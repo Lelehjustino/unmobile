@@ -56,7 +56,7 @@ dependencies:
   device_info_plus: ^12.3.0
   pinput: ^5.0.0
   keyboard_actions: ^4.2.0
-  audioplayers: ^6.1.0
+  audioplayers: ^6.5.0
   flutter_animate: ^4.5.0
   window_manager: ^0.5.1
   screen_retriever: ^0.2.1
