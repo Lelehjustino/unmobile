@@ -1,0 +1,707 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:get/get.dart';
+import 'package:mysql_client/mysql_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class Connection {
+  // Variaveis para controle de conexão
+  static const String _loadingDialogRoute = 'loading_reconnect_dialog';
+  static String ipTeste = '192.192.192.192';
+  static String ipTeste2 = '192192192192';
+
+  // Instancia de conexão com o banco de dados
+  static MySQLConnection? _conn;
+  static bool _isConnecting = false;
+  static int _falhasSeguidas = 0;
+  static const int maxFalhasPermitidas = 3;
+
+  // Timer para keep-alive
+  static Timer? _keepAliveTimer;
+  static const Duration _keepAliveInterval = Duration(
+    seconds: 60,
+  ); // A cada 60s testa conexão
+
+  // Variaveis para controle de conexão
+  static final ValueNotifier<bool> isConnected = ValueNotifier(false); // ui
+  static final RxBool _isConnected = false.obs; // ui
+  static RxBool get connectionStatus => _isConnected; // get publico
+
+  // Variaveis para controle de navegacao
+  static bool _bloquearNavegacao = false;
+  static bool _exibindoCarregamento = false;
+  static bool _podeFecharLoading = false;
+  static bool _estaReconectando = false;
+
+  // Variavel que ve se esta em query
+  static bool _acaoEmBanco = false;
+
+  static final ValueNotifier<bool> navigationLocked = ValueNotifier(false);
+  static bool get bloquearNavegacao => navigationLocked.value;
+
+  static final ValueNotifier<bool> voltouAoApp = ValueNotifier(false);
+  static final ValueNotifier<bool> zerarAtendimento = ValueNotifier(false);
+
+  // ================= LIFECYCLE =================
+
+  // Observador geral de conexao com o banco de dados
+  static void initLifecycleObserver() {
+    WidgetsBinding.instance.addObserver(_LifecycleHandler());
+  }
+
+  // Metodo para bloquear navegacao
+  static void enterProtected({String motivo = ''}) {
+    if (navigationLocked.value) return;
+
+    navigationLocked.value = true;
+    _bloquearNavegacao = true;
+  }
+
+  // Metodo para liberar navegacao
+  static Future<void> exitProtected({String motivo = ''}) async {
+    if (!navigationLocked.value) return;
+    if (_acaoEmBanco) return;
+
+    bool conectado = await conectarBanco();
+
+    if (conectado) {
+      navigationLocked.value = false;
+      _bloquearNavegacao = false;
+      voltouAoApp.value = false;
+
+      print(' Navegação LIBERADA: $motivo');
+    }
+  }
+
+  // Metodo para liberar navegacao
+  static void volteiApp() async {
+    print(' Voltou ao app');
+
+    voltouAoApp.value = true;
+    enterProtected(motivo: 'Voltou ao app');
+
+    // Mostra o loading imediatamente se não estiver conectado, para o usuário ver ação na hora
+    if (connectionStatus.value == false || _conn == null || !_conn!.connected) {
+      _mostrarLoadingReconexao(force: true);
+    }
+
+    await conectarBanco();
+
+    /* Future.delayed(const Duration(seconds: 2), () {
+      exitProtected(motivo: 'Estabilizado');
+      connectionStatus.value = true;
+    });*/
+    if (await conectarBanco()) {
+      exitProtected(motivo: 'Conectado imediato');
+    }
+  }
+
+  // ================= CONEXÃO =================
+
+  static Future<bool> conexaoRealmenteCaiu() async {
+    try {
+      if (_conn == null || !_conn!.connected) {
+        return true;
+      }
+      // Timeout agressivo para detectar queda rapidamente
+      await _conn!
+          .execute('SELECT 1')
+          .timeout(const Duration(milliseconds: 400));
+      return false;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  static Future<MySQLConnection?> getConnection() async {
+    if (_isConnecting) return _conn;
+
+    _isConnecting = true;
+
+    try {
+      if (_conn != null && _conn!.connected) {
+        _safeSetConnectionState(true);
+        return _conn;
+      }
+
+      if (_falhasSeguidas >= maxFalhasPermitidas) {
+        _safeSetConnectionState(false);
+        _handleConnectionLost();
+        return null;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      String? servidor = prefs.getString('servidor');
+
+      if (servidor != null) {
+        bool success = await _tryConnect(servidor);
+        if (success) {
+          _fecharLoadingReconexao();
+          _falhasSeguidas = 0;
+          _safeSetConnectionState(true);
+          _iniciarKeepAlive();
+          return _conn;
+        }
+      }
+
+      print("Falha conexão");
+      _falhasSeguidas++;
+      _mostrarLoadingReconexao(force: true);
+      await _closeConnSilently();
+      // LE
+      //_mostrarLoadingReconexao();
+      _safeSetConnectionState(false);
+      _handleConnectionLost();
+      return null;
+    } finally {
+      _isConnecting = false;
+    }
+  }
+
+  static Future<bool> conectarBanco() async {
+    final conn = await getConnection();
+    return conn?.connected ?? false;
+  }
+
+  static Future<bool> conectarBanconoSalvar() async {
+    voltouAoApp.value = false;
+    final prefs = await SharedPreferences.getInstance();
+    final servidor = prefs.getString('servidor');
+    if (servidor == null) return false;
+    // Fecha a conexão antiga e reseta falhas para permitir reconexão limpa
+    await _closeConnSilently();
+    _falhasSeguidas = 0;
+    bool success = await _tryConnect(servidor);
+    _safeSetConnectionState(success);
+    return success;
+  }
+
+  // ================= RECONEXÃO =================
+
+  /* static void _handleConnectionLost() {
+    final state = WidgetsBinding.instance.lifecycleState;
+
+    if (state == AppLifecycleState.paused) return;
+
+    connectionStatus.value = false;
+    _iniciarReconexaoLoop();
+  }*/
+  // Funcao chamada quando algo deu errado na conexao
+  static void _handleConnectionLost() {
+    // PEga o estado atual do app
+    final state = WidgetsBinding.instance.lifecycleState;
+
+    if (state == AppLifecycleState.paused) return;
+
+    connectionStatus.value = false;
+
+    // Tenta mostrar o loading (as regras de rota estão dentro do método)
+    _mostrarLoadingReconexao(force: true);
+
+    _iniciarReconexaoLoop();
+  }
+
+  static void _iniciarReconexaoLoop() async {
+    if (_estaReconectando) return;
+
+    _estaReconectando = true;
+    int tentativas = 0;
+
+    while (tentativas < 10) {
+      final state = WidgetsBinding.instance.lifecycleState;
+
+      if (state == AppLifecycleState.paused) {
+        _estaReconectando = false;
+        return;
+      }
+
+      _falhasSeguidas = 0; // Reseta para permitir nova tentativa
+      bool conectado = await conectarBanconoSalvar();
+
+      if (conectado) {
+        print(' Reconectado');
+
+        _fecharLoadingReconexao();
+
+        _estaReconectando = false;
+        return;
+      }
+
+      tentativas++;
+      // MUDEI
+      // await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(milliseconds: 800));
+    }
+
+    print('Falha reconexão após 10 tentativas');
+    _estaReconectando = false;
+  }
+
+  // ================= KEEP ALIVE =================
+
+  static void _iniciarKeepAlive() {
+    _keepAliveTimer?.cancel();
+
+    _keepAliveTimer = Timer.periodic(_keepAliveInterval, (timer) async {
+      if (_conn == null || !_conn!.connected) {
+        _safeSetConnectionState(false);
+        _handleConnectionLost();
+        timer.cancel();
+        return;
+      }
+
+      try {
+        await _conn!.execute('SELECT 1');
+        _safeSetConnectionState(true);
+      } catch (_) {
+        _safeSetConnectionState(false);
+        _handleConnectionLost();
+      }
+    });
+  }
+
+  // ================= BANCO =================
+
+  /// Garante conexão ativa. Se não tiver, mostra loading (exceto /inicial)
+  /// e fica tentando reconectar até conseguir ou app sair de foco.
+  static Future<MySQLConnection?> _garantirConexao() async {
+    // Reage NA HORA! Se já perdemos a conexão em background, não espera
+    // o timeout gigante do MySQL para exibir a interface bloqueante.
+    if (_conn == null || !_conn!.connected || !connectionStatus.value) {
+      _mostrarLoadingReconexao(force: true);
+    }
+
+    // 1) Tenta obter conexão normalmente
+    MySQLConnection? conn = await getConnection();
+    if (conn != null && conn.connected) {
+      _fecharLoadingReconexao(); // Garante o fechamento imediato se conectou
+      return conn;
+    }
+
+    // 2) Sem conexão — tenta mostrar o loading genérico
+    _mostrarLoadingReconexao();
+
+    // 3) Loop de reconexão até conseguir
+    while (true) {
+      await Future.delayed(const Duration(seconds: 1));
+
+      // Se o app saiu de foco, aborta
+      final state = WidgetsBinding.instance.lifecycleState;
+      if (state == AppLifecycleState.paused) {
+        return null;
+      }
+
+      _falhasSeguidas = 0; // Reseta para permitir nova tentativa
+      bool conectado = await conectarBanconoSalvar();
+
+      if (conectado) {
+        _fecharLoadingReconexao();
+        connectionStatus.value = true;
+        return _conn;
+      }
+    }
+  }
+
+  Future<String> select(String sql, {bool checkLock = true}) async {
+    try {
+      Connection._acaoEmBanco = true;
+
+      final conn = await _garantirConexao();
+      if (conn == null) return "[]";
+
+      final result = await conn.execute(sql);
+      return jsonEncode(result.rows.map((r) => r.assoc()).toList());
+    } catch (e) {
+      print('Erro no SELECT: $e');
+
+      // Verifica uma única vez se a conexão realmente caiu
+      if (await Connection.conexaoRealmenteCaiu()) {
+        await _closeConnSilently();
+        _safeSetConnectionState(false);
+        _mostrarLoadingReconexao(force: true);
+        _handleConnectionLost();
+
+        // Tenta reconectar e executar de novo UMA vez
+        final conn2 = await _garantirConexao();
+        if (conn2 != null) {
+          try {
+            final result = await conn2.execute(sql);
+            return jsonEncode(result.rows.map((r) => r.assoc()).toList());
+          } catch (_) {}
+        }
+      }
+
+      return "[]";
+    } finally {
+      Connection._acaoEmBanco = false;
+    }
+  }
+
+  Future<String> ipd(String sql, {bool checkLock = true}) async {
+    try {
+      Connection._acaoEmBanco = true;
+
+      final conn = await _garantirConexao();
+      if (conn == null) return "erro";
+
+      await conn.execute(sql);
+      return "sucesso";
+    } catch (e) {
+      print('Erro no IPD: $e');
+
+      // Verifica uma única vez se a conexão realmente caiu
+      if (await Connection.conexaoRealmenteCaiu()) {
+        await _closeConnSilently();
+        _safeSetConnectionState(false);
+        _mostrarLoadingReconexao(force: true);
+        _handleConnectionLost();
+
+        // Tenta reconectar e executar de novo UMA vez
+        final conn2 = await _garantirConexao();
+        if (conn2 != null) {
+          try {
+            await conn2.execute(sql);
+            return "sucesso";
+          } catch (_) {}
+        }
+      }
+
+      return "erro";
+    } finally {
+      Connection._acaoEmBanco = false;
+    }
+  }
+
+  static bool get _rotaBloqueada {
+    final rota = Get.currentRoute;
+
+    return rota == '/inicial' || rota == '/configuracoes';
+  }
+
+  /* static void _mostrarLoadingReconexao({bool force = false}) {
+    // BLOQUEIO TOTAL
+    if (_rotaBloqueada) {
+      debugPrint('Reconexão bloqueada na rota: ${Get.currentRoute}');
+
+      _exibindoCarregamento = false;
+      return;
+    }
+
+    // Se já estiver exibindo
+    if (_exibindoCarregamento && (Get.isDialogOpen ?? false)) {
+      return;
+    }
+
+    _exibindoCarregamento = true;
+    _podeFecharLoading = false;
+
+    void show() {
+      // DUPLA VALIDAÇÃO
+      if (_rotaBloqueada) {
+        _exibindoCarregamento = false;
+        return;
+      }
+
+      Get.dialog(
+        WillPopScope(
+          onWillPop: () async => _podeFecharLoading,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+
+                SizedBox(height: 15),
+
+                Material(
+                  color: Colors.transparent,
+                  child: Text(
+                    "Reconectando ao servidor...",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 25),
+
+                IconButton(
+                  onPressed: () async {
+                    bool conectado = await conectarBanconoSalvar();
+
+                    if (conectado) {
+                      _fecharLoadingReconexao();
+                    }
+                  },
+                  icon: Icon(Icons.refresh, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+        routeSettings: RouteSettings(name: _loadingDialogRoute),
+      );
+    }
+
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      show();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) => show());
+    }
+  } */
+
+  static void _mostrarLoadingReconexao({bool force = false}) {
+    // Se já estiver exibindo e o diálogo estiver aberto, não faz nada
+    if (_exibindoCarregamento && (Get.isDialogOpen ?? false)) {
+      return;
+    }
+
+    if (_rotaBloqueada) {
+      debugPrint('Reconexão bloqueada na rota: ${Get.currentRoute}');
+
+      _exibindoCarregamento = false;
+      return;
+    }
+
+    /*   // Regra de exibição: Não mostra loading nestas rotas (ex: inicial) de forma estrita.
+    if (Get.currentRoute == '/inicial' || Get.currentRoute == '/configuracoes') {
+      return;
+    } */
+
+    _exibindoCarregamento = true;
+    _podeFecharLoading = false;
+
+    // Função para abrir o diálogo
+    void show() {
+      Get.dialog(
+        WillPopScope(
+          onWillPop: () async => _podeFecharLoading,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                SizedBox(height: 15),
+                Material(
+                  color: Colors.transparent,
+                  child: Text(
+                    "Reconectando ao servidor...",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 25),
+                IconButton(
+                  onPressed: () async {
+                    bool conectado = await conectarBanconoSalvar();
+                    if (conectado) {
+                      _fecharLoadingReconexao();
+                    }
+                  },
+                  icon: Icon(Icons.refresh, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+        routeSettings: RouteSettings(name: _loadingDialogRoute),
+      );
+    }
+
+    // Se estivermos em um momento seguro (idle), mostramos na hora.
+    // Caso contrário (build, layout), aguardamos a próxima frame.
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      show();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) => show());
+    }
+  }
+
+  static void _fecharLoadingReconexao() {
+    if (!_exibindoCarregamento) return;
+
+    _podeFecharLoading = true;
+
+    if (Get.isDialogOpen ?? false) {
+      Get.back();
+    }
+
+    _exibindoCarregamento = false;
+  }
+
+  // ================= AUX =================
+
+  static Future<bool> _tryConnect(String host) async {
+    if ((host == ipTeste) || (host == ipTeste2)) {
+      return await conexaoTeste(host);
+    } else {
+      return await conexaoProducao(host);
+    }
+  }
+
+  static Future<bool> conexaoProducao(String host) async {
+    try {
+      await _closeConnSilently();
+
+      _conn = await MySQLConnection.createConnection(
+        host: host,
+        port: int.parse(dotenv.get('DB_PORT', fallback: '3306')),
+        userName: dotenv.get('DB_USER', fallback: 'root'),
+        password: dotenv.get('DB_PASSWORD', fallback: ''),
+        databaseName: dotenv.get('DB_NAME', fallback: 'undercontrol'),
+        secure: false,
+      );
+
+      await _conn!.connect().timeout(const Duration(seconds: 2));
+
+      print('Conexão estabelecida com sucesso!');
+      return true;
+    } catch (e) {
+      print(' Erro ao conectar: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> conexaoTeste(String host) async {
+    try {
+      await _closeConnSilently();
+      _conn = await MySQLConnection.createConnection(
+        host: 'mysql.focusnetwork.com.br',
+        port: int.parse(dotenv.get('DB_PORT_TESTE')),
+        userName: dotenv.get('DB_USER_TESTE'),
+        password: dotenv.get('DB_PASSWORD_TESTE'),
+        databaseName: dotenv.get('DB_NAME_TESTE'),
+        secure: false,
+      );
+      /* _conn = await MySQLConnection.createConnection(
+        host: 'mysql.focusnetwork.com.br',
+        port: 3306,
+        userName: 'root',
+        password: 'c3c4b22ada\$651',
+        databaseName: 'un0280',
+        secure: false,
+      ); */
+
+      // 192.192.192.192 -> ip
+      // mysql.focusnetwork.com.br -> host
+      // c3c4b22ada$651 -> pass
+      // un0280 - database
+      await _conn!.connect().timeout(Duration(seconds: 20));
+      final result = await _conn!.execute('SELECT 1;');
+      if (result.isNotEmpty) {
+        _falhasSeguidas = 0;
+        _iniciarKeepAlive();
+        return true;
+      } else {
+        _isConnected.value = false;
+        connectionStatus.value = false;
+        await _closeConnSilently();
+        return false;
+      }
+    } catch (e) {
+      print("Erro na conexão de teste: $e");
+      _isConnected.value = false;
+      connectionStatus.value = false;
+      await _closeConnSilently();
+      return false;
+    }
+  }
+
+  static void _safeSetConnectionState(bool state) {
+    try {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _isConnected.value = state;
+      });
+    } catch (_) {}
+  }
+
+  static Future<void> _closeConnSilently() async {
+    _keepAliveTimer?.cancel();
+    try {
+      await _conn?.close();
+    } catch (_) {}
+    _conn = null;
+  }
+
+  static Future<String?> discoverServer() async {
+    const int portaOuvir = 30078;
+    const String chaveEsperada = "UnderControl Engine";
+
+    RawDatagramSocket? socket;
+
+    try {
+      // No iOS, bind para anyIPv4 é padrão, mas garantimos que o timeout seja maior
+      socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        portaOuvir,
+      );
+
+      socket.broadcastEnabled = true;
+
+      // Aumentamos levemente o timeout no iOS para dar tempo da interface acordar
+      final timeoutDuration =
+          /* await _conn!.connect().timeout(
+        Platform.isIOS 
+          ? const Duration(milliseconds: 800)
+          : const Duration(seconds: 2)
+      );*/
+          Platform.isIOS
+          ? const Duration(milliseconds: 800)
+          : const Duration(seconds: 1);
+
+      await for (RawSocketEvent event in socket.timeout(timeoutDuration)) {
+        if (event == RawSocketEvent.read) {
+          Datagram? datagram = socket.receive();
+          if (datagram == null) continue;
+
+          final String msg = utf8.decode(datagram.data, allowMalformed: true);
+          final List<String> split = msg.split('|');
+
+          if (split.length == 2 && split[0] == chaveEsperada) {
+            socket.close();
+            return split[1].trim();
+          }
+        }
+      }
+    } catch (e) {
+      print("Erro no discoverServer: $e");
+    } finally {
+      socket?.close();
+    }
+
+    return null;
+  }
+
+  // Colocar circle progress indicator no lugar do texto
+}
+
+// ================= LIFECYCLE =================
+
+class _LifecycleHandler with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      Connection.enterProtected(motivo: 'App minimizado');
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      Connection.volteiApp();
+    }
+  }
+}

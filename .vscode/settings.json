@@ -1,0 +1,20 @@
+{
+    "editor.formatOnSave": false,
+    "editor.formatOnType": false,
+    "editor.formatOnPaste": false,
+    "files.autoSave": "off",
+    "[dart]": {
+        "editor.formatOnSave": false,
+        "editor.formatOnType": false,
+        "editor.formatOnPaste": false,
+        "editor.defaultFormatter": null,
+        "editor.rulers": [
+            200
+        ]
+    },
+    "dart.enableSdkFormatter": false,
+    "dart.lineLength": 200,
+    "dart.previewFlutterUiGuides": false,
+    "dart.previewFlutterUiGuidesCustomTracking": false,
+    "java.configuration.updateBuildConfiguration": "interactive"
+}

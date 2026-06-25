@@ -1,0 +1,690 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:get/get.dart';
+import 'package:mysql_client/mysql_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class Connection {
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONSTANTES
+  // ─────────────────────────────────────────────────────────────────────────
+  static const String _loadingDialogRoute = 'loading_reconnect_dialog';
+  static const Duration _keepAliveInterval = Duration(seconds: 60);
+
+  /// IPs que devem usar ambiente de teste
+  static String ipTeste = '192.192.192.192';
+  static String ipTeste2 = '192192192192';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ESTADO INTERNO
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Conexão MySQL ativa
+  static MySQLConnection? _conn;
+
+  /// Impede chamadas simultâneas ao processo de conexão
+  static bool _isConnecting = false;
+
+  /// Timer de verificação periódica (keep-alive silencioso)
+  static Timer? _keepAliveTimer;
+
+  /// Se o loop de reconexão em background está rodando
+  static bool _estaReconectandoSilencioso = false;
+
+  /// Indica se o app está em segundo plano (paused/inactive)
+  static bool _appEmBackground = false;
+
+  /// Se o loading de reconexão está sendo exibido
+  static bool _exibindoCarregamento = false;
+
+  /// PERÍODO DE GRAÇA: ativo nos 5s após o app voltar do background.
+  /// Durante esse período, _garantirConexao espera silenciosamente
+  /// sem mostrar nenhum loading ao usuário.
+  static bool _emPeriodoGracia = false;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ESTADO PÚBLICO (observável)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Estado de conexão observável pelo GetX
+  static final RxBool _isConnected = false.obs;
+  static RxBool get connectionStatus => _isConnected;
+
+  /// ValueNotifier para widgets que não usam GetX
+  static final ValueNotifier<bool> isConnected = ValueNotifier(false);
+
+  /// Sinaliza que o usuário voltou ao app (para uso externo)
+  static final ValueNotifier<bool> voltouAoApp = ValueNotifier(false);
+
+  /// Permite zerar atendimento quando necessário
+  static final ValueNotifier<bool> zerarAtendimento = ValueNotifier(false);
+
+  /// Navegação bloqueada enquanto aguarda reconexão após voltar ao app
+  static final ValueNotifier<bool> navigationLocked = ValueNotifier(false);
+  static bool get bloquearNavegacao => navigationLocked.value;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LIFECYCLE
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Registra o observador de lifecycle. Chamar uma única vez no main.
+  static void initLifecycleObserver() {
+    WidgetsBinding.instance.addObserver(_LifecycleHandler());
+  }
+
+  /// Chamado quando o app vai para background.
+  /// NÃO fecha conexão, NÃO mostra loading — apenas sinaliza o estado.
+  static void _appFoiParaBackground() {
+    _appEmBackground = true;
+    _emPeriodoGracia = false; // Cancela qualquer graça ativa
+    navigationLocked.value = true;
+    debugPrint('[Connection] App em background – conexão preservada.');
+  }
+
+  /// Chamado quando o app volta do background.
+  ///
+  /// Fluxo:
+  /// 1) Inicia período de graça de 5s (loading NÃO aparece durante esse tempo).
+  /// 2) Tenta reconectar silenciosamente em paralelo.
+  /// 3) Se reconectar → libera navegação, encerra graça.
+  /// 4) Se não reconectar em 5s → encerra graça. A partir daí, se o usuário
+  ///    tentar algo, o loading aparece normalmente.
+  static void _appVoltouDoBackground() async {
+    _appEmBackground = false;
+    voltouAoApp.value = true;
+
+    // Inicia período de graça de 5 segundos
+    _emPeriodoGracia = true;
+    debugPrint('[Connection] App voltou – período de graça de 5s iniciado.');
+
+    // Tenta reconectar silenciosamente
+    final bool ok = await _tentarConectarSilencioso();
+
+    if (ok) {
+      debugPrint('[Connection] Reconexão silenciosa OK dentro da graça.');
+      _emPeriodoGracia = false;
+      navigationLocked.value = false;
+      voltouAoApp.value = false;
+      return;
+    }
+
+    // Não reconectou imediatamente → inicia loop silencioso em background
+    _iniciarReconexaoSilenciosa();
+
+    // Aguarda o fim do período de graça (5s)
+    await Future.delayed(const Duration(seconds: 5));
+
+    // Encerra graça — a partir daqui o loading pode aparecer se o usuário agir
+    _emPeriodoGracia = false;
+    debugPrint(
+      '[Connection] Período de graça encerrado. Conexão: ${_conn?.connected}',
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONEXÃO – USO INTERNO
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Verifica se a conexão está realmente ativa com um ping leve.
+  static Future<bool> _ping() async {
+    try {
+      if (_conn == null || !_conn!.connected) return false;
+      await _conn!
+          .execute('SELECT 1')
+          .timeout(const Duration(milliseconds: 500));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Tenta conectar silenciosamente (sem afetar UI).
+  /// Retorna true se conectado.
+  static Future<bool> _tentarConectarSilencioso() async {
+    if (_isConnecting) {
+      // Já tem uma tentativa em curso – aguarda ela terminar
+      while (_isConnecting) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      return _conn != null && _conn!.connected;
+    }
+
+    _isConnecting = true;
+    try {
+      // Conexão já ativa?
+      if (await _ping()) {
+        _setConnectionState(true);
+        return true;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final servidor = prefs.getString('servidor');
+      if (servidor == null) return false;
+
+      final bool ok = await _tryConnect(servidor);
+      _setConnectionState(ok);
+
+      if (ok) _iniciarKeepAlive();
+
+      return ok;
+    } finally {
+      _isConnecting = false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONEXÃO – USO PÚBLICO
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Verifica se a conexão realmente caiu (para uso externo).
+  static Future<bool> conexaoRealmenteCaiu() async {
+    return !(await _ping());
+  }
+
+  /// Conecta/verifica conexão. Retorna true se ok.
+  static Future<bool> conectarBanco() async {
+    return await _tentarConectarSilencioso();
+  }
+
+  /// Conecta com reset completo (usado ao salvar configurações).
+  static Future<bool> conectarBanconoSalvar() async {
+    voltouAoApp.value = false;
+    final prefs = await SharedPreferences.getInstance();
+    final servidor = prefs.getString('servidor');
+    if (servidor == null) return false;
+
+    await _closeConnSilently();
+
+    _isConnecting = true;
+    try {
+      final bool ok = await _tryConnect(servidor);
+      _setConnectionState(ok);
+      if (ok) _iniciarKeepAlive();
+      return ok;
+    } finally {
+      _isConnecting = false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RECONEXÃO EM BACKGROUND (silenciosa, sem loading)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Inicia loop de reconexão silenciosa em background.
+  /// Não exibe nenhuma UI – só atualiza o estado interno.
+  static void _iniciarReconexaoSilenciosa() async {
+    if (_estaReconectandoSilencioso) return;
+    _estaReconectandoSilencioso = true;
+
+    debugPrint('[Connection] Iniciando reconexão silenciosa...');
+
+    int tentativas = 0;
+    const int maxTentativas = 20;
+    const Duration intervalo = Duration(seconds: 3);
+
+    while (tentativas < maxTentativas) {
+      if (_appEmBackground) {
+        await Future.delayed(const Duration(seconds: 1));
+        continue;
+      }
+
+      final bool ok = await _tentarConectarSilencioso();
+
+      if (ok) {
+        debugPrint(
+          '[Connection] Reconexão silenciosa OK após $tentativas tentativas.',
+        );
+        _estaReconectandoSilencioso = false;
+
+        // Fecha loading se estava visível (usuário tentou algo durante reconexão)
+        _fecharLoadingReconexao();
+
+        // Libera navegação se estava bloqueada
+        if (navigationLocked.value) {
+          navigationLocked.value = false;
+          voltouAoApp.value = false;
+        }
+
+        return;
+      }
+
+      tentativas++;
+      debugPrint(
+        '[Connection] Tentativa silenciosa $tentativas/$maxTentativas falhou.',
+      );
+      await Future.delayed(intervalo);
+    }
+
+    debugPrint(
+      '[Connection] Reconexão silenciosa encerrada sem sucesso após $maxTentativas tentativas.',
+    );
+    _estaReconectandoSilencioso = false;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // KEEP-ALIVE (verificação periódica silenciosa)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static void _iniciarKeepAlive() {
+    _keepAliveTimer?.cancel();
+
+    _keepAliveTimer = Timer.periodic(_keepAliveInterval, (_) async {
+      // Não verifica enquanto app está em background ou em período de graça
+      if (_appEmBackground || _emPeriodoGracia) return;
+
+      final bool ok = await _ping();
+      _setConnectionState(ok);
+
+      if (!ok) {
+        debugPrint(
+          '[KeepAlive] Conexão perdida – iniciando reconexão silenciosa.',
+        );
+        _iniciarReconexaoSilenciosa();
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GARANTIR CONEXÃO (chamado antes de qualquer operação no banco)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Garante conexão antes de executar operação.
+  ///
+  /// Estratégias em ordem:
+  ///
+  /// 1) Conexão em memória OK → retorna imediato (zero rede).
+  ///
+  /// 2) PERÍODO DE GRAÇA ativo (até 5s após voltar do background):
+  ///    → Espera silenciosamente o término da graça ou até conectar.
+  ///    → Sem loading visível — o usuário pode ter voltado e tocado algo rápido.
+  ///    → Após o fim da graça: se ainda não conectado, cai no passo 3.
+  ///
+  /// 3) Conexão definitivamente perdida → mostra loading IMEDIATAMENTE
+  ///    e fica tentando reconectar em loop com feedback visual.
+  static Future<MySQLConnection?> _garantirConexao() async {
+    // ── Passo 1: verificação instantânea sem rede ──────────────────────────
+    if (_conn != null && _conn!.connected && _isConnected.value) {
+      return _conn;
+    }
+
+    // ── Passo 2: dentro do período de graça → espera silenciosa ───────────
+    if (_emPeriodoGracia) {
+      debugPrint(
+        '[Connection] Ação durante período de graça – aguardando silenciosamente...',
+      );
+
+      // Espera enquanto ainda estamos em graça (até 5s no total)
+      while (_emPeriodoGracia) {
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        // Verifica se reconectou durante a espera
+        if (_conn != null && _conn!.connected && _isConnected.value) {
+          debugPrint(
+            '[Connection] Conectado durante graça – retornando sem loading.',
+          );
+          return _conn;
+        }
+      }
+
+      // Saiu da graça: tenta mais uma vez antes de mostrar loading
+      if (await _ping() && _conn != null) {
+        _setConnectionState(true);
+        return _conn;
+      }
+    }
+
+    // ── Passo 3: conexão perdida + graça encerrada → loading imediato ─────
+    _setConnectionState(false);
+    _mostrarLoadingReconexao();
+
+    // Loop de reconexão com feedback visual já ativo
+    while (true) {
+      if (_appEmBackground) {
+        // App foi para background durante tentativa — não fecha loading;
+        // será fechado quando reconectar ao voltar.
+        return null;
+      }
+
+      final bool reconectou = await _tentarConectarSilencioso();
+
+      if (reconectou && _conn != null && _conn!.connected) {
+        _fecharLoadingReconexao();
+        return _conn;
+      }
+
+      // Aguarda antes da próxima tentativa
+      await Future.delayed(const Duration(seconds: 2));
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // OPERAÇÕES NO BANCO
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<String> select(String sql) async {
+    try {
+      final conn = await _garantirConexao();
+      if (conn == null) return '[]';
+
+      final result = await conn.execute(sql);
+      return jsonEncode(result.rows.map((r) => r.assoc()).toList());
+    } catch (e) {
+      debugPrint('[SELECT] Erro: $e');
+
+      if (await conexaoRealmenteCaiu()) {
+        await _closeConnSilently();
+        _setConnectionState(false);
+        _iniciarReconexaoSilenciosa();
+
+        final conn2 = await _garantirConexao();
+        if (conn2 != null) {
+          try {
+            final result = await conn2.execute(sql);
+            return jsonEncode(result.rows.map((r) => r.assoc()).toList());
+          } catch (_) {}
+        }
+      }
+
+      return '[]';
+    }
+  }
+
+  Future<String> ipd(String sql) async {
+    try {
+      final conn = await _garantirConexao();
+      if (conn == null) return 'erro';
+
+      await conn.execute(sql);
+      return 'sucesso';
+    } catch (e) {
+      debugPrint('[IPD] Erro: $e');
+
+      if (await conexaoRealmenteCaiu()) {
+        await _closeConnSilently();
+        _setConnectionState(false);
+        _iniciarReconexaoSilenciosa();
+
+        final conn2 = await _garantirConexao();
+        if (conn2 != null) {
+          try {
+            await conn2.execute(sql);
+            return 'sucesso';
+          } catch (_) {}
+        }
+      }
+
+      return 'erro';
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LOADING DE RECONEXÃO (UI)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static bool get _rotaBloqueada {
+    final rota = Get.currentRoute;
+    return rota == '/inicial' || rota == '/configuracoes' || rota == '/splash';
+  }
+
+  static void _mostrarLoadingReconexao() {
+    // Já está exibindo e dialog está aberto → não duplica
+    if (_exibindoCarregamento && (Get.isDialogOpen ?? false)) return;
+
+    // Rotas onde não faz sentido mostrar
+    if (_rotaBloqueada) {
+      debugPrint('[Connection] Loading bloqueado na rota: ${Get.currentRoute}');
+      return;
+    }
+
+    _exibindoCarregamento = true;
+
+    void show() {
+      // Valida no momento exato da exibição — pode ter mudado de rota
+      // ou reconectado antes deste callback disparar (race condition)
+      if (!_exibindoCarregamento) return; // cancelado antes de abrir
+      if (Get.isDialogOpen ?? false) return; // já tem dialog aberto
+
+      if (_rotaBloqueada) {
+        _exibindoCarregamento = false;
+        return;
+      }
+
+      Get.dialog(
+        PopScope(
+          canPop: false,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                const SizedBox(height: 15),
+                const Material(
+                  color: Colors.transparent,
+                  child: Text(
+                    'Reconectando ao servidor...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 25),
+                IconButton(
+                  onPressed: () async {
+                    final bool ok = await conectarBanconoSalvar();
+                    if (ok) _fecharLoadingReconexao();
+                  },
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+        routeSettings: const RouteSettings(name: _loadingDialogRoute),
+      );
+    }
+
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      show();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) => show());
+    }
+  }
+
+  static void _fecharLoadingReconexao() {
+    if (!_exibindoCarregamento) return;
+    if (Get.isDialogOpen ?? false) Get.back();
+    _exibindoCarregamento = false;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // HELPERS INTERNOS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static Future<bool> _tryConnect(String host) async {
+    if (host == ipTeste || host == ipTeste2) {
+      return await conexaoTeste(host);
+    } else {
+      return await conexaoProducao(host);
+    }
+  }
+
+  static Future<bool> conexaoProducao(String host) async {
+    try {
+      await _closeConnSilently();
+
+      _conn = await MySQLConnection.createConnection(
+        host: host,
+        port: int.parse(dotenv.get('DB_PORT', fallback: '3306')),
+        userName: dotenv.get('DB_USER', fallback: 'root'),
+        password: dotenv.get('DB_PASSWORD', fallback: ''),
+        databaseName: dotenv.get('DB_NAME', fallback: 'undercontrol'),
+        secure: false,
+      );
+
+      await _conn!.connect().timeout(const Duration(seconds: 3));
+      debugPrint('[Connection] Produção conectada: $host');
+      return true;
+    } catch (e) {
+      debugPrint('[Connection] Erro produção: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> conexaoTeste(String host) async {
+    try {
+      await _closeConnSilently();
+
+      _conn = await MySQLConnection.createConnection(
+        host: 'mysql.focusnetwork.com.br',
+        port: int.parse(dotenv.get('DB_PORT_TESTE')),
+        userName: dotenv.get('DB_USER_TESTE'),
+        password: dotenv.get('DB_PASSWORD_TESTE'),
+        databaseName: dotenv.get('DB_NAME_TESTE'),
+        secure: false,
+      );
+
+      await _conn!.connect().timeout(const Duration(seconds: 20));
+      final result = await _conn!.execute('SELECT 1;');
+
+      if (result.isNotEmpty) {
+        debugPrint('[Connection] Teste conectada.');
+        return true;
+      }
+
+      await _closeConnSilently();
+      return false;
+    } catch (e) {
+      debugPrint('[Connection] Erro teste: $e');
+      await _closeConnSilently();
+      return false;
+    }
+  }
+
+  static void _setConnectionState(bool state) {
+    _isConnected.value = state;
+    isConnected.value = state;
+  }
+
+  static Future<void> _closeConnSilently() async {
+    _keepAliveTimer?.cancel();
+    try {
+      await _conn?.close();
+    } catch (_) {}
+    _conn = null;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DESCOBERTA DE SERVIDOR (broadcast UDP)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static Future<String?> discoverServer() async {
+    const int portaOuvir = 30078;
+    const String chaveEsperada = "UnderControl Engine";
+
+    RawDatagramSocket? socket;
+
+    try {
+      socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        portaOuvir,
+      );
+
+      socket.broadcastEnabled = true;
+
+      print('[discoverServer] Escutando UDP...');
+
+      await for (RawSocketEvent event in socket.timeout(
+        const Duration(seconds: 10),
+      )) {
+        if (event == RawSocketEvent.read) {
+          final datagram = socket.receive();
+          if (datagram == null) continue;
+
+          final msg = utf8.decode(datagram.data, allowMalformed: true);
+          print('[discoverServer] Recebido: $msg');
+
+          final split = msg.split('|');
+
+          if (split.length == 2 && split[0].trim() == chaveEsperada) {
+            return split[1].trim();
+          }
+        }
+      }
+    } catch (e) {
+      print("Erro no discoverServer: $e");
+    } finally {
+      socket?.close();
+    }
+
+    return null;
+  }
+
+  /* static Future<String?> discoverServer() async {
+    const int portaOuvir = 30078; 
+    const String chaveEsperada = 'UnderControl Engine';
+
+    RawDatagramSocket? socket;
+
+    try {
+      socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, portaOuvir);
+      socket.broadcastEnabled = true;
+
+      final timeoutDuration = Platform.isIOS
+          ? const Duration(milliseconds: 10000)
+          : const Duration(seconds: 10);
+
+      await for (final event in socket.timeout(timeoutDuration)) {
+        if (event == RawSocketEvent.read) {
+          final datagram = socket.receive();
+          if (datagram == null) continue;
+
+          final msg = utf8.decode(datagram.data, allowMalformed: true);
+          final parts = msg.split('|');
+
+          if (parts.length == 2 && parts[0] == chaveEsperada) {
+            socket.close();
+            return parts[1].trim();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[discoverServer] Erro: $e');
+    } finally {
+      socket?.close();
+    }
+
+    return null;
+  } */
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIFECYCLE HANDLER
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LifecycleHandler with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        Connection._appFoiParaBackground();
+        break;
+
+      case AppLifecycleState.resumed:
+        Connection._appVoltouDoBackground();
+        break;
+
+      default:
+        break;
+    }
+  }
+}

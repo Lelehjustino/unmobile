@@ -1,0 +1,449 @@
+
+// import 'dart:async';
+// import 'dart:developer' as developer show log;
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:get/get.dart';
+// import 'package:un_recepcao/controllers/carrinho_controller.dart';
+// import 'package:un_recepcao/controllers/navegacao_inteligente.dart';
+// import 'package:un_recepcao/controllers/zerar_atendimento.dart';
+// import 'package:un_recepcao/controllers/comanda_carrinho.dart';
+// import 'package:un_recepcao/data/data_class.dart';
+// import 'package:un_recepcao/views/carrinho_comandas_page.dart';
+// import 'package:un_recepcao/views/checkin_page.dart';
+// import 'package:un_recepcao/views/configuracoes_page.dart';
+// import 'package:un_recepcao/views/erro_page.dart';
+// import 'package:un_recepcao/views/garcom_page.dart';
+// import 'package:un_recepcao/views/inicial_page.dart';
+// import 'package:un_recepcao/views/pizza_page.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// // projeto versao com app Apple
+
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+
+//   runApp(
+//     MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       home: Scaffold(
+//         backgroundColor: const Color.fromRGBO(84, 134, 135, 1),
+//         body: Center(
+//           child: Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 32),
+//             child: Column(
+//               mainAxisAlignment: MainAxisAlignment.center,
+//               children: const [
+//                 Image(image: AssetImage('assets/app_icon2.png'), height: 120),
+
+//                 SizedBox(height: 24),
+
+//                 Text(
+//                   'UnMobile',
+//                   textAlign: TextAlign.center,
+//                   style: TextStyle(
+//                     color: Colors.white,
+//                     fontSize: 40,
+//                     fontWeight: FontWeight.w600,
+//                     letterSpacing: 0.5,
+//                   ),
+//                 ),
+//                 SizedBox(height: 12),
+//                 Text(
+//                   'Estamos preparando tudo para você :)',
+//                   textAlign: TextAlign.center,
+//                   style: TextStyle(
+//                     color: Colors.white,
+//                     fontSize: 22,
+//                     fontWeight: FontWeight.w600,
+//                     letterSpacing: 0.5,
+//                   ),
+//                 ),
+//                 SizedBox(height: 12),
+//                 Text(
+//                   'Aguarde um instante enquanto finalizamos os detalhes...',
+//                   textAlign: TextAlign.center,
+//                   style: TextStyle(color: Colors.white70, fontSize: 16),
+//                 ),
+//                 SizedBox(height: 32),
+//                 CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     ),
+//   );
+
+//   // Essencial para renderizar a Splash Screen imediatamente:
+//   // Libera a thread principal para desenhar o primeiro frame antes de carregar o resto.
+//   await Future.delayed(const Duration(milliseconds: 50));
+
+//   // Carrega as variáveis de ambiente com tratamento de erro
+//   try {
+//     await dotenv.load(fileName: "arquivos.env");
+//   } catch (e) {
+//     print(
+//       "Aviso: Falha ao carregar 'arquivos.env'. Certifique-se de que o arquivo existe e o app foi reiniciado: $e",
+//     );
+//   }
+
+//   // Captura erros globais do Flutter
+//   runZonedGuarded(
+//     () {
+//       FlutterError.onError = (FlutterErrorDetails details) {
+//         if (!details.exceptionAsString().contains(
+//           "Failed to post message to main thread",
+//         )) {
+//           FlutterError.presentError(details);
+//         }
+//       };
+//     },
+//     (error, stack) {
+//       if (error.toString().contains("Failed to post message to main thread"))
+//         return;
+//       print('Erro capturado globalmente: $error');
+//     },
+//   );
+
+//   // Função segura para logs filtrados
+//   void safeLog(String message) {
+//     if (!message.contains("Failed to post message to main thread")) {
+//       developer.log(message);
+//     }
+//   }
+
+//   // Inicializa controladores globais
+//   /* final variaveisController = Get.put(VariaveisController());
+//   variaveisController.carregarNomeEmpresa(); */
+
+//   Get.put(CarrinhoController(), permanent: true);
+//   Get.put(ComandaCarrinhoController(), permanent: true);
+//   Get.put(ZerarAtendimentoController(), permanent: true);
+//   Get.put(NavegacaoInteligente(), permanent: true);
+
+//   // Ativa modo tela cheia
+//   // SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+//   // Bloqueia rotação (somente modo retrato)
+//   if (!GetPlatform.isIOS && !GetPlatform.isMacOS) {
+//     await SystemChrome.setPreferredOrientations([
+//       DeviceOrientation.portraitUp,
+//       DeviceOrientation.portraitDown,
+//     ]);
+//   }
+
+//   // safeLog("Iniciando aplicativo...");
+//   Connection.initLifecycleObserver();
+//   runApp(const App());
+// }
+
+// class App extends StatefulWidget {
+//   const App({super.key});
+
+//   @override
+//   State<App> createState() => _AppState();
+// }
+
+// class _AppState extends State<App> {
+//   late final _LifecycleHandler _lifecycleHandler;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _lifecycleHandler = _LifecycleHandler();
+//     WidgetsBinding.instance.addObserver(_lifecycleHandler);
+//   }
+
+//   @override
+//   void dispose() {
+//     WidgetsBinding.instance.removeObserver(_lifecycleHandler);
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return GetMaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Nubi PDV',
+//       theme: ThemeData(
+//         useMaterial3: true,
+//         colorScheme:
+//             ColorScheme.fromSeed(
+//               seedColor: const Color.fromRGBO(76, 175, 80, 1),
+//               brightness: Brightness.light,
+//             ).copyWith(
+//               primary: const Color.fromRGBO(87, 154, 146, 1),
+//               onPrimary: Colors.white,
+//               primaryContainer: const Color.fromRGBO(87, 154, 146, 0.85),
+//               secondary: const Color.fromRGBO(173, 216, 208, 1.0),
+//               onSecondary: Colors.black,
+//               tertiary: const Color.fromRGBO(255, 216, 99, 1),
+//               onTertiary: const Color.fromRGBO(249, 248, 245, 1),
+//               surface: Colors.white,
+//               onSurface: Colors.black,
+//               error: Colors.red,
+//               surfaceDim: const Color.fromRGBO(155, 155, 155, 0.85),
+//               shadow: const Color.fromRGBO(1, 132, 152, 1),
+//               scrim: const Color.fromRGBO(243, 153, 48, 1),
+//               surfaceTint: const Color.fromARGB(193, 196, 191, 191),
+//               outline: const Color.fromARGB(255, 185, 93, 114),
+//             ),
+//       ),
+//       initialRoute: '/inicial',
+
+//       getPages: [
+//         GetPage(
+//           name: '/',
+//           page: () => OrientationRestrictedPage(child: CheckinPage()),
+//         ),
+//         GetPage(
+//           name: '/checkin',
+//           page: () => OrientationRestrictedPage(child: CheckinPage()),
+//         ),
+//         GetPage(
+//           name: '/configuracoes',
+//           page: () => OrientationRestrictedPage(child: ConfiguracoesPage()),
+//         ),
+//         GetPage(
+//           name: '/erro',
+//           page: () => OrientationRestrictedPage(child: ErroPage()),
+//         ),
+//         GetPage(
+//           name: '/inicial',
+//           page: () => OrientationRestrictedPage(child: InicialPage()),
+//         ),
+//         GetPage(
+//           name: '/pizza',
+//           page: () => OrientationRestrictedPage(child: PizzaPage()),
+//         ),
+//         GetPage(
+//           name: '/garcom',
+//           page: () => OrientationRestrictedPage(child: GarcomPage()),
+//         ),
+//         GetPage(
+//           name: '/carrinho_comandas',
+//           page: () => OrientationRestrictedPage(child: CarrinhoComandasPage()),
+//         ),
+//       ],
+//     );
+//   }
+// }
+
+// class _LifecycleHandler with WidgetsBindingObserver {
+//   @override
+//   void didChangeAppLifecycleState(AppLifecycleState state) {
+//     // Quando o app é minimzado
+//     if (state == AppLifecycleState.paused) {
+//       Connection.enterProtected();
+//       print('App minimizado - Navegação e reconexão BLOQUEADAS');
+//     }
+
+//     // Quando o app é fachado
+//     if (state == AppLifecycleState.inactive) {
+//       Connection.enterProtected();
+//       print('App fechado - Navegação e reconexão BLOQUEADAS');
+//     }
+
+//     // Volto a usar o app após fechado ou minimizado
+//     if (state == AppLifecycleState.resumed) {
+//       Connection.volteiApp();
+
+//       // Connection.enterProtected();
+
+//       // Future.delayed(const Duration(seconds: 10), () {
+//       //   Connection.exitProtected();
+//       //   print('Sistema LIBERADO após 5 segundo');
+//       // });
+//       // print('App ativo novamente - Navegação liberada');
+//     }
+//   }
+// }
+
+// /// Widget que impede rotação e mostra alerta se o usuário girar a tela
+// class OrientationRestrictedPage extends StatelessWidget {
+//   final Widget child;
+
+//   const OrientationRestrictedPage({super.key, required this.child});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return WillPopScope(
+//       onWillPop: () async {
+//         // impede botão voltar
+//         return false;
+//       },
+//       child: OrientationBuilder(
+//         builder: (context, orientation) {
+//           if (orientation == Orientation.landscape) {
+//             return Scaffold(
+//               backgroundColor: Colors.white,
+//               body: Center(
+//                 child: AlertDialog(
+//                   title: const Text('Aviso'),
+//                   content: const Text('Você não pode girar a tela.'),
+//                   actions: <Widget>[
+//                     TextButton(
+//                       onPressed: () {
+//                         Navigator.pop(context);
+//                       },
+//                       child: const Text('OK'),
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//             );
+//           }
+//           return child;
+//         },
+//       ),
+//     );
+//   }
+// }
+
+
+// import 'dart:async';
+// import 'dart:developer' as developer show log;
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:get/get.dart';
+// import 'package:un_recepcao/controllers/carrinho_controller.dart';
+// import 'package:un_recepcao/controllers/navegacao_inteligente.dart';
+// import 'package:un_recepcao/controllers/zerar_atendimento.dart';
+// import 'package:un_recepcao/controllers/comanda_carrinho.dart';
+// import 'package:un_recepcao/data/data_class.dart';
+// import 'package:un_recepcao/views/carrinho_comandas_page.dart';
+// import 'package:un_recepcao/views/configuracoes_page.dart';
+// import 'package:un_recepcao/views/erro_page.dart';
+// import 'package:un_recepcao/views/garcom_page.dart';
+// import 'package:un_recepcao/views/inicial_page.dart';
+// import 'package:un_recepcao/views/pizza_page.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+
+//   await Future.delayed(const Duration(milliseconds: 50));
+
+//   try {
+//     await dotenv.load(fileName: "arquivos.env");
+//   } catch (e) {
+//     print("Erro ao carregar .env: $e");
+//   }
+
+//   Get.put(CarrinhoController(), permanent: true);
+//   Get.put(ComandaCarrinhoController(), permanent: true);
+//   Get.put(ZerarAtendimentoController(), permanent: true);
+//   Get.put(NavegacaoInteligente(), permanent: true);
+
+//   Connection.initLifecycleObserver(); 
+
+//   if (!GetPlatform.isIOS && !GetPlatform.isMacOS) {
+//     await SystemChrome.setPreferredOrientations([
+//       DeviceOrientation.portraitUp,
+//       DeviceOrientation.portraitDown,
+//     ]);
+//   }
+
+//   runApp(const App());
+// }
+
+// class App extends StatelessWidget {
+//   const App({super.key});
+
+//   Future<void> inicializarApp() async {
+//     try {
+//       await Future.delayed(const Duration(milliseconds: 50));
+
+//       try {
+//         await dotenv.load(fileName: "arquivos.env");
+//       } catch (_) {}
+
+//     } catch (e) {
+//       throw Exception("Erro init: $e");
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return GetMaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Nubi PDV',
+
+//       theme: ThemeData(
+//         useMaterial3: true,
+//         colorScheme:
+//             ColorScheme.fromSeed(
+//               seedColor: const Color.fromRGBO(76, 175, 80, 1),
+//               brightness: Brightness.light,
+//             ).copyWith(
+//               primary: const Color.fromRGBO(87, 154, 146, 1),
+//               onPrimary: Colors.white,
+//               primaryContainer: const Color.fromRGBO(87, 154, 146, 0.85),
+//               secondary: const Color.fromRGBO(173, 216, 208, 1.0),
+//               onSecondary: Colors.black,
+//               tertiary: const Color.fromRGBO(255, 216, 99, 1),
+//               onTertiary: const Color.fromRGBO(249, 248, 245, 1),
+//               surface: Colors.white,
+//               onSurface: Colors.black,
+//               error: Colors.red,
+//               surfaceDim: const Color.fromRGBO(155, 155, 155, 0.85),
+//               shadow: const Color.fromRGBO(1, 132, 152, 1),
+//               scrim: const Color.fromRGBO(243, 153, 48, 1),
+//               surfaceTint: const Color.fromARGB(193, 196, 191, 191),
+//               outline: const Color.fromARGB(255, 185, 93, 114),
+//             ),
+//       ),
+//       // initialRoute: '/',
+
+//       getPages: [
+//         GetPage(name: '/', page: () => const SplashScreen()),
+//         GetPage(name: '/inicial', page: () => InicialPage()),
+//         GetPage(name: '/erro', page: () => ErroPage()),
+//         GetPage(name: '/pizza', page: () => PizzaPage()),
+//         GetPage(name: '/garcom', page: () => GarcomPage()),
+//         GetPage(name: '/configuracoes', page: () => ConfiguracoesPage()),
+//         GetPage(name: '/carrinho_comandas', page: () => CarrinhoComandasPage()),
+//       ],
+
+//       // home: FutureBuilder(
+//       //   future: inicializarApp(),
+//       //   builder: (context, snapshot) {
+
+//       //     if (snapshot.connectionState == ConnectionState.waiting) {
+//       //       return const SplashScreen();
+//       //     }
+
+//       //     if (snapshot.hasError) {
+//       //       return InicialPage();
+//       //     }
+
+//       //     return InicialPage();
+//       //   },
+//       // ),
+//     );
+//   }
+// }
+
+// class SplashScreen extends StatelessWidget {
+//   const SplashScreen({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: const Color.fromRGBO(84, 134, 135, 1),
+//       body: Center(
+//         child: Column(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: const [
+//             Image(image: AssetImage('assets/app_icon2.png'), height: 120),
+//             SizedBox(height: 24),
+//             Text('UnMobile', style: TextStyle(color: Colors.white, fontSize: 40)),
+//             SizedBox(height: 12),
+//             CircularProgressIndicator(color: Colors.white),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
