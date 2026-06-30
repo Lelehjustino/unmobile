@@ -7228,7 +7228,6 @@ class GarcomPageState extends State<GarcomPage>
                                       Icons.table_bar,
                                       size: 25,
                                       color: colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
