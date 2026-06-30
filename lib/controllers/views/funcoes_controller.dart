@@ -12,7 +12,7 @@ class FuncoesController extends GetxController {
   String nomeTraidpoint = "";
 
   // String versaoDoApp = "1.9.18";
-  String versaoDoApp = "1.9.18";
+  String versaoDoApp = "1.9.19";
 
   // Controlar o aparecimento do botão pagar
   RxBool aparecerBotaoPagar = false.obs;
@@ -20,7 +20,7 @@ class FuncoesController extends GetxController {
   // data atual
   RxString dataAtual = "".obs;
 
-   dia() async {
+  dia() async {
     DateTime hoje = DateTime.now();
     String dia = "${hoje.day}/${hoje.month}/${hoje.year}";
 

@@ -4,12 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:screen_retriever/screen_retriever.dart';
+
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/widgets/side_nav.dart';
 import 'package:window_manager/window_manager.dart';
-
+import 'dart:ffi';
+import 'package:ffi/ffi.dart';
+import 'package:win32/win32.dart';
 class PainelCliente extends StatefulWidget {
   const PainelCliente({super.key});
 
@@ -258,6 +260,72 @@ class _PainelClienteState extends State<PainelCliente> {
     super.dispose();
   }
 
+  /// Verifica quantas instâncias (janelas) do mesmo executável estão abertas.
+  /// Se houver exatamente 2, alterna o foco para a outra janela (a que não está em foreground no momento)
+  /// e garante que ela seja maximizada.
+  Future<void> _verificarEAlternarJanelas() async {
+    if (!Platform.isWindows) return;
+
+    final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
+    int hwnd = FindWindowEx(0, 0, className, nullptr);
+    
+    // Lista para guardar os ponteiros das janelas abertas
+    List<int> appHwnds = [];
+    // Caminho do próprio executável rodando (ex: C:\..\under_recepcao.exe)
+    final myExeName = Platform.resolvedExecutable.toLowerCase();
+
+    // Varre todas as janelas do tipo FLUTTER (FindWindowEx vai para a próxima a cada chamada)
+    while (hwnd != 0) {
+      final pPid = calloc<Uint32>();
+      GetWindowThreadProcessId(hwnd, pPid);
+      final pid = pPid.value;
+      free(pPid);
+
+      // 0x1000 = PROCESS_QUERY_LIMITED_INFORMATION (Suficiente para pegar o caminho do executável)
+      final hProcess = OpenProcess(0x1000, 0, pid);
+      if (hProcess != 0) {
+        final buffer = wsalloc(MAX_PATH);
+        final size = calloc<Uint32>()..value = MAX_PATH;
+        
+        // Verifica se conseguiu recuperar o path daquele processo
+        if (QueryFullProcessImageName(hProcess, 0, buffer, size) != 0) {
+          final processPath = buffer.toDartString().toLowerCase();
+          // Se for o mesmo executável, assumimos que é uma janela irmã
+          if (processPath == myExeName) {
+            appHwnds.add(hwnd);
+          }
+        }
+        free(buffer);
+        free(size);
+        CloseHandle(hProcess);
+      }
+      // Pega próxima janela da fila
+      hwnd = FindWindowEx(0, hwnd, className, nullptr);
+    }
+    // Libera a string ffi da memória
+    free(className);
+
+    // Regra: "Se existirem duas janelas/telas abertas, alternar para a outra janela"
+    if (appHwnds.length == 2) {
+      // Como o usuário acabou de clicar duas vezes, essa janela atual está focada
+      final currentForeground = GetForegroundWindow();
+      
+      // Procura na lista a janela que não seja a janela focada
+      int targetHwnd = appHwnds.firstWhere(
+        (h) => h != currentForeground, 
+        orElse: () => 0
+      );
+
+      if (targetHwnd != 0) {
+        // Envia o comando para maximizar caso esteja minimizada
+        // 3 representa o comando nativo Windows SW_SHOWMAXIMIZED
+        ShowWindow(targetHwnd, 3);
+        // Coloca a janela encontrada em primeiro plano no Windows
+        SetForegroundWindow(targetHwnd);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -306,56 +374,9 @@ class _PainelClienteState extends State<PainelCliente> {
             //  APPBAR CUSTOMIZADA 
             final appBar = GestureDetector(
               onDoubleTap: () async {
-              if (Platform.isWindows){
-                final displays = await screenRetriever.getAllDisplays();
-
-                for (final display in displays) {
-                  print(display.id);
-                  print(display.size);
+                if (Platform.isWindows) {
+                  await _verificarEAlternarJanelas();
                 }
-
-                if (displays.length > 1) {
-                  final monitor2 = displays[1];
-
-                  await windowManager.setBounds(
-                    Rect.fromLTWH(
-                      monitor2.visiblePosition!.dx,
-                      monitor2.visiblePosition!.dy,
-                      monitor2.size.width.toDouble(),
-                      monitor2.size.height.toDouble(),
-                    ),
-                  );
-
-                  await windowManager.setFullScreen(true);
-
-                  await windowManager.setTitleBarStyle(
-                    TitleBarStyle.hidden,
-                  );
-                }
-              }
-                /* final displays = await screenRetriever.getAllDisplays();
-
-                for (final display in displays) {
-                  print(display.id);
-                  print(display.size);
-                }
-
-                if (displays.length > 1) {
-                  final monitor2 = displays[1];
-
-                  await windowManager.setBounds(
-                    Rect.fromLTWH(
-                      monitor2.visiblePosition!.dx,
-                      monitor2.visiblePosition!.dy,
-                      monitor2.size.width.toDouble(),
-                      monitor2.size.height.toDouble(),
-                    ),
-                  );
-                  await windowManager.setFullScreen(true);
-                  await windowManager.setTitleBarStyle(
-                    TitleBarStyle.hidden,
-                  );
-                } */ 
               },
               child: Container(
                 width: double.infinity,
@@ -493,26 +514,33 @@ class _PainelClienteState extends State<PainelCliente> {
             final colunaPronto = Column(
               children: [
                 // Cabeçalho
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: headerPaddingV),
-                  decoration: BoxDecoration(
-                    color: colorScheme.shadow.withOpacity(0.08),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: colorScheme.shadow.withOpacity(0.3),
-                        width: 2,
+                GestureDetector(
+                  onDoubleTap: () async {
+                    if (Platform.isWindows) {
+                      await _verificarEAlternarJanelas();
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: headerPaddingV),
+                    decoration: BoxDecoration(
+                      color: colorScheme.shadow.withOpacity(0.08),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: colorScheme.shadow.withOpacity(0.3),
+                          width: 2,
+                        ),
                       ),
                     ),
-                  ),
-                  child: Text(
-                    "PRONTO",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.montserrat(
-                      fontSize: headerFontSize,
-                      fontWeight: FontWeight.w900,
-                      color: colorScheme.shadow,
-                      letterSpacing: 2,
+                    child: Text(
+                      "PRONTO",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.montserrat(
+                        fontSize: headerFontSize,
+                        fontWeight: FontWeight.w900,
+                        color: colorScheme.shadow,
+                        letterSpacing: 2,
+                      ),
                     ),
                   ),
                 ),
