@@ -639,18 +639,22 @@ class _PainelClienteState extends State<PainelCliente> {
     );
 
     if (Platform.isWindows) {
+      final screenHeight = MediaQuery.of(context).size.height;
+
       body = MouseRegion(
         onHover: (event) async {
           final dy = event.position.dy;
-          // Se o mouse estiver no topo (ex: 15 pixels), sai do fullscreen para mostrar título/taskbar
-          if (dy <= 15) {
+          // Se o mouse estiver no topo (<= 15) ou embaixo (>= screenHeight - 15) 
+          // sai do fullscreen para mostrar título/taskbar nativa
+          if (dy <= 15 || dy >= screenHeight - 15) {
             if (_isFullScreen) {
               _isFullScreen = false;
               await windowManager.setFullScreen(false);
               await windowManager.maximize();
             }
-          } else if (dy > 40) {
-            // Se o mouse descer, volta ao estilo Totem (fullscreen)
+          } 
+          // Se o mouse descer ou subir de volta para a região segura, volta a tela cheia
+          else if (dy > 40 && dy < screenHeight - 40) {
             if (!_isFullScreen) {
               _isFullScreen = true;
               await windowManager.setFullScreen(true);
