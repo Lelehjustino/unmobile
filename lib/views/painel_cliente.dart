@@ -23,6 +23,7 @@ class _PainelClienteState extends State<PainelCliente> {
 
   List<dynamic> listaPedidosEmPreparo = [];
   List<dynamic> listaPedidosProntos = [];
+  bool _isFullScreen = true;
 
   @override
   void initState() {
@@ -39,6 +40,17 @@ class _PainelClienteState extends State<PainelCliente> {
     });
 
     painelController.estaNoPainelCozinha.value = false;
+
+    if (Platform.isWindows) {
+      _initWindowsFullScreen();
+    }
+  }
+
+  Future<void> _initWindowsFullScreen() async {
+    await windowManager.ensureInitialized();
+    await windowManager.setFullScreen(true);
+    _isFullScreen = true;
+    if (mounted) setState(() {});
   }
 
   Future<void> _buscarEOrganizar() async {
@@ -251,7 +263,7 @@ class _PainelClienteState extends State<PainelCliente> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Scaffold(
+    Widget body = Scaffold(
       backgroundColor: colorScheme.background,
       drawer: SideNav(),
       body: SafeArea(
@@ -625,5 +637,30 @@ class _PainelClienteState extends State<PainelCliente> {
         ),
       ),
     );
+
+    if (Platform.isWindows) {
+      body = MouseRegion(
+        onHover: (event) async {
+          final dy = event.position.dy;
+          // Se o mouse estiver no topo (ex: 15 pixels), sai do fullscreen para mostrar título/taskbar
+          if (dy <= 15) {
+            if (_isFullScreen) {
+              _isFullScreen = false;
+              await windowManager.setFullScreen(false);
+              await windowManager.maximize();
+            }
+          } else if (dy > 40) {
+            // Se o mouse descer, volta ao estilo Totem (fullscreen)
+            if (!_isFullScreen) {
+              _isFullScreen = true;
+              await windowManager.setFullScreen(true);
+            }
+          }
+        },
+        child: body,
+      );
+    }
+
+    return body;
   }
 }
