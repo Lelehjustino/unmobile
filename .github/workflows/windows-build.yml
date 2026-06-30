@@ -3,6 +3,9 @@ name: Build Windows
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-2022
@@ -18,9 +21,16 @@ jobs:
 
       - run: flutter build windows --release
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-exe
-          path: build/windows/x64/runner/Release      
+      - name: Compactar Release
+        run: |
+          Compress-Archive `
+            -Path build/windows/x64/runner/Release/* `
+            -DestinationPath windows-release.zip
+        shell: pwsh
 
-          
+      - name: Criar Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-${{ github.run_number }}
+          name: Windows Build ${{ github.run_number }}
+          files: windows-release.zip
