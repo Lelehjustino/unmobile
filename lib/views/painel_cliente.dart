@@ -12,6 +12,14 @@ import 'package:window_manager/window_manager.dart';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart';
+
+const _kSinalFullscreenFile = 'painel_fullscreen_signal.tmp';
+
+File _arquivoSinal() {
+  final dir = Directory.systemTemp;
+  return File('${dir.path}${Platform.pathSeparator}$_kSinalFullscreenFile');
+}
+
 class PainelCliente extends StatefulWidget {
   const PainelCliente({super.key});
 
@@ -19,41 +27,214 @@ class PainelCliente extends StatefulWidget {
   State<PainelCliente> createState() => _PainelClienteState();
 }
 
-class _PainelClienteState extends State<PainelCliente> {
+class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserver {
   final painelController = Get.put(PainelController());
-  Timer? _timer;
+
+  // Timer de atualização periódica de dados (5 s)
+  Timer? _timerDados;
+
+  // Timer de inatividade do mouse — reiniciado a cada movimento
+  Timer? _timerMouse;
 
   List<dynamic> listaPedidosEmPreparo = [];
   List<dynamic> listaPedidosProntos = [];
-  bool _isFullScreen = true;
+
+  /// Flag de controle: evita chamadas duplicadas ao window_manager.
+  /// false = interface visível | true = fullscreen ativo
+  bool _isFullScreen = false;
+
+  // ─── Ciclo de vida ──────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    // Inicialização e busca dos dados
+
+    // Observa mudanças de ciclo de vida do app (ex.: foco ganho/perdido)
+    WidgetsBinding.instance.addObserver(this);
+
+    // Busca inicial dos dados
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _buscarEOrganizar();
     });
 
-    // Inicia o timer para atualizar a cada 5 segundos
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+    // Atualização periódica de dados a cada 5 segundos
+    _timerDados = Timer.periodic(const Duration(seconds: 5), (timer) async {
       await painelController.buscarPedidosDelivery();
       organizarListas();
     });
 
     painelController.estaNoPainelCozinha.value = false;
 
+    // Inicializa fullscreen somente no Windows
     if (Platform.isWindows) {
       _initWindowsFullScreen();
     }
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _timerDados?.cancel();
+    _timerMouse?.cancel();
+    super.dispose();
+  }
+
+  /// Chamado pelo sistema quando a janela ganha ou perde foco.
+  /// Quando esta janela recebe foco após uma alternância, lê o arquivo de
+  /// sinalização e entra em fullscreen imediatamente (modo totem).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!Platform.isWindows) return;
+
+    if (state == AppLifecycleState.resumed) {
+      _verificarSinalDeFullscreen();
+    }
+  }
+
+  // ─── Fullscreen kiosk ───────────────────────────────────────────────────────
+
+  /// Inicializa a janela em fullscreen kiosk ao abrir a tela.
   Future<void> _initWindowsFullScreen() async {
     await windowManager.ensureInitialized();
-    await windowManager.setFullScreen(true);
-    _isFullScreen = true;
-    if (mounted) setState(() {});
+    await ocultarInterfaceWindows();
   }
+
+  /// Sai do fullscreen → restaura barra de título → maximiza janela.
+  /// Protegido por flag para evitar chamadas repetidas.
+  Future<void> mostrarInterfaceWindows() async {
+    if (!_isFullScreen) return; // já está visível, nada a fazer
+    _isFullScreen = false;
+    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    await windowManager.setFullScreen(false);
+    await windowManager.maximize();
+  }
+
+  /// Entra em fullscreen → esconde barra de título.
+  /// Protegido por flag para evitar chamadas repetidas.
+  Future<void> ocultarInterfaceWindows() async {
+    if (_isFullScreen) return; // já em fullscreen, nada a fazer
+    _isFullScreen = true;
+    await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+    await windowManager.setFullScreen(true);
+  }
+
+  /// Cancela o timer anterior e inicia um novo de 5 segundos.
+  /// Ao expirar (mouse parado), volta ao fullscreen automaticamente.
+  void reiniciarTimerMouse() {
+    _timerMouse?.cancel();
+    _timerMouse = Timer(const Duration(seconds: 5), () {
+      if (mounted && Platform.isWindows) {
+        ocultarInterfaceWindows();
+      }
+    });
+  }
+
+  // ─── Sinal entre janelas ────────────────────────────────────────────────────
+
+  /// Grava um arquivo de sinalização para que a janela destino
+  /// saiba que precisa entrar em fullscreen assim que receber foco.
+  void _gravarSinalDeFullscreen() {
+    try {
+      _arquivoSinal().writeAsStringSync(
+        DateTime.now().millisecondsSinceEpoch.toString(),
+      );
+    } catch (_) {}
+  }
+
+  /// Lê e deleta o arquivo de sinalização.
+  /// Se existir e for recente (< 3 s), entra em fullscreen imediatamente.
+  Future<void> _verificarSinalDeFullscreen() async {
+    try {
+      final arquivo = _arquivoSinal();
+      if (!arquivo.existsSync()) return;
+
+      final conteudo = arquivo.readAsStringSync().trim();
+      arquivo.deleteSync(); // deleta após ler — arquivo descartável
+
+      final timestamp = int.tryParse(conteudo);
+      if (timestamp == null) return;
+
+      final idade = DateTime.now().millisecondsSinceEpoch - timestamp;
+      if (idade < 3000) {
+        // Sinal foi gerado há menos de 3 segundos → entra em fullscreen
+        // Pequeno delay para o Windows terminar a transição de foco
+        await Future.delayed(const Duration(milliseconds: 150));
+        _isFullScreen = false; // força a re-execução mesmo se já estiver true
+        await ocultarInterfaceWindows();
+        // Inicia o timer de mouse para que a auto-ocultação funcione
+        reiniciarTimerMouse();
+      }
+    } catch (_) {}
+  }
+
+  // ─── Alternância entre janelas ──────────────────────────────────────────────
+
+  /// Localiza as janelas Flutter deste executável via Win32,
+  /// alterna o foco para a outra janela e a coloca em fullscreen.
+  ///
+  /// Regra: só age se existirem exatamente 2 janelas abertas.
+  Future<void> alternarParaOutraJanela() async {
+    if (!Platform.isWindows) return;
+
+    final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
+    int hwnd = FindWindowEx(0, 0, className, nullptr);
+
+    final List<int> appHwnds = [];
+    final myExeName = Platform.resolvedExecutable.toLowerCase();
+
+    // Varre todas as janelas Flutter e filtra as que pertencem a este exe
+    while (hwnd != 0) {
+      final pPid = calloc<Uint32>();
+      GetWindowThreadProcessId(hwnd, pPid);
+      final pid = pPid.value;
+      free(pPid);
+
+      // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+      final hProcess = OpenProcess(0x1000, 0, pid);
+      if (hProcess != 0) {
+        final buffer = wsalloc(MAX_PATH);
+        final size = calloc<Uint32>()..value = MAX_PATH;
+
+        if (QueryFullProcessImageName(hProcess, 0, buffer, size) != 0) {
+          final processPath = buffer.toDartString().toLowerCase();
+          if (processPath == myExeName) {
+            appHwnds.add(hwnd);
+          }
+        }
+
+        free(buffer);
+        free(size);
+        CloseHandle(hProcess);
+      }
+
+      hwnd = FindWindowEx(0, hwnd, className, nullptr);
+    }
+
+    free(className);
+
+    // Só alterna se houver exatamente 2 janelas abertas
+    if (appHwnds.length != 2) return;
+
+    final currentForeground = GetForegroundWindow();
+    final targetHwnd = appHwnds.firstWhere(
+      (h) => h != currentForeground,
+      orElse: () => 0,
+    );
+
+    if (targetHwnd == 0) return;
+
+    // Grava sinal ANTES de mudar o foco, para que a janela destino leia
+    _gravarSinalDeFullscreen();
+
+    // SW_SHOWMAXIMIZED = 3 — restaura se minimizada e maximiza
+    ShowWindow(targetHwnd, 3);
+
+    // Traz para frente
+    SetForegroundWindow(targetHwnd);
+  }
+
+  // ─── Dados ──────────────────────────────────────────────────────────────────
 
   Future<void> _buscarEOrganizar() async {
     await painelController.buscarPedidosProntos();
@@ -61,30 +242,24 @@ class _PainelClienteState extends State<PainelCliente> {
   }
 
   void organizarListas() {
-    if (mounted) {
-      listaPedidosEmPreparo.clear();
-      listaPedidosProntos.clear();
-      setState(() {
-        if (painelController.listaPedidosDelivery.isNotEmpty) {
-          for (var pedido in painelController.listaPedidosDelivery) {
-            // No controller o campo se chama 'statuspainel'
-            // em preparo = 1
-            if (pedido['statuspainel'] == "1") {
-              listaPedidosEmPreparo.add(pedido);
-              // pronto = 2
-            } else if (pedido['statuspainel'] == "2") {
-              listaPedidosProntos.add(pedido);
-            }
+    if (!mounted) return;
+    listaPedidosEmPreparo.clear();
+    listaPedidosProntos.clear();
+    setState(() {
+      if (painelController.listaPedidosDelivery.isNotEmpty) {
+        for (var pedido in painelController.listaPedidosDelivery) {
+          if (pedido['statuspainel'] == '1') {
+            listaPedidosEmPreparo.add(pedido);
+          } else if (pedido['statuspainel'] == '2') {
+            listaPedidosProntos.add(pedido);
           }
         }
-      });
-    }
+      }
+    });
   }
 
   Future<void> mudarStatusPedido(String numeroPedido) async {
-    // update o status do pedido para 3
     try {
-      // mudar para 3
       await Connection().transaction([
         "UPDATE delivery SET statuspainel = 3 WHERE numeropedido_FK = '$numeroPedido'",
         "UPDATE servidorproducao SET status = 3 WHERE numeropedido_FK = '$numeroPedido'",
@@ -95,7 +270,8 @@ class _PainelClienteState extends State<PainelCliente> {
     _buscarEOrganizar();
   }
 
-  // Dialogo com dois botões de erro
+  // ─── Diálogo padrão ─────────────────────────────────────────────────────────
+
   Future<void> shownDialogTwoBottom({
     required BuildContext context,
     String title = 'Confirmação',
@@ -107,41 +283,37 @@ class _PainelClienteState extends State<PainelCliente> {
     VoidCallback? onCancel,
     TextEditingController? textController,
     FocusNode? focusNode,
-    ValueChanged<String>? onSubmitted, // Callback ao submeter o texto
+    ValueChanged<String>? onSubmitted,
   }) {
     return showDialog(
       context: context,
-      barrierDismissible: false, // Não pode fechar tocando fora
+      barrierDismissible: false,
       builder: (ctx) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Ícone central
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Theme.of(ctx).colorScheme.primary.withOpacity(0.08),
                   ),
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   child: Icon(
                     icon,
                     size: 40,
                     color: Theme.of(ctx).colorScheme.primary,
                   ),
                 ),
-
-                SizedBox(height: 10),
-
-                // Título opcional
+                const SizedBox(height: 10),
                 if (title.isNotEmpty)
                   Padding(
-                    padding: EdgeInsets.only(bottom: 8.0),
+                    padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
                       title,
                       style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
@@ -150,13 +322,9 @@ class _PainelClienteState extends State<PainelCliente> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-
-                // SizedBox(height: 5),
-
-                // Texto centralizado
                 if (message != null && message.isNotEmpty)
                   Padding(
-                    padding: EdgeInsets.only(bottom: 10.0),
+                    padding: const EdgeInsets.only(bottom: 10.0),
                     child: Text(
                       message,
                       textAlign: TextAlign.center,
@@ -167,81 +335,70 @@ class _PainelClienteState extends State<PainelCliente> {
                       ),
                     ),
                   ),
-
-                // O SEU NOVO CAMPO DE TEXTO COM OS CONTROLADORES
-                if (textController !=
-                    null) // Só mostra o TextField se um controller for fornecido
+                if (textController != null)
                   Padding(
-                    padding: EdgeInsets.only(bottom: 15.0),
+                    padding: const EdgeInsets.only(bottom: 15.0),
                     child: TextField(
-                      keyboardType: TextInputType.number, // TECLADO NUMÉRICO
-                      controller: textController, // Usa o controller passado
-                      focusNode: focusNode, // Usa o focusNode passado
-                      onSubmitted: onSubmitted, // Usa o onSubmitted passado
-                      autofocus:
-                          focusNode ==
-                          true, // Autofoco padrão se não houver FocusNode
-                      textAlign:
-                          TextAlign.center, // Centraliza o texto e o ponteiro
-                      decoration: InputDecoration(
+                      keyboardType: TextInputType.number,
+                      controller: textController,
+                      focusNode: focusNode,
+                      onSubmitted: onSubmitted,
+                      autofocus: focusNode == null,
+                      textAlign: TextAlign.center,
+                      decoration: const InputDecoration(
                         hintText: 'Digite aqui...',
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.all(12),
                       ),
                     ),
                   ),
-
-                // Botões centralizados
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Botão Cancelar
                     ElevatedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
                         if (onCancel != null) onCancel();
                       },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        backgroundColor: Theme.of(ctx).colorScheme.error,
+                      ),
                       child: Text(
                         cancelText.toUpperCase(),
                         style: TextStyle(
                           color: Theme.of(ctx).colorScheme.onPrimary,
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        backgroundColor: Theme.of(ctx).colorScheme.error,
-                      ),
                     ),
-                    SizedBox(width: 10),
-                    // Botão Confirmar
+                    const SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
                         if (onConfirm != null) onConfirm();
                       },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        backgroundColor:
+                            Theme.of(ctx).colorScheme.primary.withOpacity(0.05),
+                      ),
                       child: Text(
                         confirmText.toUpperCase(),
                         style: TextStyle(
                           color: Theme.of(ctx).colorScheme.onPrimary,
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        backgroundColor: Theme.of(
-                          ctx,
-                        ).colorScheme.primary.withOpacity(0.05),
                       ),
                     ),
                   ],
@@ -254,77 +411,7 @@ class _PainelClienteState extends State<PainelCliente> {
     );
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  /// Verifica quantas instâncias (janelas) do mesmo executável estão abertas.
-  /// Se houver exatamente 2, alterna o foco para a outra janela (a que não está em foreground no momento)
-  /// e garante que ela seja maximizada.
-  Future<void> _verificarEAlternarJanelas() async {
-    if (!Platform.isWindows) return;
-
-    final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
-    int hwnd = FindWindowEx(0, 0, className, nullptr);
-    
-    // Lista para guardar os ponteiros das janelas abertas
-    List<int> appHwnds = [];
-    // Caminho do próprio executável rodando (ex: C:\..\under_recepcao.exe)
-    final myExeName = Platform.resolvedExecutable.toLowerCase();
-
-    // Varre todas as janelas do tipo FLUTTER (FindWindowEx vai para a próxima a cada chamada)
-    while (hwnd != 0) {
-      final pPid = calloc<Uint32>();
-      GetWindowThreadProcessId(hwnd, pPid);
-      final pid = pPid.value;
-      free(pPid);
-
-      // 0x1000 = PROCESS_QUERY_LIMITED_INFORMATION (Suficiente para pegar o caminho do executável)
-      final hProcess = OpenProcess(0x1000, 0, pid);
-      if (hProcess != 0) {
-        final buffer = wsalloc(MAX_PATH);
-        final size = calloc<Uint32>()..value = MAX_PATH;
-        
-        // Verifica se conseguiu recuperar o path daquele processo
-        if (QueryFullProcessImageName(hProcess, 0, buffer, size) != 0) {
-          final processPath = buffer.toDartString().toLowerCase();
-          // Se for o mesmo executável, assumimos que é uma janela irmã
-          if (processPath == myExeName) {
-            appHwnds.add(hwnd);
-          }
-        }
-        free(buffer);
-        free(size);
-        CloseHandle(hProcess);
-      }
-      // Pega próxima janela da fila
-      hwnd = FindWindowEx(0, hwnd, className, nullptr);
-    }
-    // Libera a string ffi da memória
-    free(className);
-
-    // Regra: "Se existirem duas janelas/telas abertas, alternar para a outra janela"
-    if (appHwnds.length == 2) {
-      // Como o usuário acabou de clicar duas vezes, essa janela atual está focada
-      final currentForeground = GetForegroundWindow();
-      
-      // Procura na lista a janela que não seja a janela focada
-      int targetHwnd = appHwnds.firstWhere(
-        (h) => h != currentForeground, 
-        orElse: () => 0
-      );
-
-      if (targetHwnd != 0) {
-        // Envia o comando para maximizar caso esteja minimizada
-        // 3 representa o comando nativo Windows SW_SHOWMAXIMIZED
-        ShowWindow(targetHwnd, 3);
-        // Coloca a janela encontrada em primeiro plano no Windows
-        SetForegroundWindow(targetHwnd);
-      }
-    }
-  }
+  // ─── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -341,50 +428,41 @@ class _PainelClienteState extends State<PainelCliente> {
             final maxH = constraints.maxHeight;
             final isWideScreen = maxW > 768;
 
-            //  ESCALA DINÂMICA BASEADA NA RESOLUÇÃO 
-            // Todos os tamanhos são calculados proporcionalmente
-            // usando maxW e maxH como referência
+            // ── Escala dinâmica proporcional à resolução ──────────────────────
 
-            // AppBar responsiva
             final double appBarHeight = (maxH * 0.08).clamp(50.0, 120.0);
             final double appBarFontSize = (maxW * 0.018).clamp(14.0, 42.0);
             final double appBarLetterSpacing = (maxW * 0.002).clamp(1.0, 6.0);
             final double iconSize = (appBarHeight * 0.5).clamp(24.0, 56.0);
 
-            // Cabeçalhos das colunas (EM PREPARO / PRONTO)
             final double headerFontSize = (maxW * 0.022).clamp(16.0, 52.0);
             final double headerPaddingV = (maxH * 0.022).clamp(10.0, 40.0);
 
-            // Itens da lista – coluna EM PREPARO
             final double preparoNumeroFontSize = (maxW * 0.035).clamp(28.0, 80.0);
             final double preparoNomeFontSize = (maxW * 0.022).clamp(16.0, 52.0);
             final double preparoNumeroWidth = (maxW * 0.08).clamp(70.0, 200.0);
 
-            // Itens da lista – coluna PRONTO (maiores para destaque)
             final double prontoNumeroFontSize = (maxW * 0.048).clamp(36.0, 110.0);
             final double prontoNomeFontSize = (maxW * 0.032).clamp(22.0, 72.0);
             final double prontoNumeroWidth = (maxW * 0.09).clamp(80.0, 240.0);
 
-            // Espaçamentos dinâmicos
             final double itemSpacingH = (maxW * 0.012).clamp(8.0, 30.0);
             final double listPaddingH = (maxW * 0.018).clamp(10.0, 44.0);
             final double listPaddingV = (maxH * 0.018).clamp(10.0, 36.0);
             final double separatorPaddingV = (maxH * 0.005).clamp(2.0, 12.0);
 
-            //  APPBAR CUSTOMIZADA 
+            // ── AppBar customizada ────────────────────────────────────────────
+            // GestureDetector.onDoubleTap → alterna para a outra janela
             final appBar = GestureDetector(
-              onDoubleTap: () async {
-                if (Platform.isWindows) {
-                  await _verificarEAlternarJanelas();
-                }
-              },
+              onDoubleTap: Platform.isWindows
+                  ? () => alternarParaOutraJanela()
+                  : null,
               child: Container(
                 width: double.infinity,
                 height: appBarHeight,
                 padding: EdgeInsets.symmetric(horizontal: maxW * 0.01),
                 child: Row(
                   children: [
-                    // Botão do drawer
                     Builder(
                       builder: (ctx) => IconButton(
                         icon: Image.asset(
@@ -396,10 +474,9 @@ class _PainelClienteState extends State<PainelCliente> {
                         onPressed: () => Scaffold.of(ctx).openDrawer(),
                       ),
                     ),
-                    // Título centralizado
                     Expanded(
                       child: Text(
-                        "ACOMPANHE SEU PEDIDO",
+                        'ACOMPANHE SEU PEDIDO',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.montserrat(
                           color: colorScheme.primary,
@@ -408,22 +485,20 @@ class _PainelClienteState extends State<PainelCliente> {
                           fontSize: appBarFontSize,
                         ),
                       ),
-                    ), 
+                    ),
                     Container(
                       width: iconSize + 16,
                       height: iconSize + 16,
                       color: Colors.transparent,
                     ),
-                    // SizedBox(width: iconSize + 16)),
                   ],
                 ),
               ),
             );
 
-            //  COLUNA EM PREPARO 
+            // ── Coluna EM PREPARO ─────────────────────────────────────────────
             final colunaPreparo = Column(
               children: [
-                // Cabeçalho
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.symmetric(vertical: headerPaddingV),
@@ -437,7 +512,7 @@ class _PainelClienteState extends State<PainelCliente> {
                     ),
                   ),
                   child: Text(
-                    "EM PREPARO",
+                    'EM PREPARO',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.montserrat(
                       fontSize: headerFontSize,
@@ -447,7 +522,6 @@ class _PainelClienteState extends State<PainelCliente> {
                     ),
                   ),
                 ),
-                // Lista de pedidos
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.symmetric(
@@ -472,7 +546,6 @@ class _PainelClienteState extends State<PainelCliente> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // NUMERO — largura proporcional
                             SizedBox(
                               width: preparoNumeroWidth,
                               child: Text(
@@ -487,7 +560,6 @@ class _PainelClienteState extends State<PainelCliente> {
                               ),
                             ),
                             SizedBox(width: itemSpacingH),
-                            // NOME — ocupa todo o espaço restante
                             Expanded(
                               child: Text(
                                 nomeCliente.toUpperCase(),
@@ -510,16 +582,14 @@ class _PainelClienteState extends State<PainelCliente> {
               ],
             );
 
-            //  COLUNA PRONTO 
+            // ── Coluna PRONTO ─────────────────────────────────────────────────
             final colunaPronto = Column(
               children: [
-                // Cabeçalho
+                // Cabeçalho também responde ao duplo clique para alternar janelas
                 GestureDetector(
-                  onDoubleTap: () async {
-                    if (Platform.isWindows) {
-                      await _verificarEAlternarJanelas();
-                    }
-                  },
+                  onDoubleTap: Platform.isWindows
+                      ? () => alternarParaOutraJanela()
+                      : null,
                   child: Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(vertical: headerPaddingV),
@@ -533,7 +603,7 @@ class _PainelClienteState extends State<PainelCliente> {
                       ),
                     ),
                     child: Text(
-                      "PRONTO",
+                      'PRONTO',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.montserrat(
                         fontSize: headerFontSize,
@@ -544,7 +614,6 @@ class _PainelClienteState extends State<PainelCliente> {
                     ),
                   ),
                 ),
-                // Lista de pedidos
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.symmetric(
@@ -571,22 +640,19 @@ class _PainelClienteState extends State<PainelCliente> {
                           onTap: () {
                             shownDialogTwoBottom(
                               context: context,
-                              title: "Pedido $numeroPedido retirado?",
+                              title: 'Pedido $numeroPedido retirado?',
                               icon: Icons.check,
                               onConfirm: () async {
-                                 // update o status do pedido para entregue
-                                  await mudarStatusPedido(numeroPedidoReal);
-                                  await painelController.buscarPedidosProntos();
-                                  _buscarEOrganizar();
+                                await mudarStatusPedido(numeroPedidoReal);
+                                await painelController.buscarPedidosProntos();
+                                _buscarEOrganizar();
                               },
-                              onCancel: () async {
-                              },
+                              onCancel: () {},
                             );
                           },
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // NUMERO — largura proporcional (maior que "em preparo")
                               SizedBox(
                                 width: prontoNumeroWidth,
                                 child: Text(
@@ -601,7 +667,6 @@ class _PainelClienteState extends State<PainelCliente> {
                                 ),
                               ),
                               SizedBox(width: itemSpacingH),
-                              // NOME — ocupa todo o espaço restante
                               Expanded(
                                 child: Text(
                                   nomeCliente.toUpperCase(),
@@ -625,9 +690,8 @@ class _PainelClienteState extends State<PainelCliente> {
               ],
             );
 
-            //  LAYOUT FINAL 
+            // ── Layout final ──────────────────────────────────────────────────
             if (isWideScreen) {
-              // Tela larga: AppBar + colunas lado a lado
               return Column(
                 children: [
                   appBar,
@@ -647,7 +711,6 @@ class _PainelClienteState extends State<PainelCliente> {
                 ],
               );
             } else {
-              // Tela estreita: AppBar + colunas empilhadas
               return Column(
                 children: [
                   appBar,
@@ -666,28 +729,15 @@ class _PainelClienteState extends State<PainelCliente> {
       ),
     );
 
+    // ── MouseRegion (somente Windows) ─────────────────────────────────────────
+    // Envolve TODO o Scaffold. A cada movimento do mouse:
+    //   1. Sai do fullscreen (mostra barra de título + taskbar)
+    //   2. Reinicia o timer de 5 s de inatividade
     if (Platform.isWindows) {
-      final screenHeight = MediaQuery.of(context).size.height;
-
       body = MouseRegion(
-        onHover: (event) async {
-          final dy = event.position.dy;
-          // Se o mouse estiver no topo (<= 15) ou embaixo (>= screenHeight - 15) 
-          // sai do fullscreen para mostrar título/taskbar nativa
-          if (dy <= 15 || dy >= screenHeight - 15) {
-            if (_isFullScreen) {
-              _isFullScreen = false;
-              await windowManager.setFullScreen(false);
-              await windowManager.maximize();
-            }
-          } 
-          // Se o mouse descer ou subir de volta para a região segura, volta a tela cheia
-          else if (dy > 40 && dy < screenHeight - 40) {
-            if (!_isFullScreen) {
-              _isFullScreen = true;
-              await windowManager.setFullScreen(true);
-            }
-          }
+        onHover: (_) {
+          mostrarInterfaceWindows();
+          reiniciarTimerMouse();
         },
         child: body,
       );
