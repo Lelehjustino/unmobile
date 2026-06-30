@@ -14,6 +14,7 @@ import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
 import 'package:un_recepcao/views/notes_page.dart';
 import 'package:un_recepcao/views/recepcao_page.dart';
+import 'package:window_manager/window_manager.dart';
 
 class SideNav extends StatefulWidget {
   const SideNav({super.key});
@@ -396,9 +397,11 @@ class SideNavState extends State<SideNav> {
               ),
               selected: currentRoute == '/painel_cliente',
               selectedTileColor: colorScheme.primary,
-              onTap: () {
+              onTap: () async {
                 Get.toNamed('/painel_cliente');
                 funcoesController.zerarAtendimento();
+                await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+                await windowManager.setFullScreen(true);
               },
             ),
             if(aparecerKDS && rotaHome)

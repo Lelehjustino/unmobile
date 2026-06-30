@@ -7,18 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
+import 'package:un_recepcao/models/monitor.dart';
 import 'package:un_recepcao/widgets/side_nav.dart';
-import 'package:window_manager/window_manager.dart';
-import 'dart:ffi';
-import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart';
-
-const _kSinalFullscreenFile = 'painel_fullscreen_signal.tmp';
-
-File _arquivoSinal() {
-  final dir = Directory.systemTemp;
-  return File('${dir.path}${Platform.pathSeparator}$_kSinalFullscreenFile');
-}
+import 'package:window_manager/window_manager.dart';
 
 class PainelCliente extends StatefulWidget {
   const PainelCliente({super.key});
@@ -80,16 +72,9 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
   }
 
   /// Chamado pelo sistema quando a janela ganha ou perde foco.
-  /// Quando esta janela recebe foco após uma alternância, lê o arquivo de
-  /// sinalização e entra em fullscreen imediatamente (modo totem).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (!Platform.isWindows) return;
-
-    if (state == AppLifecycleState.resumed) {
-      _verificarSinalDeFullscreen();
-    }
   }
 
   // ─── Fullscreen kiosk ───────────────────────────────────────────────────────
@@ -130,51 +115,94 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     });
   }
 
-  // ─── Sinal entre janelas ────────────────────────────────────────────────────
+  // ─── Alternância de monitores ────────────────────────────────────────────────
 
-  /// Grava um arquivo de sinalização para que a janela destino
-  /// saiba que precisa entrar em fullscreen assim que receber foco.
-  void _gravarSinalDeFullscreen() {
-    try {
-      _arquivoSinal().writeAsStringSync(
-        DateTime.now().millisecondsSinceEpoch.toString(),
-      );
-    } catch (_) {}
+  /// Move a janela atual para o próximo monitor disponível.
+  ///
+  /// Algoritmo (somente Win32, sem callbacks nem Pointer.fromFunction):
+  ///   1. Obtém o HWND da janela via [windowManager.getId].
+  ///   2. Chama [MonitorFromWindow] para saber em qual monitor a janela está.
+  ///   3. Chama [enumerarMonitores] (usa MonitorFromPoint + GetMonitorInfo)
+  ///      para obter a lista ordenada da esquerda para a direita.
+  ///   4. Se só houver um monitor, encerra.
+  ///   5. Identifica o índice do monitor atual e calcula o próximo (circular).
+  ///   6. Sai do fullscreen, move a janela com [SetWindowPos], e reativa
+  ///      o fullscreen após um breve delay para o Windows processar o reposicionamento.
+  Future<void> moverParaOutroMonitor() async {
+    if (!Platform.isWindows) return;
+
+    // ── 1. Obtém o HWND da janela principal ──────────────────────────────────
+    final hwnd = await windowManager.getId();
+    if (hwnd == 0) {
+      debugPrint('[Monitor] HWND inválido — operação cancelada.');
+      return;
+    }
+
+    // ── 2. Enumera os monitores sem callbacks ────────────────────────────────
+    final monitores = enumerarMonitores();
+    debugPrint('[Monitor] Total de monitores detectados: ${monitores.length}');
+
+    if (monitores.length < 2) {
+      debugPrint('[Monitor] Apenas 1 monitor ativo. Nenhuma ação necessária.');
+      return;
+    }
+
+    // ── 3. Descobre em qual monitor a janela está atualmente ─────────────────
+    //   MONITOR_DEFAULTTONEAREST: retorna o monitor mais próximo caso a janela
+    //   esteja parcialmente fora de qualquer monitor.
+    final hMonitorAtual = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+
+    final indiceAtual = monitores.indexWhere((m) => m.handle == hMonitorAtual);
+    if (indiceAtual == -1) {
+      debugPrint('[Monitor] Monitor atual não encontrado na lista.');
+      return;
+    }
+
+    // ── 4. Calcula o índice do próximo monitor (circular) ────────────────────
+    final indiceDestino = (indiceAtual + 1) % monitores.length;
+    final destino = monitores[indiceDestino];
+
+    debugPrint(
+      '[Monitor] Movendo do monitor ${indiceAtual + 1} '
+      'para o monitor ${indiceDestino + 1}: $destino',
+    );
+
+    // ── 5. Sai do fullscreen antes de mover ─────────────────────────────────
+    //   É necessário sair do fullscreen para que o SetWindowPos possa
+    //   reposicionar a janela corretamente no outro monitor.
+    _isFullScreen = false; // reseta a flag antes de chamar window_manager
+    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    await windowManager.setFullScreen(false);
+
+    // Aguarda o Windows processar a saída do fullscreen
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    // ── 6. Move e redimensiona a janela para cobrir o monitor destino ────────
+    //   SWP_NOZORDER: não altera a ordem Z (z-order) da janela.
+    //   SWP_SHOWWINDOW: garante que a janela seja exibida após o reposicionamento.
+    SetWindowPos(
+      hwnd,
+      HWND_TOP,
+      destino.left,
+      destino.top,
+      destino.width,
+      destino.height,
+      SWP_NOZORDER | SWP_SHOWWINDOW,
+    );
+
+    // Aguarda o Windows processar o reposicionamento antes de reativar fullscreen
+    await Future.delayed(const Duration(milliseconds: 250));
+
+    // ── 7. Reativa o fullscreen no novo monitor ──────────────────────────────
+    await ocultarInterfaceWindows();
+
+    debugPrint('[Monitor] Janela movida e fullscreen reativado com sucesso.');
   }
 
   /// Lê e deleta o arquivo de sinalização.
   /// Se existir e for recente (< 3 s), entra em fullscreen imediatamente.
-  Future<void> _verificarSinalDeFullscreen() async {
-    try {
-      final arquivo = _arquivoSinal();
-      if (!arquivo.existsSync()) return;
-
-      final conteudo = arquivo.readAsStringSync().trim();
-      arquivo.deleteSync(); // deleta após ler — arquivo descartável
-
-      final timestamp = int.tryParse(conteudo);
-      if (timestamp == null) return;
-
-      final idade = DateTime.now().millisecondsSinceEpoch - timestamp;
-      if (idade < 3000) {
-        // Sinal foi gerado há menos de 3 segundos → entra em fullscreen
-        // Pequeno delay para o Windows terminar a transição de foco
-        await Future.delayed(const Duration(milliseconds: 150));
-        _isFullScreen = false; // força a re-execução mesmo se já estiver true
-        await ocultarInterfaceWindows();
-        // Inicia o timer de mouse para que a auto-ocultação funcione
-        reiniciarTimerMouse();
-      }
-    } catch (_) {}
-  }
-
-  // ─── Alternância entre janelas ──────────────────────────────────────────────
-
-  /// Localiza as janelas Flutter deste executável via Win32,
-  /// alterna o foco para a outra janela e a coloca em fullscreen.
-  ///
-  /// Regra: só age se existirem exatamente 2 janelas abertas.
-  Future<void> alternarParaOutraJanela() async {
+  
+  /* Future<void> alternarParaOutraJanela() async {
     if (!Platform.isWindows) return;
 
     final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
@@ -232,7 +260,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
     // Traz para frente
     SetForegroundWindow(targetHwnd);
-  }
+  } */
 
   // ─── Dados ──────────────────────────────────────────────────────────────────
 
@@ -455,7 +483,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
             // GestureDetector.onDoubleTap → alterna para a outra janela
             final appBar = GestureDetector(
               onDoubleTap: Platform.isWindows
-                  ? () => alternarParaOutraJanela()
+                  ? () => moverParaOutroMonitor()
                   : null,
               child: Container(
                 width: double.infinity,
@@ -588,7 +616,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                 // Cabeçalho também responde ao duplo clique para alternar janelas
                 GestureDetector(
                   onDoubleTap: Platform.isWindows
-                      ? () => alternarParaOutraJanela()
+                      ? () => moverParaOutroMonitor()
                       : null,
                   child: Container(
                     width: double.infinity,
