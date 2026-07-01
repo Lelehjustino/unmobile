@@ -452,8 +452,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
         if (valor5.isNotEmpty && valor5 != 'null') {
           try {
             DateTime data = DateTime.parse(valor5);
-            dataFormatada =
-                '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
+            dataFormatada = '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
           } catch (_) {
             dataFormatada = '';
           }
@@ -2669,13 +2668,15 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     });
 
     // Solicita foco somente após o frame atual
-    _solicitarFoco(comandaFocusNode, 'comanda');
+    // _solicitarFoco(comandaFocusNode, 'comanda');
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
-
+      _solicitarFoco(comandaFocusNode, 'comanda');
+      
       if (comandaFocusNode.hasFocus) {
         _scrollToField(comandaFocusNode);
+        _solicitarFoco(comandaFocusNode, 'comanda');
       }
     });
   }

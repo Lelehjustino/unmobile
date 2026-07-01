@@ -77,16 +77,15 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     super.didChangeAppLifecycleState(state);
   }
 
-  // ─── Fullscreen kiosk ───────────────────────────────────────────────────────
+  // Fullscreen kiosk
 
-  /// Inicializa a janela em fullscreen kiosk ao abrir a tela.
+  // Inicializa a janela em fullscreen kiosk ao abrir a tela.
   Future<void> _initWindowsFullScreen() async {
     await windowManager.ensureInitialized();
     await ocultarInterfaceWindows();
   }
 
-  /// Sai do fullscreen → restaura barra de título → maximiza janela.
-  /// Protegido por flag para evitar chamadas repetidas.
+  // Sai do fullscreen → restaura barra de título → maximiza janela.
   Future<void> mostrarInterfaceWindows() async {
     if (!_isFullScreen) return; // já está visível, nada a fazer
     _isFullScreen = false;
@@ -95,8 +94,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     await windowManager.maximize();
   }
 
-  /// Entra em fullscreen → esconde barra de título.
-  /// Protegido por flag para evitar chamadas repetidas.
+  // Entra em fullscreen → esconde barra de título.
   Future<void> ocultarInterfaceWindows() async {
     if (_isFullScreen) return; // já em fullscreen, nada a fazer
     _isFullScreen = true;
@@ -104,8 +102,8 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     await windowManager.setFullScreen(true);
   }
 
-  /// Cancela o timer anterior e inicia um novo de 5 segundos.
-  /// Ao expirar (mouse parado), volta ao fullscreen automaticamente.
+  // Cancela o timer anterior e inicia um novo de 5 segundos.
+  // Ao expirar (mouse parado), volta ao fullscreen automaticamente.
   void reiniciarTimerMouse() {
     _timerMouse?.cancel();
     _timerMouse = Timer(const Duration(seconds: 5), () {
@@ -115,19 +113,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     });
   }
 
-  // ─── Alternância de monitores ────────────────────────────────────────────────
-
-  /// Move a janela atual para o próximo monitor disponível.
-  ///
-  /// Algoritmo (somente Win32, sem callbacks nem Pointer.fromFunction):
-  ///   1. Obtém o HWND da janela via [windowManager.getId].
-  ///   2. Chama [MonitorFromWindow] para saber em qual monitor a janela está.
-  ///   3. Chama [enumerarMonitores] (usa MonitorFromPoint + GetMonitorInfo)
-  ///      para obter a lista ordenada da esquerda para a direita.
-  ///   4. Se só houver um monitor, encerra.
-  ///   5. Identifica o índice do monitor atual e calcula o próximo (circular).
-  ///   6. Sai do fullscreen, move a janela com [SetWindowPos], e reativa
-  ///      o fullscreen após um breve delay para o Windows processar o reposicionamento.
+  // Alternância de monitores
   Future<void> moverParaOutroMonitor() async {
     if (!Platform.isWindows) return;
 
@@ -162,11 +148,6 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     final indiceDestino = (indiceAtual + 1) % monitores.length;
     final destino = monitores[indiceDestino];
 
-    debugPrint(
-      '[Monitor] Movendo do monitor ${indiceAtual + 1} '
-      'para o monitor ${indiceDestino + 1}: $destino',
-    );
-
     // ── 5. Sai do fullscreen antes de mover ─────────────────────────────────
     //   É necessário sair do fullscreen para que o SetWindowPos possa
     //   reposicionar a janela corretamente no outro monitor.
@@ -178,8 +159,6 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     await Future.delayed(const Duration(milliseconds: 150));
 
     // ── 6. Move e redimensiona a janela para cobrir o monitor destino ────────
-    //   SWP_NOZORDER: não altera a ordem Z (z-order) da janela.
-    //   SWP_SHOWWINDOW: garante que a janela seja exibida após o reposicionamento.
     SetWindowPos(
       hwnd,
       HWND_TOP,
@@ -195,75 +174,9 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
     // ── 7. Reativa o fullscreen no novo monitor ──────────────────────────────
     await ocultarInterfaceWindows();
-
-    debugPrint('[Monitor] Janela movida e fullscreen reativado com sucesso.');
   }
 
-  /// Lê e deleta o arquivo de sinalização.
-  /// Se existir e for recente (< 3 s), entra em fullscreen imediatamente.
-  
-  /* Future<void> alternarParaOutraJanela() async {
-    if (!Platform.isWindows) return;
-
-    final className = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
-    int hwnd = FindWindowEx(0, 0, className, nullptr);
-
-    final List<int> appHwnds = [];
-    final myExeName = Platform.resolvedExecutable.toLowerCase();
-
-    // Varre todas as janelas Flutter e filtra as que pertencem a este exe
-    while (hwnd != 0) {
-      final pPid = calloc<Uint32>();
-      GetWindowThreadProcessId(hwnd, pPid);
-      final pid = pPid.value;
-      free(pPid);
-
-      // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-      final hProcess = OpenProcess(0x1000, 0, pid);
-      if (hProcess != 0) {
-        final buffer = wsalloc(MAX_PATH);
-        final size = calloc<Uint32>()..value = MAX_PATH;
-
-        if (QueryFullProcessImageName(hProcess, 0, buffer, size) != 0) {
-          final processPath = buffer.toDartString().toLowerCase();
-          if (processPath == myExeName) {
-            appHwnds.add(hwnd);
-          }
-        }
-
-        free(buffer);
-        free(size);
-        CloseHandle(hProcess);
-      }
-
-      hwnd = FindWindowEx(0, hwnd, className, nullptr);
-    }
-
-    free(className);
-
-    // Só alterna se houver exatamente 2 janelas abertas
-    if (appHwnds.length != 2) return;
-
-    final currentForeground = GetForegroundWindow();
-    final targetHwnd = appHwnds.firstWhere(
-      (h) => h != currentForeground,
-      orElse: () => 0,
-    );
-
-    if (targetHwnd == 0) return;
-
-    // Grava sinal ANTES de mudar o foco, para que a janela destino leia
-    _gravarSinalDeFullscreen();
-
-    // SW_SHOWMAXIMIZED = 3 — restaura se minimizada e maximiza
-    ShowWindow(targetHwnd, 3);
-
-    // Traz para frente
-    SetForegroundWindow(targetHwnd);
-  } */
-
-  // ─── Dados ──────────────────────────────────────────────────────────────────
-
+  // Dados
   Future<void> _buscarEOrganizar() async {
     await painelController.buscarPedidosProntos();
     organizarListas();
