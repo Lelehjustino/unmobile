@@ -243,7 +243,7 @@ class InicialPageState extends State<InicialPage> {
       // ── ETAPA 1: tentar servidor salvo ────────────────────────────────────
       _inicialCtrl.atualizar(
         StatusConexao.conectandoSalvo,
-        'Conectando ao servidor...',
+        '',
       );
 
       await _loadNumeroLicenca();
