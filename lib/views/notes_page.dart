@@ -119,6 +119,13 @@ class NotesPageState extends State<NotesPage> {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       _atualizarHora();
     });
+
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (nomeFocusNode.canRequestFocus) {
+        nomeFocusNode.requestFocus();
+      }
+    });
+
     _focusNode.addListener(() {
       setState(() {
         _isFocused = _focusNode.hasFocus;
@@ -305,6 +312,49 @@ class NotesPageState extends State<NotesPage> {
   Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
+    if (modoJson != null) {
+      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
+      setState(() {
+        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+        if (funcoesController.logicaPorComanda.value){
+          if (modosSalvos.contains("Comanda")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorMesa.value){
+          if (modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorComandaNaMesa.value){
+          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+      });
+    } else {
+      setState(() {
+        naoAparecerMapa = true;
+        aparecerCheckInOut = false;
+      });
+    }
+  }
+  /* Future<void> _carregarModos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modoJson = prefs.getString('modo_padrao');
 
     if (modoJson != null) {
       final modosSalvos = Set<String>.from(jsonDecode(modoJson));
@@ -330,7 +380,7 @@ class NotesPageState extends State<NotesPage> {
         aparecerCheckInOut = true; // Mantendo o padrão deste arquivo para esta variável se nada salvo
       });
     }
-  }
+  } */
 
   // Carregar check
   Future<void> _carregarchecks() async {

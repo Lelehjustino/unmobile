@@ -31,7 +31,7 @@ class MapaPageState extends State<MapaPage> {
   final painelController = Get.put(PainelController());
 
   final TextEditingController comandaController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  // final FocusNode _focusNode = FocusNode();
 
   // Teclado barra de busca
   final TextEditingController barraBusca = TextEditingController();
@@ -105,20 +105,17 @@ class MapaPageState extends State<MapaPage> {
   void initState() {
     super.initState();
 
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (_searchFocusNode.canRequestFocus) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+
     painelController.estaNoPainelCozinha.value = false;
 
     _atualizarHora();
     _timer = Timer.periodic(Duration(seconds: 1), (_) => _atualizarHora());
-    _focusNode.addListener(() {
-      setState(() {
-        _isFocused = _focusNode.hasFocus;
-      });
-    });
-    _searchFocusNode.addListener(() {
-      setState(() {
-        _isFocused = _searchFocusNode.hasFocus;
-      });
-    });
+    
     _carregarModo();
     _carregarNote();
     _carregarchecks();
@@ -132,13 +129,6 @@ class MapaPageState extends State<MapaPage> {
     buscarTipoPedido();
     _loadNomeEmpresa();
     _loadNumeroLicenca();
-
-    // Para fazer requisições em determinado tempo (2/3)
-    /* _timerMesas = Timer.periodic(Duration(seconds: 5), (timer) {
-      if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
-        _toggleAberta();
-      }
-    }); */
   }
 
   // Load nomeEmpresa
@@ -491,48 +481,10 @@ class MapaPageState extends State<MapaPage> {
     }
   }
 
-  // Adiciona um número
-  void _adicionarNumero(String numero) {
-    HapticFeedback.lightImpact();
-    setState(() {
-      final textoAtual = comandaController.text;
-      final novoTexto = textoAtual + numero;
-      comandaController.text = novoTexto;
-      comandaController.selection = TextSelection.fromPosition(
-        TextPosition(offset: comandaController.text.length),
-      );
-    });
-    FocusScope.of(context).requestFocus(_searchFocusNode);
-  }
-
-  // Apaga o último dígito
-  void _apagarNumero() {
-    HapticFeedback.lightImpact();
-    setState(() {
-      final textoAtual = comandaController.text;
-      if (textoAtual.isNotEmpty) {
-        final novoTexto = textoAtual.substring(0, textoAtual.length - 1);
-        comandaController.text = novoTexto;
-        comandaController.selection = TextSelection.fromPosition(
-          TextPosition(offset: comandaController.text.length),
-        );
-      }
-    });
-    FocusScope.of(context).requestFocus(_searchFocusNode);
-  }
-
-  // Função para confirmar numero da comanda
-  void _confirmar() {
-    setState(() {
-      _showKeyboardNome = false;
-      FocusScope.of(context).unfocus(); // Esconde o teclado e remove o foco
-    });
-  }
-
   @override
   void dispose() {
     _timer.cancel();
-    _focusNode.dispose();
+    //_focusNode.dispose();
     _searchFocusNode.dispose();
     comandaController.dispose();
     barraBusca.dispose();
@@ -2109,6 +2061,7 @@ class MapaPageState extends State<MapaPage> {
                               controller: comandaController,
                               focusNode: _searchFocusNode,
                               textAlign: TextAlign.center,
+                              autofocus: false,
                               readOnly: false,
                               showCursor: true, // FORÇA o cursor piscando
                               cursorColor: Theme.of(context).colorScheme.primary,

@@ -228,14 +228,56 @@ class CheckinPageState extends State<CheckinPage>
   Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
+    if (modoJson != null) {
+      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
+      setState(() {
+        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+        if (funcoesController.logicaPorComanda.value){
+          if (modosSalvos.contains("Comanda")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorMesa.value){
+          if (modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorComandaNaMesa.value){
+          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+      });
+    } else {
+      setState(() {
+        naoAparecerMapa = true;
+        aparecerCheckInOut = false;
+      });
+    }
+  }
+  /* Future<void> _carregarModos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modoJson = prefs.getString('modo_padrao');
 
     if (modoJson != null) {
       final modosSalvos = Set<String>.from(jsonDecode(modoJson));
 
       setState(() {
         // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa =
-            !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
 
         // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
         if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
@@ -250,11 +292,10 @@ class CheckinPageState extends State<CheckinPage>
       setState(() {
         // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
         naoAparecerMapa = true;
-        aparecerCheckInOut =
-            true; // Mantendo o padrão deste arquivo para esta variável se nada salvo
+        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo para esta variável se nada salvo
       });
     }
-  }
+  } */
 
   // Carregar check
   Future<void> _carregarchecks() async {

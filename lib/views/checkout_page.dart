@@ -234,44 +234,50 @@ class CheckoutPageState extends State<CheckoutPage>
   }
 
   // Carregar modo
-  /* Future<void> _carregarModos() async {
+  Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
     if (modoJson != null) {
       final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-      if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-        setState(() {
-          aparecerCheckInOut = false;
-        });
-      } else if (modosSalvos.contains("Mesa") &&
-          modosSalvos.contains("Comanda")) {
-        setState(() {
-          aparecerCheckInOut = true;
-        });
-      } else if (!modosSalvos.contains("Mesa") &&
-          modosSalvos.contains("Comanda")) {
-        setState(() {
-          aparecerCheckInOut = true;
-        });
-      } else if (!modosSalvos.contains("Mesa") &&
-          !modosSalvos.contains("Comanda")) {
-        setState(() {
-          naoAparecerMapa = true;
-          aparecerCheckInOut = false;
-        });
-      } else {
-        setState(() {
-          aparecerCheckInOut = true;
-        });
-      }
+      setState(() {
+        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+        if (funcoesController.logicaPorComanda.value){
+          if (modosSalvos.contains("Comanda")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorMesa.value){
+          if (modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorComandaNaMesa.value){
+          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+      });
     } else {
       setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerCheckInOut = true;
+        naoAparecerMapa = true;
+        aparecerCheckInOut = false;
       });
     }
-  } */
-  Future<void> _carregarModos() async {
+  }
+  /* Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
 
@@ -299,7 +305,7 @@ class CheckoutPageState extends State<CheckoutPage>
         aparecerCheckInOut = true; // Mantendo o padrão deste arquivo para esta variável se nada salvo
       });
     }
-  }
+  } */
 
   // Carregar note
   Future<void> _carregarNote() async {

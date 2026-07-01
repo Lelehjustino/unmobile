@@ -1513,16 +1513,18 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     super.initState();
     _atualizarHora();
 
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (cpfnoCpfFocusNode.canRequestFocus) {
+        cpfnoCpfFocusNode.requestFocus();
+      }
+    });
+
     painelController.estaNoPainelCozinha.value = false;
 
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       _atualizarHora();
     });
-    _focusNode.addListener(() {
-      setState(() {
-        _isFocused = _focusNode.hasFocus;
-      });
-    });
+
     limparCampos();
     _carregarModo();
     _carregarModos();
@@ -2654,9 +2656,9 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     // Busca cliente pelo telefone
     buscarPorNumero(numeroControllerTelefone.text);
 
-    debugPrint(
+    /* debugPrint(
       '[TECLADO] $hora validarTelefoneNoNumero → foco em: comanda',
-    );
+    ); */
 
     desaparecerTema = true;
 
@@ -2673,7 +2675,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       _solicitarFoco(comandaFocusNode, 'comanda');
-      
+
       if (comandaFocusNode.hasFocus) {
         _scrollToField(comandaFocusNode);
         _solicitarFoco(comandaFocusNode, 'comanda');
@@ -2790,6 +2792,49 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
+    if (modoJson != null) {
+      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
+      setState(() {
+        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+        if (funcoesController.logicaPorComanda.value){
+          if (modosSalvos.contains("Comanda")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorMesa.value){
+          if (modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+        if(funcoesController.logicaPorComandaNaMesa.value){
+          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+      });
+    } else {
+      setState(() {
+        naoAparecerMapa = true;
+        aparecerCheckInOut = false;
+      });
+    }
+  }
+  /* Future<void> _carregarModos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modoJson = prefs.getString('modo_padrao');
 
     if (modoJson != null) {
       final modosSalvos = Set<String>.from(jsonDecode(modoJson));
@@ -2814,7 +2859,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
         aparecerCheckInOut = true; // Mantendo o padrão deste arquivo para esta variável se nada salvo
       });
     }
-  }
+  } */
 
   // Carregar check
   Future<void> _carregarchecks() async {

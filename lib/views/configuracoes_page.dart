@@ -60,6 +60,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   Set<String> recepcaoSelecionados = {};
 
   List<String> modos = ['Mesa', 'Comanda'];
+  List<String> modosDisponiveis = [];
+  // List<String> modoMesa = ['Mesa'];
+  // List<String> modoComanda = ['Comanda'];
   // Set<String> modosSelecionados = {'Mesa', 'Comanda'};
   Set<String> modosSelecionados = {};
 
@@ -157,6 +160,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
     painelController.estaNoPainelCozinha.value = false;
 
+    preencherModosDisponiveis();
+
     // inicia timer seguro (não assume que será não-nulo)
     _atualizarHora();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -205,6 +210,16 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {}
+
+  void preencherModosDisponiveis() {
+    if (funcoesController.logicaPorComanda.value) {
+      modosDisponiveis = ['Comanda'];
+    } else if (funcoesController.logicaPorMesa.value) {
+      modosDisponiveis = ['Mesa'];
+    } else {
+      modosDisponiveis = ['Mesa', 'Comanda'];
+    }
+  }
 
   navegar() async {
     if (rotaPainelCliente) {
@@ -2078,7 +2093,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ),
                       ),
                       SizedBox(height: 4),
-                      if (modos.isEmpty)
+                      if (modosDisponiveis.isEmpty)
                         Padding(
                           padding: EdgeInsets.all(10.0),
                           child: Center(child: CircularProgressIndicator()),
@@ -2089,9 +2104,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
-                            itemCount: modos.length,
+                            itemCount: modosDisponiveis.length,
                             itemBuilder: (context, index) {
-                              String modo = modos[index];
+                              String modo = modosDisponiveis[index];
                               bool isChecked = modosSelecionados.contains(modo);
                               return CheckboxListTile(
                                 controlAffinity:

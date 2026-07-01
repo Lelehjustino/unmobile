@@ -291,6 +291,16 @@ class GarcomPageState extends State<GarcomPage>
 
   int shakeKey = 0;
 
+  /// Flag que indica se o bloqueio global de foco está ativo.
+  bool _bloqueandoFoco = false;
+
+  /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
+  late final FocusNode _focoBloqueio = FocusNode(
+    debugLabel: 'focoBloqueioDialogo',
+    skipTraversal: true,
+    canRequestFocus: true,
+  );
+
   final painelController = Get.put(PainelController());
 
   @override
@@ -340,15 +350,7 @@ class GarcomPageState extends State<GarcomPage>
     _carregargarcom();
     _loadNumeroLicenca();
     _loadNomeEmpresa();
-
-    // controllers
-    // adicionaisObservacoesProdutos();
-    // buscarTipoPedido();
-    // informacoesListaGarcom();
-    // buscarGrupos();
-    // buscarProdutos();
     listaProdutoFiltrada = funcoesController.listaProduto;
-    // /controllers
 
     // Se já existem itens no carrinho OU foi passado algum argumento, restaura o estado ANTES de ligar os listeners
     if (carrinhoController.carrinho.isNotEmpty || Get.arguments != null) {
@@ -363,6 +365,17 @@ class GarcomPageState extends State<GarcomPage>
     // Sincronizar showKeyboardAlfa com o foco nativo dos campos de texto
     cardapioFocus.addListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.addListener(_syncKeyboardAlfaFromFocus);
+  }
+
+  Future<void> tirarFoco() async {
+    comandaFocus.unfocus();
+    mesaFocus.unfocus();
+    cardapioFocus.unfocus();
+    numeroProdutoSelecionadoFocus.unfocus();
+    quantidadeProdutoSelecionadoFocus.unfocus();
+    observacaoProdutoSelecionadoFocus.unfocus();
+    senhaFocus.unfocus();
+    FocusScope.of(context).unfocus();
   }
 
   void initChecks() {
@@ -537,60 +550,101 @@ class GarcomPageState extends State<GarcomPage>
     });
   }
 
+  // ─── Bloqueio global de foco ────────────────────────────────────────────────
+
+  /// Ativa o modo de bloqueio de foco: o [_focoBloqueio] sequestra o
+  /// primaryFocus do [FocusManager], impedindo que qualquer outro FocusNode
+  /// da árvore receba foco enquanto o bloqueio estiver ativo.
+  ///
+  /// Como funciona:
+  ///   1. Desabilitamos [FocusManager.instance.highlightStrategy] para suprimir
+  ///      qualquer sinal de highlight durante o período.
+  ///   2. Chamamos [_focoBloqueio.requestFocus()] via [FocusManager.instance]
+  ///      para que ele assuma o primaryFocus imediatamente.
+  ///   3. Qualquer chamada subsequente a [requestFocus()] em outros nós será
+  ///      ignorada pelo Flutter pois [_focoBloqueio] retém o primaryFocus e
+  ///      não está dentro da rota de baixo.
+  void _bloquearFocoGlobal() {
+    if (_bloqueandoFoco) return;
+    _bloqueandoFoco = true;
+    // Remove qualquer foco ativo antes de assumir
+    FocusManager.instance.primaryFocus?.unfocus();
+    // Solicita foco para o nó bloqueio — ele passa a ser o primaryFocus
+    FocusScope.of(context).requestFocus(_focoBloqueio);
+    debugPrint('[FOCO-GARCOM] Bloqueio global de foco ATIVADO');
+  }
+
+  /// Desativa o modo de bloqueio de foco e libera o [_focoBloqueio].
+  void _liberarFocoGlobal() {
+    if (!_bloqueandoFoco) return;
+    _bloqueandoFoco = false;
+    _focoBloqueio.unfocus();
+    debugPrint('[FOCO-GARCOM] Bloqueio global de foco LIBERADO');
+  }
+
+  // ─── Diálogo de sucesso ──────────────────────────────────────────────────────
+
   // Função para mostrar mensagem de venda inserida com sucesso
   Future<void> vendaInseridaComSucesso() async {
+    // 1. Bloqueia o foco globalmente ANTES de abrir o diálogo
+    _bloquearFocoGlobal();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        FocusManager.instance.primaryFocus?.unfocus();
-        FocusScope.of(context).unfocus();
-
-        Future.delayed(Duration(milliseconds: 1388), () {
+        // 2. Agenda o fechamento E a liberação do foco juntos
+        Future.delayed(const Duration(milliseconds: 1388), () {
+          _liberarFocoGlobal();
           if (Navigator.canPop(ctx)) {
             Navigator.pop(ctx);
           }
         });
 
-        return Center(
-          child: TweenAnimationBuilder(
-            duration: Duration(milliseconds: 500),
-            tween: Tween<double>(begin: 0, end: 1),
-            curve: Curves.easeOutCubic,
-            builder: (context, double value, child) {
-              return Transform.scale(
-                scale: value,
-                child: Dialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 80,
-                        ),
-                        SizedBox(height: 20),
-                        Text(
-                          'Pedido feito com sucesso!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+        // 3. FocusScope do diálogo continua protegido por redundância
+        return FocusScope(
+          canRequestFocus: false,
+          descendantsAreFocusable: false,
+          child: Center(
+            child: TweenAnimationBuilder(
+              duration: const Duration(milliseconds: 500),
+              tween: Tween<double>(begin: 0, end: 1),
+              curve: Curves.easeOutCubic,
+              builder: (context, double value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: Dialog(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 80,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                          Text(
+                            'Pedido feito com sucesso!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },
@@ -599,55 +653,62 @@ class GarcomPageState extends State<GarcomPage>
 
   // Função para mostrar mensagem de erro ao inserir pedido
   void erroAoInserirPedido() {
+    _bloquearFocoGlobal();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        Future.delayed(Duration(milliseconds: 1388), () {
+        Future.delayed(const Duration(milliseconds: 1388), () {
+          _liberarFocoGlobal();
           if (Navigator.canPop(ctx)) {
             Navigator.pop(ctx);
           }
         });
 
-        return Center(
-          child: TweenAnimationBuilder(
-            duration: Duration(milliseconds: 500),
-            tween: Tween<double>(begin: 0, end: 1),
-            curve: Curves.easeOutCubic,
-            builder: (context, double value, child) {
-              return Transform.scale(
-                scale: value,
-                child: Dialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.error,
-                          color: Theme.of(context).colorScheme.error,
-                          size: 80,
-                        ),
-                        SizedBox(height: 20),
-                        Text(
-                          'Erro ao inserir pedido!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+        return FocusScope(
+          canRequestFocus: false,
+          descendantsAreFocusable: false,
+          child: Center(
+            child: TweenAnimationBuilder(
+              duration: const Duration(milliseconds: 500),
+              tween: Tween<double>(begin: 0, end: 1),
+              curve: Curves.easeOutCubic,
+              builder: (context, double value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: Dialog(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.error,
+                            color: Theme.of(context).colorScheme.error,
+                            size: 80,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                          Text(
+                            'Erro ao inserir pedido!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },
@@ -658,15 +719,6 @@ class GarcomPageState extends State<GarcomPage>
   void reiniciarPage() {
     zerarAtendimento();
     setState(() {
-      if (funcoesController.logicaPorComanda.value ||
-          funcoesController.logicaPorComandaNaMesa.value) {
-        _campoAtivo = 'comandaController';
-      } else if (funcoesController.logicaPorMesa.value) {
-        _campoAtivo = 'mesaController';
-      } else {
-        _campoAtivo = 'comandaController';
-      }
-
       aparecerBotoes = false;
       aparecerCardapio = false;
       showKeyboardNumero = true;
@@ -714,11 +766,14 @@ class GarcomPageState extends State<GarcomPage>
 
     if (!houveErroGeral) {
       // Se TUDO deu certo, limpa a página (vai pro garçom) e avisa
+      await tirarFoco();
       await vendaInseridaComSucesso();
       await zerarAtendimento();
       await limparAmbas();
-      Future.delayed(const Duration(milliseconds: 2000), () {
-        chamarFoco();
+      // Aguarda o diálogo fechar (1388ms) + margem antes de devolver o foco.
+      // Isso evita o race condition onde chamarFoco() disparava DURANTE o diálogo.
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted) chamarFoco();
       });
     } else {
       // Se algo falhou, avisa o erro (as comandas que falharam continuam na lista)
@@ -840,6 +895,7 @@ class GarcomPageState extends State<GarcomPage>
     );
 
     if (carrinhoSnapshot.isEmpty) {
+      await tirarFoco();
       await vendaInseridaComSucesso();
       await limparAmbas();
       await zerarAtendimento();
@@ -928,11 +984,14 @@ class GarcomPageState extends State<GarcomPage>
     }
 
     if (todasSucesso) {
+      await tirarFoco();
       await vendaInseridaComSucesso();
       await limparAmbas();
       await zerarAtendimento();
-      Future.delayed(const Duration(milliseconds: 2000), () {
-        chamarFoco();
+      // Aguarda o diálogo fechar (1388ms) + margem antes de devolver o foco.
+      // Isso evita o race condition onde chamarFoco() disparava DURANTE o diálogo.
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted) chamarFoco();
       });
     } else {
       erroAoInserirPedido();
@@ -1425,7 +1484,8 @@ class GarcomPageState extends State<GarcomPage>
 
   // Função para chamar foco
   Future<void> chamarFoco() async {
-    // await buscarTipoPedido();
+    // Se o bloqueio de foco estiver ativo (diálogo visível), aborta silenciosamente
+    if (_bloqueandoFoco) return;
 
     if (carrinhoController.carrinho.isNotEmpty) {
       iniciaComCarrinho();
@@ -1439,7 +1499,7 @@ class GarcomPageState extends State<GarcomPage>
         _campoAtivo = 'comandaController';
 
         Future.delayed(Duration(milliseconds: 300), () {
-          if (comandaFocus.canRequestFocus) {
+          if (!_bloqueandoFoco && comandaFocus.canRequestFocus) {
             comandaFocus.requestFocus();
           }
         });
@@ -1451,7 +1511,7 @@ class GarcomPageState extends State<GarcomPage>
         _campoAtivo = 'mesaController';
 
         Future.delayed(Duration(milliseconds: 300), () {
-          if (mesaFocus.canRequestFocus) {
+          if (!_bloqueandoFoco && mesaFocus.canRequestFocus) {
             mesaFocus.requestFocus();
           }
         });
@@ -1564,17 +1624,21 @@ class GarcomPageState extends State<GarcomPage>
         // isProcessing e cliqueiFazerPedido substituídos pelo FuncoesController
 
         // chama o foco para o campo de comanda ou mesa
-        if (funcoesController.logicaPorComanda.value ||
-            funcoesController.logicaPorComandaNaMesa.value) {
-          showKeyboardAlfa = false;
-          showKeyboardNumero = true;
-          _campoAtivo = 'comandaController';
-          FocusScope.of(context).requestFocus(comandaFocus);
-        } else if (funcoesController.logicaPorMesa.value) {
-          showKeyboardAlfa = false;
-          showKeyboardNumero = true;
-          _campoAtivo = 'mesaController';
-          FocusScope.of(context).requestFocus(mesaFocus);
+        // Só solicita foco se o bloqueio global NÃO estiver ativo
+        // (ex: diálogo de sucesso/erro ainda visível)
+        if (!_bloqueandoFoco) {
+          if (funcoesController.logicaPorComanda.value ||
+              funcoesController.logicaPorComandaNaMesa.value) {
+            showKeyboardAlfa = false;
+            showKeyboardNumero = true;
+            _campoAtivo = 'comandaController';
+            FocusScope.of(context).requestFocus(comandaFocus);
+          } else if (funcoesController.logicaPorMesa.value) {
+            showKeyboardAlfa = false;
+            showKeyboardNumero = true;
+            _campoAtivo = 'mesaController';
+            FocusScope.of(context).requestFocus(mesaFocus);
+          }
         }
       });
     }
@@ -3941,21 +4005,40 @@ class GarcomPageState extends State<GarcomPage>
 
       setState(() {
         // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa =
-            !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
 
-        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
-        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = false;
-        } else if (modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = true;
-        } else {
-          aparecerCheckInOut = false;
+        if (funcoesController.logicaPorComanda.value){
+          if (modosSalvos.contains("Comanda")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+
+        if(funcoesController.logicaPorMesa.value){
+          if (modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+
+        if(funcoesController.logicaPorComandaNaMesa.value){
+          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
         }
       });
     } else {
       setState(() {
-        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
         naoAparecerMapa = true;
         aparecerCheckInOut = false;
       });
@@ -4135,8 +4218,10 @@ class GarcomPageState extends State<GarcomPage>
   // Sincroniza showKeyboardAlfa com o estado real do foco nativo
   void _syncKeyboardAlfaFromFocus() {
     if (!mounted) return;
-    final hasFocus =
-        cardapioFocus.hasFocus || observacaoProdutoSelecionadoFocus.hasFocus;
+    // Se o bloqueio global de foco estiver ativo (diálogo aberto),
+    // ignora qualquer mudança de teclado para não abrir o teclado durante o diálogo.
+    if (_bloqueandoFoco) return;
+    final hasFocus = cardapioFocus.hasFocus || observacaoProdutoSelecionadoFocus.hasFocus;
     if (hasFocus != showKeyboardAlfa) {
       setState(() {
         showKeyboardAlfa = hasFocus;
@@ -4149,6 +4234,7 @@ class GarcomPageState extends State<GarcomPage>
     cardapioFocus.removeListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.removeListener(_syncKeyboardAlfaFromFocus);
     _timer.cancel();
+    _focoBloqueio.dispose(); // dispose do nó de bloqueio global de foco
     super.dispose();
     _focusNode.dispose();
     animationController.dispose();
