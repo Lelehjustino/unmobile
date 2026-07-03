@@ -82,7 +82,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   bool comandaRegistrada = false;
   bool aparecerCheckInOut = false; 
   bool aparecerRecepcao = false;
-  bool naoAparecerMapa = false;
+  bool naoAparecerMapa = true;
   bool aparecerCheckIn = false;
   bool aparecerCheckOut = false;
   bool aparecerGarcom = true;

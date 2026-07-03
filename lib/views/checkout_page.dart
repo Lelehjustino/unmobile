@@ -234,7 +234,7 @@ class CheckoutPageState extends State<CheckoutPage>
   }
 
   // Carregar modo
-  Future<void> _carregarModos() async {
+  /* Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
     if (modoJson != null) {
@@ -274,6 +274,34 @@ class CheckoutPageState extends State<CheckoutPage>
       setState(() {
         naoAparecerMapa = true;
         aparecerCheckInOut = false;
+      });
+    }
+  } */
+ Future<void> _carregarModos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modoJson = prefs.getString('modo_padrao');
+
+    if (modoJson != null) {
+      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
+
+      setState(() {
+        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+
+        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
+        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
+          aparecerCheckInOut = false;
+        } else if (modosSalvos.contains("Comanda")) {
+          aparecerCheckInOut = true;
+        } else {
+          aparecerCheckInOut = false;
+        }
+      });
+    } else {
+      setState(() {
+        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
+        naoAparecerMapa = true;
+        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo
       });
     }
   }

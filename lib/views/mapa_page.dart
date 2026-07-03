@@ -72,7 +72,7 @@ class MapaPageState extends State<MapaPage> {
   bool aparecerNote = false;
   bool aparecerCheckInOut = false;
   bool aparecerRecepcao = false;
-  bool naoAparecerMapa = false;
+  bool naoAparecerMapa = true;
   bool aparecerCheckIn = false;
   bool aparecerCheckOut = false;
   bool aparecerGarcom = true;
@@ -528,46 +528,57 @@ class MapaPageState extends State<MapaPage> {
     if (modoJson != null) {
       final modosSalvos = Set<String>.from(jsonDecode(modoJson));
 
-      if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-        setState(() {
-          mostrarMesas = true;
-          mostrarMesaseComandas = false;
-          aparecerCheckInOut = false;
-        });
-      } else if (modosSalvos.contains("Mesa") &&
-          modosSalvos.contains("Comanda")) {
-        setState(() {
-          mostrarMesas = false;
-          mostrarMesaseComandas = true;
-          aparecerCheckInOut = true;
-        });
-      } else if (!modosSalvos.contains("Mesa") &&
-          modosSalvos.contains("Comanda")) {
-        setState(() {
-          mostrarMesas = false;
-          mostrarMesaseComandas = false;
-          aparecerCheckInOut = true;
-        });
-      } else if (!modosSalvos.contains("Mesa") &&
-          !modosSalvos.contains("Comanda")) {
-        setState(() {
-          mostrarMesas = false;
-          mostrarMesaseComandas = false;
-          naoAparecerMapa = true;
-          aparecerCheckInOut = false;
-        });
-      } else {
-        setState(() {
-          mostrarMesas = false;
-          mostrarMesaseComandas = false;
-          aparecerCheckInOut = true;
-        });
-      }
+      setState(() {
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+
+        if (funcoesController.logicaPorComanda.value){
+          if (modosSalvos.contains("Comanda")) {
+            mostrarMesas = false;
+            mostrarMesaseComandas = true;
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            mostrarMesas = false;
+            mostrarMesaseComandas = false;
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+
+        if(funcoesController.logicaPorMesa.value){
+          if (modosSalvos.contains("Mesa")) {
+            mostrarMesas = true;
+            mostrarMesaseComandas = false;
+            aparecerCheckInOut = false;
+            naoAparecerMapa = false;
+          } else {
+            mostrarMesas = false;
+            mostrarMesaseComandas = false;
+            aparecerCheckInOut = false;
+            naoAparecerMapa = true;
+          }
+        }
+
+        if(funcoesController.logicaPorComandaNaMesa.value){
+          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
+            mostrarMesas = false;
+            mostrarMesaseComandas = false;
+            aparecerCheckInOut = true;
+            naoAparecerMapa = false;
+          } else {
+            mostrarMesas = false;
+            mostrarMesaseComandas = false;
+            aparecerCheckInOut = true;
+            naoAparecerMapa = true;
+          }
+        }
+      });
     } else {
       setState(() {
-        // Se não tiver nada salvo, define padrão
         mostrarMesas = false;
         mostrarMesaseComandas = false;
+        aparecerCheckInOut = false;
+        naoAparecerMapa = true;
       });
     }
   }

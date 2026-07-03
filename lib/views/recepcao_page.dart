@@ -236,6 +236,130 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
   Timer? _timerApagar;
 
+  Future<void> reiniciarPagina() async {
+    nomeController.clear();
+    numeroController.clear();
+    numeroControllerTelefone.clear();
+    cpfControllerNoCpf.clear();
+    cpfControllerNoTelefone.clear();
+    dataNascimentoController.clear();
+    comandaController.clear();
+    adicionalController.clear();
+
+    // Libera o foco de forma unificada e segura para evitar bug de teclado
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      checkIn = true;
+      checkout = false;
+
+      mostrarTodas = true;
+      mostrarAbertas = false;
+      mostrarFechadas = false;
+
+      sexoSelecionado = null;
+      radioPreenchido = false;
+
+      cpfValido = false;
+      telefoneValido = false;
+      telefoneValidoTel = false;
+      cpfValidoNumero = false;
+      inserirComanda = false;
+      vazioCpf = true;
+      vazioTelefone = true;
+      dataCorreta = false;
+      nomeValido = false;
+
+      corBorda = true;
+      corAlerta = true;
+      corComanda = false;
+      
+      mensagem = '';
+      mensagem2 = '';
+
+      isLoading = false;
+      isLoading2 = false;
+      isProcessing = false;
+      cliqueiRecepcao = false;
+      desaparecerTema = false;
+
+      adicionais.clear();
+
+      botaoCpf = true;
+      botaotelefone = false;
+      _showKeyboardNome = true;
+      _showKeyboardMaior = false;
+      mostrarBotoes = true;
+
+      // Limpar formatações
+      _maskFormatter.clear();
+      _maskFormatterTelefone.clear();
+
+      // Limpando variáveis de estado residuais
+      numeroDoPedido = '';
+      valorTotalLiquido = '';
+      statusPedido = '';
+      numeroDoProduto = 0;
+      comandaNumero = '';
+      comandaRegistrada = false;
+      icone = false;
+      _campoAtivo = '';
+      tecladoAlfa = false;
+      numeroCliente = '';
+      numeroClienteInt = 0;
+      telefoneCliente = '';
+      cpfCliente = '';
+      sexoCliente = '';
+      datanascimentoCliente = '';
+      nomeCliente = '';
+      retornoCpf = false;
+      retornoNumero = false;
+      couvert = 0;
+      textoComanda = '';
+      comanda = '';
+      precisoCadastrarCliente = false;
+      comandaFoiValidada = false;
+      comandaValida = false;
+      clienteExiste = false;
+      numeroPedido = "";
+    });
+
+    //setState(() {});
+
+    // Get.toNamed('/recepcao');
+
+    // Garante que o guard esteja limpo antes de solicitar foco
+    _focusPendente = false;
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _solicitarFoco(cpfnoCpfFocusNode, 'cpfCpf');
+    });
+  }
+
+  /* Future<void> reiniciarPagina() async {
+    await Future.delayed(Duration(milliseconds: 300), () {
+      if (cpfnoCpfFocusNode.canRequestFocus) {
+        cpfnoCpfFocusNode.requestFocus();
+      }
+    });
+    setState(() {
+      nomeController.clear();
+      numeroController.clear();
+      numeroControllerTelefone.clear();
+      cpfControllerNoCpf.clear();
+      cpfControllerNoTelefone.clear();
+      dataNascimentoController.clear();
+      comandaController.clear();
+      adicionalController.clear();
+      _showKeyboardNome = true;
+      mostrarBotoes = true;
+      isLoading2 = false;
+      isProcessing = false;
+      cliqueiRecepcao = false;
+      desaparecerTema = false;
+    });
+  } */
+
   // Salvar nomeEmpresa
   Future<void> _saveNomeEmpresa(String value) async {
     try {
@@ -306,7 +430,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
       _saveNomeEmpresa(nomeEmpresa);
     } catch (e, st) {
-      debugPrint("Erro ao carregar nome da empresa: $e\n$st");
       setState(() {
         nomeEmpresa = nomeEmpresaLoad;
         telefoneEmpresa = '';
@@ -570,9 +693,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   void _onNomeFocusChange() {
     if (!mounted) return;
     final hora = DateTime.now();
-    debugPrint('[FOCO] ${hora.toIso8601String()} nomeFocusNode — hasFocus: ${nomeFocusNode.hasFocus}');
-    // Atualiza mostrarBotoes apenas quando perde foco, sem disparar rebuild extra
-    // durante transições de foco programáticas
     if (!nomeFocusNode.hasFocus && !_focusPendente) {
       if (mounted) {
         setState(() {
@@ -585,33 +705,19 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   // ── Helper centralizado de requestFocus com guard anti-concorrência ───────
   void _solicitarFoco(FocusNode destino, String nomeCampo) {
     if (!mounted) return;
-    if (_focusPendente) {
-      debugPrint(
-        '[FOCO] ${DateTime.now().toIso8601String()} _solicitarFoco($nomeCampo) IGNORADO — foco já pendente',
-      );
-      return;
-    }
+    // Reseta o guard imediatamente para não bloquear chamadas subsequentes
     _focusPendente = true;
-    debugPrint(
-      '[FOCO] ${DateTime.now().toIso8601String()} _solicitarFoco → solicitando foco em: $nomeCampo',
-    );
-    // Adiar para o próximo frame garante que qualquer setState em andamento
-    // termine antes de mudar o foco
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         _focusPendente = false;
         return;
       }
-      debugPrint(
-        '[FOCO] ${DateTime.now().toIso8601String()} _solicitarFoco → requestFocus executado em: $nomeCampo',
-      );
-      FocusScope.of(context).requestFocus(destino);
-      // Libera o guard após breve delay para evitar chamadas em cascata
-      Future.delayed(const Duration(milliseconds: 200), () {
+      if (destino.canRequestFocus) {
+        FocusScope.of(context).requestFocus(destino);
+        debugPrint('[FOCO] ${DateTime.now().toIso8601String()} → $nomeCampo (primaryFocus antes: ${FocusManager.instance.primaryFocus?.debugLabel})');
+      }
+      Future.delayed(const Duration(milliseconds: 150), () {
         _focusPendente = false;
-        debugPrint(
-          '[FOCO] ${DateTime.now().toIso8601String()} _focusPendente liberado (campo: $nomeCampo)',
-        );
       });
     });
   }
@@ -619,7 +725,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
   void execucaoretornoNumero() {
     final hora = DateTime.now().toIso8601String();
-    debugPrint('[NUMERO→COMANDA] $hora execucaoretornoNumero iniciado');
 
     clienteExiste = true;
 
@@ -633,10 +738,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     }
 
     final String telefoneClienteForm = telefoneCliente;
-
-    debugPrint(
-      '[TECLADO] ${DateTime.now().toIso8601String()} execucaoretornoNumero → setState único agrupado',
-    );
 
     // Um único setState agrupando TODAS as mudanças
     setState(() {
@@ -666,10 +767,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
       numeroControllerTelefone.text = telefoneClienteForm;
     });
 
-    debugPrint(
-      '[TECLADO] ${DateTime.now().toIso8601String()} execucaoretornoNumero → solicitando foco: comanda',
-    );
-
     // Solicita foco FORA do setState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -686,10 +783,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
       _scrollToField(comandaFocusNode);
     });
-
-    debugPrint(
-      '[NUMERO→COMANDA] ${DateTime.now().toIso8601String()} execucaoretornoNumero concluído',
-    );
   }
 
   /* void execucaoretornoNumero() {
@@ -1448,17 +1541,19 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   // Função para confirmar numero da comanda
   void _confirmar() {
     HapticFeedback.lightImpact();
+    // unfocus FORA do setState para evitar rebuild que re-solicita foco
+    FocusScope.of(context).unfocus();
     setState(() {
       _showKeyboardNome = false;
-      FocusScope.of(context).unfocus(); // Esconde o teclado e remove o foco
     });
   }
 
-  // Função para fechat teclado no teclado Alfanumérico
+  // Função para fechar teclado no teclado Alfanumérico
   void _fecharTecladoNoTecladoAlfa() {
+    // unfocus FORA do setState para evitar rebuild que re-solicita foco
+    FocusScope.of(context).unfocus();
     setState(() {
       _showKeyboardMaior = false;
-      FocusScope.of(context).unfocus(); // Esconde o teclado e remove o foco
     });
   }
 
@@ -2675,11 +2770,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       _solicitarFoco(comandaFocusNode, 'comanda');
-
-      if (comandaFocusNode.hasFocus) {
-        _scrollToField(comandaFocusNode);
-        _solicitarFoco(comandaFocusNode, 'comanda');
-      }
     });
   }
   /* void validarTelefoneNoNumero(String telefone) {
@@ -2792,6 +2882,34 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
+
+    if (modoJson != null) {
+      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
+
+      setState(() {
+        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
+        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
+
+        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
+        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
+          aparecerCheckInOut = false;
+        } else if (modosSalvos.contains("Comanda")) {
+          aparecerCheckInOut = true;
+        } else {
+          aparecerCheckInOut = false;
+        }
+      });
+    } else {
+      setState(() {
+        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
+        naoAparecerMapa = true;
+        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo
+      });
+    }
+  }
+  /* Future<void> _carregarModos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modoJson = prefs.getString('modo_padrao');
     if (modoJson != null) {
       final modosSalvos = Set<String>.from(jsonDecode(modoJson));
       setState(() {
@@ -2827,11 +2945,11 @@ class RecepcaoPageState extends State<RecepcaoPage> {
       });
     } else {
       setState(() {
+        aparecerCheckInOut = true;
         naoAparecerMapa = true;
-        aparecerCheckInOut = false;
       });
     }
-  }
+  } */
   /* Future<void> _carregarModos() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
@@ -3197,6 +3315,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     String confirmText = 'OK',
     VoidCallback? onConfirm,
   }) {
+    bool isSuccess = icon == Icons.check_circle;
     return showDialog(
       context: context,
       barrierDismissible: false, // não pode fechar tocando fora
@@ -3214,7 +3333,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: icone
+                    color: isSuccess
                         ? Theme.of(ctx).colorScheme.shadow.withOpacity(0.08)
                         : Theme.of(ctx).colorScheme.error.withOpacity(0.08),
                   ),
@@ -3222,7 +3341,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                   child: Icon(
                     icon,
                     size: 40,
-                    color: icone
+                    color: isSuccess
                         ? Theme.of(ctx).colorScheme.shadow
                         : Theme.of(ctx).colorScheme.error,
                   ),
@@ -3278,7 +3397,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                           horizontal: 16,
                           vertical: 12,
                         ),
-                        backgroundColor: icone
+                        backgroundColor: isSuccess
                             ? Theme.of(ctx).colorScheme.shadow
                             : Theme.of(ctx).colorScheme.error,
                       ),
@@ -3888,8 +4007,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                               _maskFormatterTelefone,
                                                             ],
                                                             onChanged: (text) {
-                                                              final onlyDigits = text.replaceAll(RegExp(r'\D'), '');
-                                                              telefoneEmpresa = onlyDigits;
                                                               validarTelefoneNoNumero(text);
                                                             },
                                                             onTap: () {
@@ -4394,19 +4511,9 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                                     context: context,
                                                                     title: "Cliente recepcinado com sucesso!!!",
                                                                     message: "Comanda: ${comanda} \n",
-                                                                    icon: icone ? Icons.check_circle : Icons.error, // você pode trocar para outro ícone
+                                                                    icon: Icons.check_circle, 
                                                                     onConfirm: () async {
-                                                                      Navigator.push(
-                                                                        context,
-                                                                        PageRouteBuilder(
-                                                                          transitionDuration: Duration.zero, // sem duração
-                                                                          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-                                                                          pageBuilder: (context, animation, secondaryAnimation) => RecepcaoPage(),
-                                                                          transitionsBuilder: (context, animation, secondaryAnimation, child,) {
-                                                                            return child;
-                                                                          },
-                                                                        ),
-                                                                      );
+                                                                      reiniciarPagina();
                                                                     },
                                                                   );
                                                                 } else {
@@ -4414,19 +4521,19 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                                     context: context,
                                                                     title: '${mensagem}',
                                                                     message: "Cliente: ${nomeController.text}\n Comanda: ${comandaController.text} \n",
-                                                                    icon: icone ? Icons.check_circle : Icons.error, // você pode trocar para outro ícone
+                                                                    icon: Icons.error,
                                                                     onConfirm: () async {
-                                                                      // Navigator.pop(context);
+                                                                      comandaController.clear();
                                                                       setState(() {
-                                                                        comandaController.clear();
                                                                         _campoAtivo = 'comanda';
-                                                                        FocusScope.of(context,).requestFocus(comandaFocusNode,);
                                                                         _showKeyboardNome = true;
                                                                         mostrarBotoes = true;
-                                                                        if (!mounted) return;
-                                                                        Future.delayed(Duration(milliseconds: 300,), () {
-                                                                            _scrollToField(comandaFocusNode,);
-                                                                          },);
+                                                                      });
+                                                                      // requestFocus FORA do setState
+                                                                      _focusPendente = false;
+                                                                      _solicitarFoco(comandaFocusNode, 'comanda');
+                                                                      Future.delayed(const Duration(milliseconds: 350), () {
+                                                                        if (mounted) _scrollToField(comandaFocusNode);
                                                                       });
                                                                     },
                                                                   );
@@ -4657,19 +4764,16 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                                 );
                                                                 if (comandaValida) {
                                                                   showConfirmationDialog(
-                                                                    context:
-                                                                        context,
-                                                                    title:
-                                                                        "Cliente recepcinado com sucesso!!!",
-                                                                    message:
-                                                                        "Comanda: ${comanda} \n",
-                                                                    icon: icone
-                                                                        ? Icons
-                                                                              .check_circle
-                                                                        : Icons
-                                                                              .error, // você pode trocar para outro ícone
+                                                                    context: context,
+                                                                    title:"Cliente recepcinado com sucesso!!!",
+                                                                    message: "Comanda: ${comanda} \n",
+                                                                    icon: 
+                                                                    // icone ? 
+                                                                    Icons.check_circle,
+                                                                    // : Icons.error, // você pode trocar para outro ícone
                                                                     onConfirm: () async {
-                                                                      setState(() {
+                                                                      reiniciarPagina();
+                                                                      /* setState(() {
                                                                         Navigator.push(
                                                                           context,
                                                                           PageRouteBuilder(
@@ -4694,50 +4798,29 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                                                 },
                                                                           ),
                                                                         );
-                                                                      });
+                                                                      }); */
                                                                     },
                                                                   );
                                                                 } else {
                                                                   showConfirmationDialog(
-                                                                    context:
-                                                                        context,
+                                                                    context: context,
                                                                     title:
                                                                         '${mensagem}',
                                                                     message:
                                                                         "Cliente: ${nomeController.text}\n Comanda: ${comandaController.text} \n",
-                                                                    icon: icone
-                                                                        ? Icons
-                                                                              .check_circle
-                                                                        : Icons
-                                                                              .error, // você pode trocar para outro ícone
+                                                                    icon: Icons.error,
                                                                     onConfirm: () async {
+                                                                      comandaController.clear();
                                                                       setState(() {
-                                                                        comandaController
-                                                                            .clear();
-                                                                        _campoAtivo =
-                                                                            'comanda';
-                                                                        FocusScope.of(
-                                                                          context,
-                                                                        ).requestFocus(
-                                                                          comandaFocusNode,
-                                                                        );
-                                                                        _showKeyboardNome =
-                                                                            true;
-                                                                        mostrarBotoes =
-                                                                            true;
-                                                                        if (!mounted)
-                                                                          return;
-                                                                        Future.delayed(
-                                                                          Duration(
-                                                                            milliseconds:
-                                                                                300,
-                                                                          ),
-                                                                          () {
-                                                                            _scrollToField(
-                                                                              comandaFocusNode,
-                                                                            );
-                                                                          },
-                                                                        );
+                                                                        _campoAtivo = 'comanda';
+                                                                        _showKeyboardNome = true;
+                                                                        mostrarBotoes = true;
+                                                                      });
+                                                                      // requestFocus FORA do setState
+                                                                      _focusPendente = false;
+                                                                      _solicitarFoco(comandaFocusNode, 'comanda');
+                                                                      Future.delayed(const Duration(milliseconds: 350), () {
+                                                                        if (mounted) _scrollToField(comandaFocusNode);
                                                                       });
                                                                     },
                                                                   );

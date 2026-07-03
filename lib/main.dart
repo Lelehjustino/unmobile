@@ -21,6 +21,7 @@ import 'package:un_recepcao/views/painel_cliente.dart';
 import 'package:un_recepcao/views/painel_cozinha.dart';
 import 'package:un_recepcao/views/pizza_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:un_recepcao/views/recepcao_page.dart';
 import 'package:un_recepcao/views/splash_page.dart';
 
 // projeto versao com app Apple
@@ -41,7 +42,6 @@ void main() async {
   Get.put(CarrinhoController(), permanent: true);
   Get.put(ComandaCarrinhoController(), permanent: true);
   Get.put(ZerarAtendimentoController(), permanent: true);
-  Get.put(NavegacaoInteligente(), permanent: true);
 
   ServicoNotificacao.configurarAudio();
 
@@ -153,6 +153,7 @@ class _AppState extends State<App> {
           page: () => MapaPage(),
         ),
         GetPage(name: '/splash', page: () => SplashPage()),
+        GetPage(name: '/recepcao', page: () => RecepcaoPage()),
       ],
     );
   }

@@ -294,6 +294,11 @@ class GarcomPageState extends State<GarcomPage>
   /// Flag que indica se o bloqueio global de foco está ativo.
   bool _bloqueandoFoco = false;
 
+  /// Flag que bloqueia toda interação de toque enquanto um diálogo está ativo
+  /// ou operações assíncronas críticas estão sendo executadas.
+  /// Controlado por AbsorbPointer no body do Scaffold.
+  bool _telaBloqueada = false;
+
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
     debugLabel: 'focoBloqueioDialogo',
@@ -571,6 +576,12 @@ class GarcomPageState extends State<GarcomPage>
     FocusManager.instance.primaryFocus?.unfocus();
     // Solicita foco para o nó bloqueio — ele passa a ser o primaryFocus
     FocusScope.of(context).requestFocus(_focoBloqueio);
+    // Bloqueia também toda interação de toque na tela
+    if (mounted) {
+      setState(() {
+        _telaBloqueada = true;
+      });
+    }
     debugPrint('[FOCO-GARCOM] Bloqueio global de foco ATIVADO');
   }
 
@@ -579,29 +590,41 @@ class GarcomPageState extends State<GarcomPage>
     if (!_bloqueandoFoco) return;
     _bloqueandoFoco = false;
     _focoBloqueio.unfocus();
+    // Libera a interação de toque na tela
+    if (mounted) {
+      setState(() {
+        _telaBloqueada = false;
+      });
+    }
     debugPrint('[FOCO-GARCOM] Bloqueio global de foco LIBERADO');
   }
 
   // ─── Diálogo de sucesso ──────────────────────────────────────────────────────
 
   // Função para mostrar mensagem de venda inserida com sucesso
+  /// Exibe o diálogo de sucesso e aguarda seu fechamento antes de retornar.
+  /// A tela fica bloqueada para toque durante todo o período.
   Future<void> vendaInseridaComSucesso() async {
-    // 1. Bloqueia o foco globalmente ANTES de abrir o diálogo
+    if (!mounted) return;
+
+    // 1. Bloqueia foco + toque ANTES de abrir o diálogo
     _bloquearFocoGlobal();
 
-    showDialog(
+    // 2. Completer garante que o await só resolve quando o diálogo fechar
+    final completer = Completer<void>();
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        // 2. Agenda o fechamento E a liberação do foco juntos
+        // Agenda o fechamento do diálogo
         Future.delayed(const Duration(milliseconds: 1388), () {
-          _liberarFocoGlobal();
           if (Navigator.canPop(ctx)) {
             Navigator.pop(ctx);
           }
         });
 
-        // 3. FocusScope do diálogo continua protegido por redundância
+        // FocusScope protege descendentes do diálogo
         return FocusScope(
           canRequestFocus: false,
           descendantsAreFocusable: false,
@@ -649,18 +672,29 @@ class GarcomPageState extends State<GarcomPage>
         );
       },
     );
+
+    // 3. Só libera foco/toque após o diálogo ter fechado de fato
+    _liberarFocoGlobal();
+    if (!completer.isCompleted) completer.complete();
+    return completer.future;
   }
 
   // Função para mostrar mensagem de erro ao inserir pedido
-  void erroAoInserirPedido() {
+  /// Exibe o diálogo de erro e aguarda seu fechamento antes de retornar.
+  /// A tela fica bloqueada para toque durante todo o período.
+  Future<void> erroAoInserirPedido() async {
+    if (!mounted) return;
+
+    // 1. Bloqueia foco + toque ANTES de abrir o diálogo
     _bloquearFocoGlobal();
 
-    showDialog(
+    final completer = Completer<void>();
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         Future.delayed(const Duration(milliseconds: 1388), () {
-          _liberarFocoGlobal();
           if (Navigator.canPop(ctx)) {
             Navigator.pop(ctx);
           }
@@ -713,6 +747,11 @@ class GarcomPageState extends State<GarcomPage>
         );
       },
     );
+
+    // 3. Só libera foco/toque após o diálogo ter fechado de fato
+    _liberarFocoGlobal();
+    if (!completer.isCompleted) completer.complete();
+    return completer.future;
   }
 
   // Função para reiniciar a página
@@ -1549,7 +1588,6 @@ class GarcomPageState extends State<GarcomPage>
               aparecerCarrinho = true;
               aparecerLista = false;
               aparecerConfiguracaoProduto = false;
-              
             });
           },
         );
@@ -4007,12 +4045,38 @@ class GarcomPageState extends State<GarcomPage>
         // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
         naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
 
+        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
+        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
+          aparecerCheckInOut = false;
+        } else if (modosSalvos.contains("Comanda")) {
+          aparecerCheckInOut = true;
+        } else {
+          aparecerCheckInOut = false;
+        }
+      });
+    } else {
+      setState(() {
+        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
+        naoAparecerMapa = true;
+        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo
+      });
+    }
+  }
+  /* Future<void> _carregarModos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modoJson = prefs.getString('modo_padrao');
+
+    if (modoJson != null) {
+      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
+
+      setState(() {
+
         if (funcoesController.logicaPorComanda.value){
           if (modosSalvos.contains("Comanda")) {
             aparecerCheckInOut = false;
             naoAparecerMapa = false;
           } else {
-            aparecerCheckInOut = false;
+            aparecerCheckInOut = true;
             naoAparecerMapa = true;
           }
         }
@@ -4022,7 +4086,7 @@ class GarcomPageState extends State<GarcomPage>
             aparecerCheckInOut = false;
             naoAparecerMapa = false;
           } else {
-            aparecerCheckInOut = false;
+            aparecerCheckInOut = true;
             naoAparecerMapa = true;
           }
         }
@@ -4032,7 +4096,7 @@ class GarcomPageState extends State<GarcomPage>
             aparecerCheckInOut = false;
             naoAparecerMapa = false;
           } else {
-            aparecerCheckInOut = false;
+            aparecerCheckInOut = true;
             naoAparecerMapa = true;
           }
         }
@@ -4040,10 +4104,10 @@ class GarcomPageState extends State<GarcomPage>
     } else {
       setState(() {
         naoAparecerMapa = true;
-        aparecerCheckInOut = false;
+        aparecerCheckInOut = true;
       });
     }
-  }
+  } */
 
   // Carregar check
   Future<void> _carregarchecks() async {
@@ -6005,8 +6069,14 @@ class GarcomPageState extends State<GarcomPage>
         }),
       ),
       // Corpo da tela
-      body: Stack(
-        children: [
+      // AbsorbPointer envolve TODO o body: quando _telaBloqueada=true,
+      // nenhum toque, botão, TextField ou FocusNode da tela responde.
+      // O bloqueio é ativado ANTES do showDialog e liberado DEPOIS que
+      // o diálogo fecha e todas as operações async terminam.
+      body: AbsorbPointer(
+        absorbing: _telaBloqueada,
+        child: Stack(
+          children: [
           Padding(
             padding: EdgeInsets.all(0.0),
             child: Column(
@@ -10423,7 +10493,8 @@ class GarcomPageState extends State<GarcomPage>
               ),
             ),
         ],
-      ),
+        ), // fecha Stack
+      ), // fecha AbsorbPointer
     );
   }
 }

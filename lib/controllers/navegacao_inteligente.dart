@@ -1,4 +1,4 @@
-import 'dart:convert';
+/* import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,7 +21,7 @@ class NavegacaoInteligente extends GetxController {
   bool aparecerCheckIn = false;
   bool aparecerCheckOut = false;
   bool aparecerRecepcao = false;
-  bool naoAparecerMapa = false;
+  bool naoAparecerMapa = true;
   bool aparecerGarcom = false;
   bool aparecerNote = false;
   bool aparecerCheckInOut = false;
@@ -63,7 +63,7 @@ class NavegacaoInteligente extends GetxController {
 
     } else {  // Se não tiver nada salvo, define padrão
         aparecerCheckInOut = true;
-        naoAparecerMapa = false;
+        naoAparecerMapa = true;
     }
   }
 
@@ -256,4 +256,4 @@ class NavegacaoInteligente extends GetxController {
       ); */
     }
   }
-}
+} */

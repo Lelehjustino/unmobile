@@ -178,7 +178,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
   // Dados
   Future<void> _buscarEOrganizar() async {
-    await painelController.buscarPedidosProntos();
+    await painelController.buscarPedidosDelivery();
     organizarListas();
   }
 
@@ -199,7 +199,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     });
   }
 
-  Future<void> mudarStatusPedido(String numeroPedido) async {
+  Future<void> mudarStatusPedidoRetirado(String numeroPedido) async {
     try {
       await Connection().transaction([
         "UPDATE delivery SET statuspainel = 3 WHERE numeropedido_FK = '$numeroPedido'",
@@ -463,6 +463,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                     ),
                   ),
                 ),
+                // status do painel tem que ser 1
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.symmetric(
@@ -555,6 +556,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                     ),
                   ),
                 ),
+                // status do painel tem que ser 2
                 Expanded(
                   child: ListView.separated(
                     padding: EdgeInsets.symmetric(
@@ -584,8 +586,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                               title: 'Pedido $numeroPedido retirado?',
                               icon: Icons.check,
                               onConfirm: () async {
-                                await mudarStatusPedido(numeroPedidoReal);
-                                await painelController.buscarPedidosProntos();
+                                await mudarStatusPedidoRetirado(numeroPedidoReal);
                                 _buscarEOrganizar();
                               },
                               onCancel: () {},
