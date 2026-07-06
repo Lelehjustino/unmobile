@@ -35,19 +35,22 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
   /// false = interface visível | true = fullscreen ativo
   bool _isFullScreen = false;
 
-  // ─── Ciclo de vida ──────────────────────────────────────────────────────────
-
   @override
   void initState() {
     super.initState();
-
     // Observa mudanças de ciclo de vida do app (ex.: foco ganho/perdido)
-    WidgetsBinding.instance.addObserver(this);
+    if(Platform.isWindows){
+      WidgetsBinding.instance.addObserver(this);
+    }
 
     // Busca inicial dos dados
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if(Platform.isWindows){
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _buscarEOrganizar();
+      });
+    }else{
       _buscarEOrganizar();
-    });
+    }
 
     // Atualização periódica de dados a cada 5 segundos
     _timerDados = Timer.periodic(const Duration(seconds: 5), (timer) async {
@@ -65,7 +68,9 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    if(Platform.isWindows){
+      WidgetsBinding.instance.removeObserver(this);
+    }
     _timerDados?.cancel();
     _timerMouse?.cancel();
     super.dispose();
@@ -81,36 +86,44 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
   // Inicializa a janela em fullscreen kiosk ao abrir a tela.
   Future<void> _initWindowsFullScreen() async {
-    await windowManager.ensureInitialized();
-    await ocultarInterfaceWindows();
+    if (Platform.isWindows) {
+      await windowManager.ensureInitialized();
+      await ocultarInterfaceWindows();
+    }
   }
 
   // Sai do fullscreen → restaura barra de título → maximiza janela.
   Future<void> mostrarInterfaceWindows() async {
-    if (!_isFullScreen) return; // já está visível, nada a fazer
-    _isFullScreen = false;
-    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
-    await windowManager.setFullScreen(false);
-    await windowManager.maximize();
+    if (Platform.isWindows) {
+      if (!_isFullScreen) return; // já está visível, nada a fazer
+      _isFullScreen = false;
+      await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+      await windowManager.setFullScreen(false);
+      await windowManager.maximize();
+    }
   }
 
   // Entra em fullscreen → esconde barra de título.
   Future<void> ocultarInterfaceWindows() async {
-    if (_isFullScreen) return; // já em fullscreen, nada a fazer
-    _isFullScreen = true;
-    await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-    await windowManager.setFullScreen(true);
+    if (Platform.isWindows){
+      if (_isFullScreen) return; // já em fullscreen, nada a fazer
+      _isFullScreen = true;
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      await windowManager.setFullScreen(true);
+    }
   }
 
   // Cancela o timer anterior e inicia um novo de 5 segundos.
   // Ao expirar (mouse parado), volta ao fullscreen automaticamente.
   void reiniciarTimerMouse() {
-    _timerMouse?.cancel();
-    _timerMouse = Timer(const Duration(seconds: 5), () {
-      if (mounted && Platform.isWindows) {
-        ocultarInterfaceWindows();
-      }
-    });
+    if(Platform.isWindows){
+      _timerMouse?.cancel();
+      _timerMouse = Timer(const Duration(seconds: 5), () {
+        if (mounted && Platform.isWindows) {
+          ocultarInterfaceWindows();
+        }
+      });
+    }
   }
 
   // Alternância de monitores

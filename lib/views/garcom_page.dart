@@ -9102,7 +9102,26 @@ class GarcomPageState extends State<GarcomPage>
 
                                   if (temAdicionalObservacao) {
                                     // Dialogo se quer adicionar observação ou adicinal
-                                    shownDialogTwoBottom(
+                                    final nome = cardapioController.text;
+                                    final numero = numeroProdutoSelecionadoController.text;
+                                    final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
+                                    final quantidade = produtoKilo 
+                                        ? (double.tryParse(qtdText) ?? 1.0)
+                                        : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
+                                    final observacao = observacaoProdutoSelecionadoController.text;
+                                    final valor = valorDoProdutoSelecionado.toString();
+                                    showModalAdicionaisObservacoes(
+                                      context,
+                                      numeroDoProdutoSelecionado,
+                                      funcoesController.listaAdicionaisObservacoes, 
+                                      nome,
+                                      valor,
+                                      numero,
+                                      quantidade,
+                                      observacao,
+                                    );
+                                    temAdicionalObservacao = false;
+                                    /* shownDialogTwoBottom(
                                       context: context,
                                       title: "Deseja adicionar observação ou adicionais?",
                                       message: "",
@@ -9181,7 +9200,7 @@ class GarcomPageState extends State<GarcomPage>
                                               observacaoProdutoSelecionadoController.clear();
                                             });
                                       },
-                                    );
+                                    ); */
                                   } else {
                                     final nome = cardapioController.text;
                                     final numero = numeroProdutoSelecionadoController.text;

@@ -4255,6 +4255,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
                                               // #region REGIÃO COMANDA
                                               if (botaoCpf ? inserirComanda && cpfValido: inserirComanda && telefoneValidoTel)
+                                              // if (inserirComanda && (botaoCpf ? cpfValido : telefoneValidoTel))
                                                 Padding(
                                                   padding: EdgeInsets.only(bottom: 12.0,),
                                                   child: Stack(
@@ -4272,15 +4273,11 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                                   separatorBuilder: (_, __) => Divider(height: 1,),
                                                                   itemBuilder: (context, index) {
                                                                         final item = adicionais[index];
-                                                                        final nome = item['nome'] ?? '';
-                                                                            item['nome'] ??
-                                                                            '';
+                                                                        final nome = item['nome'] ?? ''; item['nome'] ?? '';
                                                                         return ListTile(
                                                                           title: Text(nome),
                                                                           onTap: () {
-                                                                            Navigator.of(context).pop(
-                                                                              nome,
-                                                                            );
+                                                                            Navigator.of(context).pop(nome);
                                                                           },
                                                                         );
                                                                       },
@@ -4288,8 +4285,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                               );
                                                             },
                                                           ).then((selected) {
-                                                            if (selected !=
-                                                                null) {
+                                                            if (selected != null) {
                                                               final itemSelecionado = adicionais.firstWhere(
                                                                   (it) => it['nome'] == selected,
                                                                   orElse: () => {},
@@ -4304,11 +4300,9 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                         },
                                                         child: AbsorbPointer(
                                                           child: _buildWithKeyboardActions(
-                                                            focusNode:
-                                                                adicionalFocusNode,
+                                                            focusNode: adicionalFocusNode,
                                                             child: TextFormField(
-                                                              controller:
-                                                                  adicionalController,
+                                                              controller: adicionalController,
                                                               readOnly: false,
                                                               showCursor: true,
                                                               cursorColor: Theme.of(context,).colorScheme.primary,
@@ -4322,6 +4316,13 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                                 contentPadding: EdgeInsets.symmetric(
                                                                   horizontal: 12,
                                                                   vertical: 14,
+                                                                ),
+                                                                enabledBorder: OutlineInputBorder(
+                                                                  borderRadius: BorderRadius.circular(10,),
+                                                                  borderSide: BorderSide(
+                                                                    color: colorScheme.onSecondary.withOpacity(0.6),
+                                                                    width: 1,
+                                                                  ),
                                                                 ),
                                                               ),
                                                             ),

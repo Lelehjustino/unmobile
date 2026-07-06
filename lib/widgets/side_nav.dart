@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -400,8 +401,10 @@ class SideNavState extends State<SideNav> {
               onTap: () async {
                 Get.toNamed('/painel_cliente');
                 funcoesController.zerarAtendimento();
-                await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-                await windowManager.setFullScreen(true);
+                if (Platform.isWindows) {
+                  await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+                  await windowManager.setFullScreen(true);
+                }
               },
             ),
             if(aparecerKDS && rotaHome)

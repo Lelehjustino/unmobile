@@ -99,6 +99,8 @@ class CheckinPageState extends State<CheckinPage>
   String numeroPedidoInserido = "";
   String configuracaoServicoValor = "";
 
+  List<dynamic> observacoesEadicionais = [];
+
   @override
   void initState() {
     super.initState();
@@ -148,15 +150,21 @@ class CheckinPageState extends State<CheckinPage>
   }
 
   // ABRIR COMANDA
+  // 2026 - 07 - 06
+  /* abrirComanda(String numeroComanda) async {
+    await abrirPedido(numeroComanda, await configuracaoServico());
+    await devolverPedido(numeroComanda);
+    await atualizarCartoes(numeroComanda, valorTotalLiquido, statusPedido);
+    await buscarNumeroProduto(numeroComanda);
+    await verificacaoProduto(numeroComanda, await configuracaoProdutoNaComanda(numeroComanda));
+  } */
+
   abrirComanda(String numeroComanda) async {
     await abrirPedido(numeroComanda, await configuracaoServico());
     await devolverPedido(numeroComanda);
     await atualizarCartoes(numeroComanda, valorTotalLiquido, statusPedido);
     await buscarNumeroProduto(numeroComanda);
-    await verificacaoProduto(
-      numeroComanda,
-      await configuracaoProdutoNaComanda(numeroComanda),
-    );
+    await verificacaoProduto(numeroComanda, await configuracaoProdutoNaComanda(numeroComanda));
   }
 
   // Load nomeEmpresa
@@ -616,11 +624,6 @@ class CheckinPageState extends State<CheckinPage>
             isLoading = true;
           });
           await abrirComanda(numeroComanda);
-          /* await abrirPedido(numeroComanda, await configuracaoServico());
-          await devolverPedido(numeroComanda);
-          await atualizarCartoes(numeroComanda, valorTotalLiquido, statusPedido);
-          await buscarNumeroProduto(numeroComanda);
-          await verificacaoProduto(numeroComanda, await configuracaoProdutoNaComanda(numeroComanda)); */
           setState(() {
             isLoading = false;
             mensagem = "Comanda $numeroComanda aberta com sucesso!!!";
@@ -693,19 +696,56 @@ class CheckinPageState extends State<CheckinPage>
     if (produtoEncontradoFK == "0") {
       print("Produto não encontrado na comanda");
     } else {
-      await inserirProduto(
-        numeroproduto_FK,
-        numeroComanda,
-        numeroUsuario,
-        numeroDaLicencaSelecionada,
+      // select de observacoes e adicionais 
+      List<dynamic> observacoesEadicionaisFuncao = await buscarObservacoesEadicionais(numeroproduto_FK);
+      // verifica se tem observacoes e adicionais 
+      if(observacoesEadicionaisFuncao.isNotEmpty){
+        // abrir o seletor de observacoes e adicionais
+        showModalAdicionaisObservacoes(
+          context,
+          numeroproduto_FK,
+          observacoesEadicionaisFuncao,
+          numeroComanda,
+          numeroUsuario,
+          numeroDaLicencaSelecionada,
+        );
+      } else {
+        await inserirProduto(
+          numeroproduto_FK,
+          numeroComanda,
+          numeroUsuario,
+          numeroDaLicencaSelecionada,
+        );
+      }
+    }
+  }
+
+  // Função para buscar observacoes e adicionais
+  Future<List<dynamic>> buscarObservacoesEadicionais(String numeroProduto) async {
+    try {
+      String dadosJson = await Connection().select(
+        """
+          SELECT 
+          numeroproduto_FK AS numeroproduto, 
+          IF(numeroobservacao_FK = '0', '0', (SELECT observacao FROM observacoes WHERE numero = numeroobservacao_FK)) AS nomeobservacao, 
+          numeroprodutoadicional_FK AS numeroadicional, 
+          IF(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero = numeroprodutoadicional_FK)) AS nomeadicional, 
+          numeroobservacao_FK AS numeroobservacao 
+          FROM observacoesadicionaisprodutos 
+          WHERE numeroproduto_FK = $numeroProduto 
+          ORDER BY numeroproduto_FK;  
+        """,
       );
-      /* await inserirVenda(
-        numeroproduto_FK,
-        numeroComanda,
-        numeroUsuario,
-        numeroDaLicencaSelecionada,
-        0,
-      ); */
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+      if (lista.isNotEmpty) {
+        return lista;
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print("Erro ao carregar configuracaoServico: $e");
+      return [];
     }
   }
 
@@ -783,8 +823,7 @@ class CheckinPageState extends State<CheckinPage>
     String statusPedido,
   ) async {
     // Variáveis locais
-    String numeroPedido =
-        numeroDoPedido; // pego de alguma variável global/controlador
+    String numeroPedido = numeroDoPedido; // pego de alguma variável global/controlador
     String numeroDaComanda = numeroComanda;
     String valorTotal = valorTotalLiquido;
     String statuspedido = statusPedido;
@@ -827,9 +866,7 @@ class CheckinPageState extends State<CheckinPage>
     int numeroPedido = 0;
 
     // Montando o SQL
-    // String sql = "INSERT INTO pedidos (numerocartao_FK,numerocaixa_FK,numerousuarioabertura_FK,status,pessoas,observacao,numerotradepointabertura_FK,taxaservico,descricaopedido,abertura) VALUES ('$NumeroComanda','$numeroCaixaAtual','$numeroUsuarioAtual','1','1','','$numeroTradepointAtual','$cobrarTaxa','Comanda - '$NumeroComanda','CURRENT_TIMESTAMP')";
-    String sql =
-        "INSERT INTO pedidos (numerocartao_FK,numerocaixa_FK,numerousuarioabertura_FK,status,pessoas,observacao,numerotradepointabertura_FK,taxaservico,descricaopedido,abertura,numerocliente_FK) VALUES ('$NumeroComanda','$numeroCaixaAtual','$numeroUsuarioAtual','1','1','','$numeroTradepointAtual','$cobrarTaxa','Comanda - $NumeroComanda', CURRENT_TIMESTAMP,'$numeroPedido')";
+    String sql = "INSERT INTO pedidos (numerocartao_FK,numerocaixa_FK,numerousuarioabertura_FK,status,pessoas,observacao,numerotradepointabertura_FK,taxaservico,descricaopedido,abertura,numerocliente_FK) VALUES ('$NumeroComanda','$numeroCaixaAtual','$numeroUsuarioAtual','1','1','','$numeroTradepointAtual','$cobrarTaxa','Comanda - $NumeroComanda', CURRENT_TIMESTAMP,'$numeroPedido')";
     try {
       String numeroPedido = await Connection().insertId(sql);
 
@@ -952,92 +989,70 @@ class CheckinPageState extends State<CheckinPage>
     }
   }
 
-  /* // Função para inserir um produto
-  Future<void> inserirVenda(
+  // Função para inserir um produto
+  Future<void> inserirProdutoComObservacoes(
     String numeroDoProduto,
     String numeroComanda,
     String numeroUsuario,
     String numeroDaLicencaSelecionada,
-    double valorUnitario,
+    String observacao,
   ) async {
-    // Campos conhecidos
-    String numeroPromocaoFk = '0';
-    String numeroPedidoFk = numeroComanda;
-    String numeroProdutoFk = numeroDoProduto;
-    String numeroVendedorFk = numeroUsuario;
-    String numeroTradepointFk = numeroDaLicencaSelecionada;
-    String numeroEstoqueFk = '0';
+    String numeroSerie = '1';
+    String numeroTradepointFK = numeroDaLicencaSelecionada;
+    String numeroUsuarioFK = numeroUsuario;
+    String numeroCartao = numeroComanda;
+    String numeroProdutoFK = numeroDoProduto;
+    String nomeProduto = '';
+    int numeroMesa = 0;
+    String observacaoSelect = observacao;
 
-    // Campos padrão
-    String observacao = '0';
-    String numeroAtendenteFk = numeroUsuario;
-    String comissao = '0';
-    String valorComissao = '0';
-    String idIntegracao = '0';
-    String percentualCashback = '0';
-    String valorCashback = '0';
+    // Valores numéricos
+    int quantidade = 1;
+    String adicional = '';
 
-    int taxaServico = int.parse(configuracaoServicoValor);
-    int temCashback = 0;
-
-    String valorLiquido = '0';
-    String valorServico = '0';
+    String status = '1';
 
     try {
       String sql =
-          '''
-        INSERT INTO vendas (
-          numeropromocao_fk,
-          numeropedido_fk,
-          numeroproduto_fk,
-          valorunitario,
-          quantidade,
-          observacao,
-          valorliquido,
-          numerovendedor_fk,
-          numerotradepoint_fk,
-          numeroestoque_fk,
-          taxaservico,
-          valorservico,
-          numeroatendente_fk,
-          comissao,
-          valorcomissao,
-          id_integracao,
-          temcashback,
-          percentualcashback,
-          valorcashback,
-          datahora
+          """
+        INSERT INTO vendasmobiles(
+          numeroserie, 
+          numerotradepoint_FK, 
+          numerousuario_FK, 
+          numerocartao, 
+          numeroproduto_FK, 
+          quantidade, 
+          observacao, 
+          adicional, 
+          nomeproduto, 
+          numeromesa, 
+          status
         ) VALUES (
-          '$numeroPromocaoFk',
-          '$numeroPedidoFk',
-          '$numeroProdutoFk',
-          '$valorUnitario',
-          '0',
-          '$observacao',
-          '$valorLiquido',
-          '$numeroVendedorFk',
-          '$numeroTradepointFk',
-          '$numeroEstoqueFk',
-          '$taxaServico',
-          '$valorServico',
-          '$numeroAtendenteFk',
-          '$comissao',
-          '$valorComissao',
-          '$idIntegracao',
-          '$temCashback',
-          '$percentualCashback',
-          '$valorCashback',
-          CURRENT_TIMESTAMP
+          '$numeroSerie',
+          '$numeroTradepointFK',
+          '$numeroUsuarioFK',
+          '$numeroCartao',
+          '$numeroProdutoFK',
+          $quantidade,
+          '$observacaoSelect',
+          '$adicional',
+          '$nomeProduto',
+          $numeroMesa,
+          '$status'
         )
-      ''';
+      """;
 
-      String numeroVenda = await Connection().insertId(sql);
+      String resultado = await Connection().ipd(sql);
 
-      print('Venda inserida com sucesso. ID: $numeroVenda');
+      if (resultado == 'sucesso') {
+        print("Venda inserida com sucesso! Pedido: | Produto: ");
+      } else {
+        print("Erro ao inserir venda: $resultado");
+      }
     } catch (e) {
-      print('Erro ao inserir venda: $e');
+      print("Erro inesperado ao inserir venda: $e");
     }
-  } */
+  }
 
   void _atualizarHora() {
     final agora = DateTime.now();
@@ -1224,6 +1239,223 @@ class CheckinPageState extends State<CheckinPage>
       }
       print(" Erro ao conectar ao banco: $e");
     }
+  }
+
+  void showModalAdicionaisObservacoes(
+    BuildContext context,
+    String numeroProduto,
+    List<dynamic> listaCompleta,
+    String numeroComandaFuncao,
+    String numeroUsuarioFuncao,
+    String numeroDaLicencaSelecionadaFuncao,
+  ) {
+    // observacoes
+    String numeroObservacaoSelecionado = '';
+    String nomeObservacaoSelecionado = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Text(
+                        'Comanda $numeroComandaFuncao',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+
+                    if (listaCompleta.isEmpty)
+                      Center(
+                        child: Text(
+                          'Este produto não tem observações',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                    Expanded(
+                      child: ListView(
+                        children: [
+                          // OBSERVAÇÕES
+                          if (listaCompleta.isNotEmpty)
+                            Align(
+                              child: Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 0,
+                                  ),
+                                  child: Text(
+                                    'Deseja selecionar uma observação?',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          // Lista de observacoes
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: listaCompleta.length,
+                            itemBuilder: (context, index) {
+                              final item = listaCompleta[index];
+                              final nomeObservacao = item['nomeobservacao'].toString();
+                              final numeroObservacao =item['numeroobservacao'].toString();
+
+                              return Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setModalState(() {
+                                      numeroObservacaoSelecionado = numeroObservacao;
+                                      nomeObservacaoSelecionado = nomeObservacao;
+                                    });
+                                  },
+                                  child: Card(
+                                    color: numeroObservacaoSelecionado == numeroObservacao
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context).colorScheme.surface,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Padding(
+                                            padding: EdgeInsets.all(8),
+                                            child: Text(
+                                              nomeObservacao,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: numeroObservacaoSelecionado == numeroObservacao
+                                                    ? Theme.of(context).colorScheme.onPrimary
+                                                    : Theme.of(context).colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // Botões
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Botão de fechar
+                              Flexible(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:  Theme.of(context).colorScheme.primary,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 20,
+                                      horizontal: 40,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Não quero informar',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(width: 6),
+
+                              // Botão de Adicionar
+                              Flexible(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    // adicionar e abrir comanda
+                                    if(numeroObservacaoSelecionado != ""){
+                                      await inserirProdutoComObservacoes(
+                                        numeroProduto,
+                                        numeroComandaFuncao,
+                                        numeroUsuarioFuncao,
+                                        numeroDaLicencaSelecionadaFuncao,
+                                        nomeObservacaoSelecionado,
+                                      );
+                                      Navigator.pop(context);
+                                    } else {
+                                      // mensagem de erro
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Selecione uma observação'),
+                                          backgroundColor: Theme.of(context).colorScheme.error,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 20,
+                                      horizontal: 40,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'Confirmar',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: Theme.of(context).colorScheme.onPrimary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Icon(Icons.check, color: Theme.of(context).colorScheme.onPrimary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
