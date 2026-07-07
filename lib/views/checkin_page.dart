@@ -100,6 +100,10 @@ class CheckinPageState extends State<CheckinPage>
   String configuracaoServicoValor = "";
 
   List<dynamic> observacoesEadicionais = [];
+  RxList<dynamic> observacoesSelecionadas = <dynamic>[].obs;
+
+  bool cliqueiFora = true;
+  bool loadingConfirmar = false;
 
   @override
   void initState() {
@@ -151,7 +155,7 @@ class CheckinPageState extends State<CheckinPage>
 
   // ABRIR COMANDA
   // 2026 - 07 - 06
-  /* abrirComanda(String numeroComanda) async {
+  /* fazerCheckIn(String numeroComanda) async {
     await abrirPedido(numeroComanda, await configuracaoServico());
     await devolverPedido(numeroComanda);
     await atualizarCartoes(numeroComanda, valorTotalLiquido, statusPedido);
@@ -159,12 +163,106 @@ class CheckinPageState extends State<CheckinPage>
     await verificacaoProduto(numeroComanda, await configuracaoProdutoNaComanda(numeroComanda));
   } */
 
-  abrirComanda(String numeroComanda) async {
-    await abrirPedido(numeroComanda, await configuracaoServico());
-    await devolverPedido(numeroComanda);
-    await atualizarCartoes(numeroComanda, valorTotalLiquido, statusPedido);
-    await buscarNumeroProduto(numeroComanda);
-    await verificacaoProduto(numeroComanda, await configuracaoProdutoNaComanda(numeroComanda));
+  limparPage(){
+    setState(() {
+      mensagem = 'Insira o número da comanda';
+      corMensagem = true;
+      iconeMensagem = true;
+      animacaoAparecer = false;
+      _isFocused = true;
+      animacaoCerto = true;
+      cliqueiFora = true;
+      comandaController.clear();
+    });
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (comandaFocus.canRequestFocus) {
+        comandaFocus.requestFocus();
+      }
+    });
+  }
+
+
+  fazerCheckIn(String numeroComanda) async {
+    bool temProdutoNaComanda = await buscarNumeroProduto(numeroComanda); 
+    String produtoEncontradoFK = await configuracaoProdutoNaComanda(numeroComanda);
+
+    if(temProdutoNaComanda){
+      // fluxo quando tem produto na comanda
+      List<dynamic> observacoesEadicionaisFuncao = await buscarObservacoesEadicionais(produtoEncontradoFK);
+      // verifica se tem observacoes e adicionais 
+      if(observacoesEadicionaisFuncao.isNotEmpty){
+        // abrir o seletor de observacoes e adicionais
+        showModalAdicionaisObservacoes(
+          context,
+          produtoEncontradoFK,
+          observacoesEadicionaisFuncao,
+          numeroComanda,
+          numeroUsuario,
+          numeroDaLicencaSelecionada,
+        );
+      } else {
+        await fluxoComProdutoSemObs (numeroComanda, valorTotalLiquido, statusPedido, produtoEncontradoFK, numeroUsuario, numeroDaLicencaSelecionada);
+      }
+    } else {
+      // fluxo direto quando nao tem nada na comanda
+      await fluxoSemProduto (numeroComanda, valorTotalLiquido, statusPedido, produtoEncontradoFK, numeroUsuario, numeroDaLicencaSelecionada);
+    }
+  }
+
+  Future<void> checkInRealizadoComSucesso(String numeroComandaFuncao) async {
+    setState(() {
+      isLoading = false;
+      mensagem = "Comanda $numeroComandaFuncao aberta com sucesso!!!";
+      corMensagem = true;
+      animacaoCerto = true;
+      iconeMensagem = true;
+      saveComanda(numeroComandaFuncao);
+      observacoesSelecionadas.clear();
+    });
+    _dispararAnimacaoDeResultado(true);
+  }
+
+  Future<void> checkInRealizadoSemSucesso(String numeroComandaFuncao) async {
+    setState(() {
+      mensagem = "Operação cancelada! Comanda: $numeroComandaFuncao";
+      corMensagem = false;
+      iconeMensagem = false;
+      animacaoCerto = false;
+      observacoesSelecionadas.clear();
+      isLoading = false;
+    });
+    _dispararAnimacaoDeResultado(false);
+    comandaController.clear();
+  }
+
+  Future<void> fluxoSemProduto (numeroComandaFuncao, valorTotalLiquidoFuncao, statusPedidoFuncao, produtoEncontradoFKFuncao, numeroUsuarioFuncao, numeroDaLicencaSelecionadaFuncao) async {
+    await abrirPedido(numeroComandaFuncao, await configuracaoServico());
+    await devolverPedido(numeroComandaFuncao);
+    await atualizarCartoes(numeroComandaFuncao, valorTotalLiquidoFuncao, statusPedidoFuncao);
+    await inserirProduto(produtoEncontradoFKFuncao, numeroComandaFuncao, numeroUsuario, numeroDaLicencaSelecionada);
+    await checkInRealizadoComSucesso(numeroComandaFuncao);
+  }
+
+  Future<void> fluxoComProdutoSemObs (numeroComandaFuncao, valorTotalLiquidoFuncao, statusPedidoFuncao, produtoEncontradoFKFuncao, numeroUsuarioFuncao, numeroDaLicencaSelecionadaFuncao) async {
+    await abrirPedido(numeroComandaFuncao, await configuracaoServico());
+    await devolverPedido(numeroComandaFuncao);
+    await atualizarCartoes(numeroComandaFuncao, valorTotalLiquidoFuncao, statusPedidoFuncao);
+    await inserirProduto(produtoEncontradoFKFuncao, numeroComandaFuncao, numeroUsuario, numeroDaLicencaSelecionada);
+    await checkInRealizadoComSucesso(numeroComandaFuncao); 
+  }
+
+  // Função para montar observação
+  String montarObservacoes(List<dynamic> observacoes) {
+    final List<String> obs = [];
+
+    // Varrendo os adicionais para incluir o nome nas observações
+    if (observacoes.isNotEmpty) {
+      for (var observacao in observacoes) {
+        obs.add(observacao);
+      }
+    } 
+
+    return obs.join('|');
   }
 
   // Load nomeEmpresa
@@ -379,6 +477,7 @@ class CheckinPageState extends State<CheckinPage>
   } */
 
   // Carregar check
+  // Carregar check
   Future<void> _carregarchecks() async {
     final prefs = await SharedPreferences.getInstance();
     final checkJson = prefs.getString('check_padrao');
@@ -424,6 +523,51 @@ class CheckinPageState extends State<CheckinPage>
       });
     }
   }
+  /* Future<void> _carregarchecks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final checkJson = prefs.getString('check_padrao');
+
+    if (checkJson != null) {
+      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
+
+      if (checksSalvos.contains("Ckeck-in") &&
+          !checksSalvos.contains("Check-out")) {
+        setState(() {
+          aparecerCheckIn = true;
+          aparecerCheckOut = false;
+        });
+      } else if (checksSalvos.contains("Check-out") &&
+          !checksSalvos.contains("Ckeck-in")) {
+        setState(() {
+          aparecerCheckIn = false;
+          aparecerCheckOut = true;
+        });
+      } else if (!checksSalvos.contains("Ckeck-in") &&
+          !checksSalvos.contains("Check-out")) {
+        setState(() {
+          aparecerCheckIn = false;
+          aparecerCheckOut = false;
+        });
+      } else if (checksSalvos.contains("Ckeck-in") &&
+          checksSalvos.contains("Check-out")) {
+        setState(() {
+          aparecerCheckIn = true;
+          aparecerCheckOut = true;
+        });
+      } else {
+        setState(() {
+          aparecerCheckIn = false;
+          aparecerCheckOut = false;
+        });
+      }
+    } else {
+      setState(() {
+        // Se não tiver nada salvo, define padrão
+        aparecerCheckIn = false;
+        aparecerCheckOut = false;
+      });
+    }
+  } */
 
   // Carregar garçom
   Future<void> _carregargarcom() async {
@@ -483,7 +627,7 @@ class CheckinPageState extends State<CheckinPage>
   }
 
   // Função para fazer sumir animação SUMIR ANIMAÇÃO
-  void _dispararAnimacaoDeResultado(bool sucesso) {
+  void _dispararAnimacaoDeResultado(bool sucesso) async {
     // Um parâmetro booleano que indica se a operação foi bem-sucedida (true) ou se houve erro (false).
     // 1. Define o estado para mostrar a animação correta (sucesso ou erro)
     setState(() {
@@ -495,7 +639,7 @@ class CheckinPageState extends State<CheckinPage>
     animationController.forward(from: 0.0); // Reinicia a animaçã
 
     // 3. Agenda a animação para sumir após 3 segundos
-    Future.delayed(Duration(seconds: 4), () {
+    Future.delayed(Duration(seconds: 1), () {
       // Verifica se o widget ainda está na tela para evitar erros
       if (mounted) {
         setState(() {
@@ -503,9 +647,15 @@ class CheckinPageState extends State<CheckinPage>
           // comandaController.clear(); // Limpa o campo de texto
         });
         // Devolve o foco para o campo de texto
-        FocusScope.of(context).requestFocus(comandaFocus);
+        // FocusScope.of(context).requestFocus(comandaFocus);
       }
     });
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    await limparPage();
   }
 
   // Carregar note
@@ -580,8 +730,9 @@ class CheckinPageState extends State<CheckinPage>
           corMensagem = false;
           iconeMensagem = false;
           animacaoCerto = false;
-          _dispararAnimacaoDeResultado(false);
+          comandaController.clear();
         });
+        _dispararAnimacaoDeResultado(false);
         return;
       }
       Map<String, dynamic> comanda = lista[0];
@@ -592,39 +743,44 @@ class CheckinPageState extends State<CheckinPage>
           corMensagem = false;
           iconeMensagem = false;
           animacaoCerto = false;
-          _dispararAnimacaoDeResultado(false);
+          comandaController.clear();
         });
+        _dispararAnimacaoDeResultado(false);
       } else if (comanda['bloqueada'] == '1') {
         setState(() {
           mensagem = "Comanda bloqueada!";
           corMensagem = false;
           iconeMensagem = false;
           animacaoCerto = false;
-          _dispararAnimacaoDeResultado(false);
+          comandaController.clear(); 
         });
+        _dispararAnimacaoDeResultado(false);
       } else if (comanda['numeropedido_FK'] != '0') {
         setState(() {
           mensagem = "Está comanda já está em uso!";
           corMensagem = false;
           iconeMensagem = false;
           animacaoCerto = false;
-          _dispararAnimacaoDeResultado(false);
+          comandaController.clear();
         });
+        _dispararAnimacaoDeResultado(false);
       } else if (comanda['numero'] == null) {
+
         setState(() {
           mensagem = "Comanda inexistente";
           corMensagem = false;
           iconeMensagem = false;
           animacaoCerto = false;
-          _dispararAnimacaoDeResultado(false);
+          comandaController.clear();
         });
+        _dispararAnimacaoDeResultado(false);
       } else {
         try {
           setState(() {
             isLoading = true;
           });
-          await abrirComanda(numeroComanda);
-          setState(() {
+          await fazerCheckIn(numeroComanda);
+          /* setState(() {
             isLoading = false;
             mensagem = "Comanda $numeroComanda aberta com sucesso!!!";
             corMensagem = true;
@@ -632,7 +788,7 @@ class CheckinPageState extends State<CheckinPage>
             iconeMensagem = true;
             saveComanda(numeroComanda);
           });
-          _dispararAnimacaoDeResultado(true);
+          _dispararAnimacaoDeResultado(true); */
         } catch (e) {
           print('Nao foi possivel abrir comanda $e');
           // Você pode adicionar uma mensagem de erro genérica aqui também
@@ -717,6 +873,24 @@ class CheckinPageState extends State<CheckinPage>
           numeroDaLicencaSelecionada,
         );
       }
+    }
+  }
+
+  Future<bool> buscarSeTemProdutoNaComandaComObservacao(String numeroComanda) async {
+    try {
+      String dadosJson = await Connection().select(
+        "SELECT * FROM comandas WHERE numero = '$numeroComanda' AND numeroobservacao_FK != '0';",
+      );
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+      if (lista.isNotEmpty) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      print("Erro ao buscar se tem produto na comanda com observacao: $e");
+      return false;
     }
   }
 
@@ -894,7 +1068,7 @@ class CheckinPageState extends State<CheckinPage>
   }
 
   // Função que retorna o número do produto vinculado à comanda
-  Future<void> buscarNumeroProduto(String numeroComanda) async {
+  Future<bool> buscarNumeroProduto(String numeroComanda) async {
     try {
       String dadosJson = await Connection().select(
         "SELECT numeroproduto_FK FROM checkinautomatico WHERE numerocomanda_FK='$numeroComanda' LIMIT 1;",
@@ -911,17 +1085,20 @@ class CheckinPageState extends State<CheckinPage>
         });
 
         print("Número do produto encontrado: $numeroProduto");
+        return true;
       } else {
         setState(() {
           numeroDoProduto = "0"; // caso não encontre nada
         });
         print("Nenhum produto encontrado para comanda $numeroComanda");
+        return false;
       }
     } catch (e) {
       print("Erro ao buscar número do produto: $e");
       setState(() {
         numeroDoProduto = "0";
       });
+      return false;
     }
   }
 
@@ -1250,14 +1427,14 @@ class CheckinPageState extends State<CheckinPage>
     String numeroDaLicencaSelecionadaFuncao,
   ) {
     // observacoes
-    String numeroObservacaoSelecionado = '';
-    String nomeObservacaoSelecionado = '';
+    String ultimoNumeroObservacaoSelecionado = '';
+    String ultimoNomeObservacaoSelecionado = '';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
@@ -1265,197 +1442,291 @@ class CheckinPageState extends State<CheckinPage>
           builder: (context, setModalState) {
             return Container(
               height: MediaQuery.of(context).size.height * 0.8,
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Text(
-                        'Comanda $numeroComandaFuncao',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // TÍTULO DA COMANDA
+                  Center(
+                    child: Text(
+                      'Comanda $numeroComandaFuncao',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 12),
+                  ),
 
-                    if (listaCompleta.isEmpty)
-                      Center(
+                  // MENSAGEM SE A LISTA ESTIVER VAZIA
+                  if (listaCompleta.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
                         child: Text(
                           'Este produto não tem observações',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
+                    ),
 
-                    Expanded(
-                      child: ListView(
-                        children: [
-                          // OBSERVAÇÕES
-                          if (listaCompleta.isNotEmpty)
-                            Align(
-                              child: Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 0,
-                                  ),
-                                  child: Text(
-                                    'Deseja selecionar uma observação?',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
+                  // CORPO ROLÁVEL (LISTA DE OBSERVAÇÕES)
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        if (listaCompleta.isNotEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              child: Text(
+                                'Deseja selecionar uma observação?',
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
-                          // Lista de observacoes
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemCount: listaCompleta.length,
-                            itemBuilder: (context, index) {
-                              final item = listaCompleta[index];
-                              final nomeObservacao = item['nomeobservacao'].toString();
-                              final numeroObservacao =item['numeroobservacao'].toString();
+                          ),
+                        
+                        // Grid de observações
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            const larguraMinimaCard = 100.0;
+                            final crossAxisCount = (constraints.maxWidth / larguraMinimaCard).floor().clamp(1, 8);
 
-                              return Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: GestureDetector(
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: listaCompleta.length,
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 1,
+                              ),
+                              itemBuilder: (context, index) {
+                                final item = listaCompleta[index];
+                                final nomeObservacao = item['nomeobservacao'].toString();
+                                final numeroObservacao = item['numeroobservacao'].toString();
+
+                                // final selecionado = ultimoNumeroObservacaoSelecionado == numeroObservacao;
+                                final selecionado = observacoesSelecionadas.contains(nomeObservacao);
+
+                                return GestureDetector(
                                   onTap: () {
-                                    setModalState(() {
-                                      numeroObservacaoSelecionado = numeroObservacao;
-                                      nomeObservacaoSelecionado = nomeObservacao;
-                                    });
+                                    if(selecionado){
+                                      setModalState(() {
+                                        ultimoNumeroObservacaoSelecionado = "";
+                                        ultimoNomeObservacaoSelecionado = "";
+                                        observacoesSelecionadas.remove(nomeObservacao);
+                                      });
+                                    } else {
+                                      setModalState(() {
+                                        ultimoNumeroObservacaoSelecionado = numeroObservacao;
+                                        ultimoNomeObservacaoSelecionado = nomeObservacao;
+                                        observacoesSelecionadas.add(nomeObservacao);
+                                      });
+                                    }
                                   },
                                   child: Card(
-                                    color: numeroObservacaoSelecionado == numeroObservacao
+                                    color: selecionado
                                         ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context).colorScheme.surface,
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Padding(
-                                            padding: EdgeInsets.all(8),
-                                            child: Text(
-                                              nomeObservacao,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: numeroObservacaoSelecionado == numeroObservacao
-                                                    ? Theme.of(context).colorScheme.onPrimary
-                                                    : Theme.of(context).colorScheme.onSurface,
-                                              ),
-                                            ),
+                                        : Theme.of(context).colorScheme.surfaceContainerLow,
+                                    child: Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Text(
+                                          nomeObservacao,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: selecionado
+                                                ? Theme.of(context).colorScheme.onPrimary
+                                                : Theme.of(context).colorScheme.onSurface,
                                           ),
                                         ),
-                                      ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        SizedBox(height: 8,),
+                        Row(
+                          children: [
+                            loadingConfirmar ?
+                              Expanded(
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
                                     ),
                                   ),
                                 ),
-                              );
-                            },
-                          ),
+                              )
+                            : Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  if(observacoesSelecionadas.isNotEmpty){
+                                    loadingConfirmar = true;
+                                    String observacoesSelecionadasFinal = "";
+                                    if(observacoesSelecionadas.length > 1) {
+                                      observacoesSelecionadasFinal = await montarObservacoes(await observacoesSelecionadas);
+                                    } else {
+                                      observacoesSelecionadasFinal = observacoesSelecionadas[0];
+                                    }
+                                      
+                                    cliqueiFora = false;
 
-                          // Botões
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Botão de fechar
-                              Flexible(
-                                child: ElevatedButton(
-                                  onPressed: () {
                                     Navigator.pop(context);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:  Theme.of(context).colorScheme.primary,
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 20,
-                                      horizontal: 40,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Não quero informar',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              SizedBox(width: 6),
-
-                              // Botão de Adicionar
-                              Flexible(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    // adicionar e abrir comanda
-                                    if(numeroObservacaoSelecionado != ""){
+                                    
+                                    if (ultimoNumeroObservacaoSelecionado != "") {
+                                      await abrirPedido(numeroComandaFuncao, await configuracaoServico());
+                                      await devolverPedido(numeroComandaFuncao);
+                                      await atualizarCartoes(numeroComandaFuncao, valorTotalLiquido, statusPedido);
                                       await inserirProdutoComObservacoes(
                                         numeroProduto,
                                         numeroComandaFuncao,
                                         numeroUsuarioFuncao,
                                         numeroDaLicencaSelecionadaFuncao,
-                                        nomeObservacaoSelecionado,
+                                        observacoesSelecionadasFinal,
                                       );
-                                      Navigator.pop(context);
-                                    } else {
-                                      // mensagem de erro
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Selecione uma observação'),
-                                          backgroundColor: Theme.of(context).colorScheme.error,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary,
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 20,
-                                      horizontal: 40,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        'Confirmar',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          color: Theme.of(context).colorScheme.onPrimary,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Icon(Icons.check, color: Theme.of(context).colorScheme.onPrimary),
-                                    ],
+                                      await checkInRealizadoComSucesso(numeroComandaFuncao);
+                                      
+                                      loadingConfirmar = false;
+                                    } 
+                                  } 
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: observacoesSelecionadas.length > 0
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.surfaceDim,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Confirmar',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color:  observacoesSelecionadas.length > 0
+                                            ? Theme.of(context).colorScheme.onPrimary 
+                                            : Theme.of(context).colorScheme.onPrimary ,
+                                            /* : Theme.of(context).colorScheme.onSurfaceVariant, */
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.check,
+                                      color: observacoesSelecionadas.length > 0
+                                          ? Theme.of(context).colorScheme.onPrimary 
+                                          : Theme.of(context).colorScheme.onPrimary ,
+                                          // : Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ESPAÇAMENTO ENTRE A LISTA E OS BOTÕES
+                  const SizedBox(height: 16),
+
+                  // PAINEL DE BOTÕES FIXOS EM BAIXO
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 2ª LINHA: CANCELAR E NÃO INFORMAR (LADO A LADO)
+                      Row(
+                        children: [
+                          // Botão Cancelar
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                cliqueiFora = false;
+                                await checkInRealizadoSemSucesso(numeroComandaFuncao);
+                                Navigator.pop(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.error,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Cancelar',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Theme.of(context).colorScheme.onError,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          
+                          const SizedBox(width: 12), // Espaço horizontal entre os dois botões
+
+                          // Botão Não Informar
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                cliqueiFora = false;
+                                await abrirPedido(numeroComandaFuncao, await configuracaoServico());
+                                await devolverPedido(numeroComandaFuncao);
+                                await atualizarCartoes(numeroComandaFuncao, valorTotalLiquido, statusPedido);
+                                await inserirProdutoComObservacoes(
+                                  numeroProduto,
+                                  numeroComandaFuncao,
+                                  numeroUsuarioFuncao,
+                                  numeroDaLicencaSelecionadaFuncao,
+                                  ultimoNomeObservacaoSelecionado,
+                                );
+                                await checkInRealizadoComSucesso(numeroComandaFuncao);
+                                Navigator.pop(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.shadow,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Não informar',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Theme.of(context).colorScheme.onTertiary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             );
           },
         );
       },
-    );
+    ).then((_) async {
+      if(cliqueiFora){
+        await checkInRealizadoSemSucesso(numeroComandaFuncao);
+      }
+    });
   }
 
   @override
@@ -2037,7 +2308,7 @@ class CheckinPageState extends State<CheckinPage>
                         ),
 
                       // Botão Check Out
-                      // if (aparecerCheckOut)
+                      if (aparecerCheckOut)
                       Expanded(
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 4.0),
