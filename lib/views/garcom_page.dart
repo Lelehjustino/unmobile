@@ -299,6 +299,8 @@ class GarcomPageState extends State<GarcomPage>
   /// Controlado por AbsorbPointer no body do Scaffold.
   bool _telaBloqueada = false;
 
+  bool modoTouch = false;
+
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
     debugLabel: 'focoBloqueioDialogo',
@@ -2880,6 +2882,20 @@ class GarcomPageState extends State<GarcomPage>
 
   // Função que verifica se um produto tem adicionais
   void verificacaoSeTemAdicionalObservacao(
+    String numero,
+    List<dynamic> listaCompleta,
+  ) {
+    final itensProduto = listaCompleta
+        .where((e) => e['numeroproduto'].toString() == numero)
+        .toList();
+    if (itensProduto.isEmpty) {
+      temAdicionalObservacao = false;
+    } else {
+      temAdicionalObservacao = true;
+    }
+  }
+
+  void verificacaoSeTemAdicionalObservacaoFavoritos(
     String numero,
     List<dynamic> listaCompleta,
   ) {
@@ -8072,70 +8088,6 @@ class GarcomPageState extends State<GarcomPage>
                                     ),
                                   ),
                                 ),
-                              /* SizedBox(width: 8),
-                              // Mostrar o que tem dentro da comanda ou mesa 
-                              if(mostrarDentroComandaMesa)
-                              Padding(
-                                  padding: EdgeInsets.only(left: 0,right: 0, top: 14,bottom: 0,),
-                                  child: Column(
-                                    children: [
-                                        IconButton(
-                                        icon: Icon(
-                                          /* logicaPorComanda || logicaPorMesa ? Icons.table_bar : Icons.description, */
-                                          /* Icons.request_page, */
-                                          Icons.receipt,
-                                          color: Theme.of(context).colorScheme.onTertiary,
-                                        ),
-                                        onPressed: () async {
-                                          if(logicaPorComanda){
-                                            Get.to(
-                                              () => ContaPage(),
-                                              arguments: {
-                                                'numeropedido': numeropedido_FK,
-                                                'comanda': numeroComandaEmUso,
-                                                'mesa': '0',
-                                              },
-                                            );
-                                          } else if(logicaPorMesa){
-                                            Get.to(
-                                              () => ContaPage(),
-                                              arguments: {
-                                                'numeropedido': numeropedido_FK,
-                                                'comanda': '0',
-                                                'mesa': numeroMesaEmUso,
-                                              },
-                                            );
-                                          } else if (logicaPorComandaNaMesa){
-                                            Get.to(
-                                              () => ContaPage(),
-                                              arguments: {
-                                                'numeropedido': numeropedido_FK,
-                                                'comanda': numeroComandaEmUso,
-                                                'mesa': numeroMesaEmUso,
-                                              },
-                                            );
-                                          }
-                                        },
-                                        style: IconButton.styleFrom(
-                                          backgroundColor: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                          padding: EdgeInsets.all(10),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        'Conta',
-                                        style: TextStyle(
-                                          color: colorScheme.primary,
-                                          fontWeight: FontWeight.bold
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                ), */
                             ],
                           ),
                         ),

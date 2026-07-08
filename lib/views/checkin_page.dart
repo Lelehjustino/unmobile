@@ -1682,6 +1682,9 @@ class CheckinPageState extends State<CheckinPage>
                             child: ElevatedButton(
                               onPressed: () async {
                                 cliqueiFora = false;
+                                
+                                Navigator.pop(context);
+
                                 await abrirPedido(numeroComandaFuncao, await configuracaoServico());
                                 await devolverPedido(numeroComandaFuncao);
                                 await atualizarCartoes(numeroComandaFuncao, valorTotalLiquido, statusPedido);
@@ -1693,7 +1696,6 @@ class CheckinPageState extends State<CheckinPage>
                                   ultimoNomeObservacaoSelecionado,
                                 );
                                 await checkInRealizadoComSucesso(numeroComandaFuncao);
-                                Navigator.pop(context);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Theme.of(context).colorScheme.shadow,

@@ -146,6 +146,9 @@ class FuncoesController extends GetxController {
     RxString nomeCaixa = "".obs;
     RxList<dynamic> listaCaixas = <dynamic>[].obs;
 
+    RxList<dynamic> listaFavoritos = <dynamic>[].obs;
+    RxList<dynamic> listaAdicionaisObservacoesFavoritos = <dynamic>[].obs;
+
     @override
     void onInit() {
       super.onInit();
