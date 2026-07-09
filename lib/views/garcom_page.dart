@@ -299,7 +299,10 @@ class GarcomPageState extends State<GarcomPage>
   /// Controlado por AbsorbPointer no body do Scaffold.
   bool _telaBloqueada = false;
 
-  bool modoTouch = false;
+  bool aparecerVendaTouch = false;
+  String grupoSelecionadoNoTouch = "";
+
+  bool empurrarBotoes = false;
 
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
@@ -357,6 +360,7 @@ class GarcomPageState extends State<GarcomPage>
     _carregargarcom();
     _loadNumeroLicenca();
     _loadNomeEmpresa();
+    carregarUltimaConfiguracao();
     listaProdutoFiltrada = funcoesController.listaProduto;
 
     // Se já existem itens no carrinho OU foi passado algum argumento, restaura o estado ANTES de ligar os listeners
@@ -372,6 +376,73 @@ class GarcomPageState extends State<GarcomPage>
     // Sincronizar showKeyboardAlfa com o foco nativo dos campos de texto
     cardapioFocus.addListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.addListener(_syncKeyboardAlfaFromFocus);
+  }
+
+  // Salvar ultima configuracao
+  Future<void> salvarUltimaConfiguracao(String rotasSalvas) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('carregar_ultima_configuracao', jsonEncode(rotasSalvas));
+    } catch (e, st) {
+      // debugPrint("Erro salvarRota(): $e\n$st");
+    }
+  }
+
+  // Carregar ultima configuracao
+  Future<void> carregarUltimaConfiguracao() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rota = prefs.getString('carregar_ultima_configuracao');
+
+    if (rota == "Touch") {
+      entrarModoTouch();
+    } else {
+      sairModoTouch();
+    }
+  }
+
+  /// Seleciona automaticamente o primeiro grupo disponível e carrega seus produtos.
+  /// Deve ser chamado sempre que o modo touch é ativado ou a lista de grupos é recarregada.
+  void _selecionarPrimeiroGrupo() {
+    if (funcoesController.listaGrupo.isEmpty) return;
+    final primeiro = funcoesController.listaGrupo.first;
+    setState(() {
+      grupoSelecionadoNoTouch = primeiro['numero'].toString();
+      produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
+    });
+  }
+
+  entrarModoTouch(){
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      aparecerCarrinho = false;
+      aparecerConfiguracaoProduto = false;
+      aparecerVendaTouch = true;
+      grupoSelecionadoNoTouch = "";
+    });
+    // Seleciona o primeiro grupo após o frame atual para garantir que
+    // a lista já está disponível (sem Future.delayed — usa o frame callback nativo)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _selecionarPrimeiroGrupo();
+    });
+    salvarUltimaConfiguracao("Touch");
+  }
+
+  sairModoTouch(){ // carrinho
+    FocusScope.of(context).unfocus();
+    setState(() {
+      aparecerCarrinho = true;
+      aparecerConfiguracaoProduto = false;
+      aparecerVendaTouch = false;
+      grupoSelecionadoNoTouch = "";
+    });
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (cardapioFocus.canRequestFocus) {
+        cardapioFocus.requestFocus();
+      }
+    }); 
+    salvarUltimaConfiguracao("Carrinho");
   }
 
   Future<void> tirarFoco() async {
@@ -1529,6 +1600,7 @@ class GarcomPageState extends State<GarcomPage>
     if (_bloqueandoFoco) return;
 
     if (carrinhoController.carrinho.isNotEmpty) {
+      empurrarBotoes = false;
       iniciaComCarrinho();
       return;
     }
@@ -1536,6 +1608,8 @@ class GarcomPageState extends State<GarcomPage>
         funcoesController.logicaPorComandaNaMesa.value) {
       setState(() {
         showKeyboardNumero = true;
+
+        empurrarBotoes = false;
 
         _campoAtivo = 'comandaController';
 
@@ -1550,6 +1624,8 @@ class GarcomPageState extends State<GarcomPage>
         showKeyboardNumero = true;
 
         _campoAtivo = 'mesaController';
+
+        empurrarBotoes = false;
 
         Future.delayed(Duration(milliseconds: 300), () {
           if (!_bloqueandoFoco && mesaFocus.canRequestFocus) {
@@ -3526,6 +3602,8 @@ class GarcomPageState extends State<GarcomPage>
                                                 observacoesSelecionadas,
                                           );
 
+                                        sairModoTouch();
+
                                       // Limpa listas
                                       listaAdicionaisSelecionados.clear();
                                       observacoesSelecionadas.clear();
@@ -3650,6 +3728,327 @@ class GarcomPageState extends State<GarcomPage>
       });
     }
   } */
+
+ // Função com o popup para selecionar garçom
+  void abrirCarrinhoNaVendaTouch(List<Produto> carrinhoFuncao) {
+    if (_popupGarcomAberto) return;
+    _popupGarcomAberto = true;    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Align(
+            alignment: Alignment.center,
+            child: Text(
+              "Carrinho",
+              style: TextStyle(
+                fontSize: 20, // ou qualquer outro estilo que desejar
+              ),
+            ),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: carrinhoFuncao.isEmpty
+                ? Center(child: Text("Seu carrinho não tem itens :("))
+                : ListView.builder(
+                    shrinkWrap: true,
+                    controller: _scrollController,
+                    physics: BouncingScrollPhysics(),
+                    itemCount: carrinhoController.carrinho.length,
+                    itemBuilder: (context, index) {
+                      final produto = carrinhoController.carrinho[index];
+                      final bool ehKilo;
+
+                      // Agrupa os adicionais/sabores/bordas por nome para exibição
+                      final Map<String, int> adicionaisAgrupados = {};
+                      for (final adicional in produto.adicionais) {
+                        final nome = adicional.nome;
+                        adicionaisAgrupados[nome] =
+                            (adicionaisAgrupados[nome] ?? 0) +
+                            adicional.quantidade.toInt();
+                      }
+
+                      // Verifica se o produto é vendido por Kg
+                      if (produto.nome.contains("(Kg)")) {
+                        ehKilo = true;
+                      } else {
+                        ehKilo = false;
+                      }
+
+                      // Agrupa observações de texto repetidas
+                      final Map<String, int> observacoesAgrupadas = {};
+                      for (final obs in produto.observacoesTexto) {
+                        final texto = obs.trim();
+                        if (texto.isNotEmpty) {
+                          observacoesAgrupadas[texto] =
+                              (observacoesAgrupadas[texto] ?? 0) + 1;
+                        }
+                      }
+
+                      return Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Card(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 8,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // REMOVER PRODUTO
+                                    GestureDetector(
+                                      onTap: () {
+                                        shownDialogErrorTwoBottom(
+                                          context: context,
+                                          title: "Deseja descartar este ${produto.nome}?",
+                                          icon: Icons.delete,
+                                          onConfirm: () {
+                                            removerProdutoDoCarrinhoPorNumeroIndex(
+                                              produto.numero,
+                                              index,
+                                            );
+                                            setState(() {});
+                                          },
+                                          onCancel: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                        );
+                                      },
+                                      child: Icon(
+                                        Icons.delete,
+                                        size: 20,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.error,
+                                      ),
+                                    ),
+
+                                    SizedBox(width: 8),
+
+                                    // DADOS DO PRODUTO
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 0.0,
+                                            ),
+                                            child: Text(
+                                              produto.nome,
+                                              /* maxLines: 1, */
+                                              /* overflow: TextOverflow.ellipsis, */
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                                color: Theme.of(context).colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ),
+
+                                          if (produto
+                                              .observacaoEscrita
+                                              .isNotEmpty)
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                top: 4,
+                                              ),
+                                              child: Text(
+                                                produto.observacaoEscrita,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontStyle: FontStyle.italic,
+                                                  color:  Theme.of(context).colorScheme.surfaceDim,
+                                                ),
+                                              ),
+                                            ),
+
+                                          if (produto
+                                              .observacoesTexto
+                                              .isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 2,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: observacoesAgrupadas
+                                                    .entries
+                                                    .map(
+                                                      (entry) => Text(
+                                                        '${entry.value}x ${entry.key}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontStyle: FontStyle.italic,
+                                                          color:  Theme.of(context).colorScheme.surfaceDim,
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                              ),
+                                            ),
+
+                                          if (produto.adicionais.isNotEmpty)
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                top: 6,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: adicionaisAgrupados
+                                                    .entries
+                                                    .map((entry) {
+                                                      //.entries = le
+                                                      //.map = traduz e quadra
+                                                      return Text(
+                                                        // value = int
+                                                        // key = string
+                                                        '${entry.value}x ${entry.key}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:  Theme.of(context).colorScheme
+                                                              .surfaceDim,
+                                                        ),
+                                                      );
+                                                    })
+                                                    .toList(),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // CONTROLE DE QUANTIDADE
+                                    Container(
+                                      width:
+                                          MediaQuery.of(context).size.width *
+                                          0.35,
+                                      decoration: BoxDecoration(
+                                        color: ehKilo
+                                            ? Colors.transparent
+                                            :  Theme.of(context).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(
+                                          8,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment
+                                            .center, // Centraliza os elementos
+                                        children: [
+                                          if (!ehKilo)
+                                            IconButton(
+                                              icon: Icon(
+                                                Icons.remove,
+                                                color: ehKilo
+                                                    ? Colors.transparent
+                                                    : Colors.black,
+                                              ),
+                                              onPressed: ehKilo
+                                                  ? null
+                                                  : () {
+                                                      if (produto.quantidade >
+                                                          1) {
+                                                        setState(
+                                                          () => produto
+                                                              .quantidade--,
+                                                        );
+                                                      } else {
+                                                        shownDialogErrorTwoBottom(
+                                                          context: context,
+                                                          title:
+                                                              "Deseja descartar este ${produto.nome}?",
+                                                          icon: Icons.delete,
+                                                          onConfirm: () {
+                                                            removerProdutoDoCarrinhoPorNumeroIndex(
+                                                              produto.numero,
+                                                              index,
+                                                            );
+                                                            setState(() {});
+                                                          },
+                                                          onCancel: () {
+                                                            Navigator.of(
+                                                              context,
+                                                            ).pop();
+                                                          },
+                                                        );
+                                                      }
+                                                    },
+                                            ),
+
+                                          Flexible(
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 4,
+                                              ),
+                                              child: Text(
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
+                                                ehKilo
+                                                    ? produto.quantidade
+                                                          .toStringAsFixed(3)
+                                                    : produto.quantidade
+                                                          .toStringAsFixed(0),
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(context).colorScheme.onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+
+                                          if (!ehKilo)
+                                            IconButton(
+                                              icon: Icon(
+                                                Icons.add,
+                                                color: ehKilo
+                                                    ? Colors.transparent
+                                                    : Colors.black,
+                                              ),
+                                              onPressed: ehKilo
+                                                  ? null
+                                                  : () {
+                                                      setState(
+                                                        () => produto
+                                                            .quantidade++,
+                                                      );
+                                                    },
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("Cancelar"),
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+      _popupGarcomAberto = false;
+    });
+  }
  
 
   // Função com o popup para selecionar garçom
@@ -4781,6 +5180,9 @@ class GarcomPageState extends State<GarcomPage>
 
     if (comandaValida && !mesaVinculada) {
       _dialogVincularMesa();
+      setState(() {
+        empurrarBotoes = false;
+      });
       return;
     }
 
@@ -4808,6 +5210,7 @@ class GarcomPageState extends State<GarcomPage>
         showKeyboardAlfa = true;
         showKeyboardQuantidade = false;
         showKeyboardNumero = false;
+        empurrarBotoes = false;
         _campoAtivo = 'cardapioController';
         Future.delayed(Duration(milliseconds: 300), () {
           if (cardapioFocus.canRequestFocus) {
@@ -4902,6 +5305,7 @@ class GarcomPageState extends State<GarcomPage>
       showKeyboardAlfa = true;
       showKeyboardQuantidade = false;
       showKeyboardNumero = false;
+      empurrarBotoes = false;
       _campoAtivo = 'cardapioController';
     });
 
@@ -6301,6 +6705,8 @@ class GarcomPageState extends State<GarcomPage>
                                       onTap: () async {
                                         if (isProcessing) return;
 
+                                        empurrarBotoes = true;
+
                                         setState(() => isProcessing = true);
 
                                         try {
@@ -6535,6 +6941,9 @@ class GarcomPageState extends State<GarcomPage>
                                         // quando clicar em fazer pedido
                                         onTap: () async {
                                           if (isProcessing) return;
+
+                                          empurrarBotoes = true;
+
                                           if (!cliqueiFazerPedido) {
                                             cliqueiFazerPedido = true;
                                           } else {
@@ -6896,6 +7305,7 @@ class GarcomPageState extends State<GarcomPage>
                                                 Future.delayed(const Duration(milliseconds: 2000), () {
                                                   chamarFoco();
                                                 });
+                                                empurrarBotoes = true;
                                               }
                                             },
 
@@ -7340,6 +7750,7 @@ class GarcomPageState extends State<GarcomPage>
                                                   limparAmbas();
                                                   limparInformacoesProduto();
                                                   chamarFoco();
+                                                  empurrarBotoes = true;
                                                 }
                                               }
                                             },
@@ -7451,6 +7862,7 @@ class GarcomPageState extends State<GarcomPage>
                                           aparecerLista = false;
                                           aparecerConfiguracaoProduto = false;
                                           aparecerBotoes = true;
+                                          empurrarBotoes = true;
                                         });
                                       }
                                     },
@@ -7531,12 +7943,23 @@ class GarcomPageState extends State<GarcomPage>
                                               });
                                             },
 
-                                            onChanged: (value) {
+                                            /* onChanged: (value) {
                                               if (comandaValida) {
                                                 zerarAtendimento();
                                                 limparAmbas();
                                                 limparInformacoesProduto();
                                                 chamarFoco();
+                                              }
+                                            }, */
+
+                                            onChanged: (value) async {
+                                              if (value.isNotEmpty && comandaValida) {
+                                                zerarAtendimento();
+                                                limparAmbas();
+                                                limparInformacoesProduto();
+                                                Future.delayed(const Duration(milliseconds: 2000), () {
+                                                  chamarFoco();
+                                                });
                                               }
                                             },
 
@@ -7897,33 +8320,37 @@ class GarcomPageState extends State<GarcomPage>
                                   children: [
                                     IconButton(
                                       icon: Icon(
-                                        Icons.menu,
+                                        aparecerVendaTouch ? Icons.shopping_cart : Icons.fingerprint,
+                                        // Icons.fingerprint,
                                         // size: 30,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onTertiary,
+                                        color: Theme.of(context,).colorScheme.onTertiary,
                                       ),
                                       onPressed: () async {
-                                        aparecerCarrinho = true;
-                                        aparecerLista = false;
-                                        abrirSelecaoGrupoProduto();
+                                        if(aparecerVendaTouch){
+                                          aparecerCarrinho = true;
+                                          aparecerLista = false;
+                                          // abrirSelecaoGrupoProduto();
+                                          sairModoTouch();
+                                        } else {
+                                          // modo touch 
+                                          entrarModoTouch();
+                                        }
                                       },
                                       style: IconButton.styleFrom(
-                                        backgroundColor: Theme.of(
-                                          context,
-                                        ).colorScheme.scrim,
+                                        backgroundColor: aparecerVendaTouch ? Theme.of(context,).colorScheme.scrim : Theme.of(context,).colorScheme.shadow,
+                                       // backgroundColor: Theme.of(context,).colorScheme.shadow,
                                         padding: EdgeInsets.all(10),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
+                                          borderRadius: BorderRadius.circular(10,),
                                         ),
                                       ),
                                     ),
                                     Text(
-                                      'Menu',
+                                      aparecerVendaTouch ? 'Carrinho' : 'Touch',
+                                      // 'Touch',
                                       style: TextStyle(
-                                        color: colorScheme.scrim,
+                                        color: aparecerVendaTouch ? colorScheme.scrim : colorScheme.shadow,
+                                        // color: colorScheme.shadow,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -8491,7 +8918,7 @@ class GarcomPageState extends State<GarcomPage>
                   ], */
 
                 // Carrinho
-                if (carrinhoController.carrinho.isNotEmpty && !aparecerLista && !aparecerConfiguracaoProduto) ...[
+                if (carrinhoController.carrinho.isNotEmpty && !aparecerLista && !aparecerConfiguracaoProduto && !aparecerVendaTouch) ...[
                   // TÍTULO DO CARRINHO
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
@@ -9073,86 +9500,6 @@ class GarcomPageState extends State<GarcomPage>
                                       observacao,
                                     );
                                     temAdicionalObservacao = false;
-                                    /* shownDialogTwoBottom(
-                                      context: context,
-                                      title: "Deseja adicionar observação ou adicionais?",
-                                      message: "",
-                                      icon: Icons.add,
-                                      onConfirm: () async {
-                                        final nome = cardapioController.text;
-                                        final numero = numeroProdutoSelecionadoController.text;
-                                        final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
-                                        final quantidade = produtoKilo 
-                                            ? (double.tryParse(qtdText) ?? 1.0)
-                                            : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
-                                        final observacao = observacaoProdutoSelecionadoController.text;
-                                        final valor = valorDoProdutoSelecionado.toString();
-                                        showModalAdicionaisObservacoes(
-                                          context,
-                                          numeroDoProdutoSelecionado,
-                                          funcoesController.listaAdicionaisObservacoes, 
-                                          nome,
-                                          valor,
-                                          numero,
-                                          quantidade,
-                                          observacao,
-                                        );
-                                        temAdicionalObservacao = false;
-                                      },
-                                      onCancel: () {
-                                        // Adiciona produto ao carrinho
-                                        final nome = cardapioController.text;
-                                        final numero = numeroProdutoSelecionadoController.text;
-                                        final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
-                                        final quantidade = produtoKilo 
-                                            ? (double.tryParse(qtdText) ?? 1.0)
-                                            : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
-                                        final observacao = observacaoProdutoSelecionadoController.text;
-                                        final valor = valorDoProdutoSelecionado.toString();
-
-                                        // adiciona no carrinho
-                                        carrinhoController.adicionarProdutoAoCarrinho(
-                                              nome,
-                                              valor,
-                                              numero,
-                                              quantidade,
-                                              observacao,
-                                              idDoProdutoSelecionado,
-                                              adicionais:
-                                                  listaAdicionaisSelecionados,
-                                              observacoesTexto:
-                                                  listaObservacoesSelecionadas,
-                                            );
-
-                                        // altera estado visual
-                                        setState(() {
-                                          aparecerConfiguracaoProduto = false;
-                                          aparecerBotoes = true;
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-
-                                          showKeyboardAlfa = false;
-                                          showKeyboardNumero = false;
-                                          showKeyboardQuantidade = false;
-
-                                          mostrarGrupos = true;
-                                          mostrarProdutos = false;
-
-                                          aparecerFazerPedido = true;
-
-                                          quantidadeInicial = 1;
-                                        });
-
-                                        // ações pós-build
-                                        WidgetsBinding.instance
-                                            .addPostFrameCallback((_) {
-                                              if (!mounted) return;
-                                              limparInformacoesProduto();
-                                              cardapioController.clear();
-                                              observacaoProdutoSelecionadoController.clear();
-                                            });
-                                      },
-                                    ); */
                                   } else {
                                     final nome = cardapioController.text;
                                     final numero = numeroProdutoSelecionadoController.text;
@@ -9179,6 +9526,7 @@ class GarcomPageState extends State<GarcomPage>
                                       aparecerConfiguracaoProduto = false;
                                       aparecerBotoes = true;
                                       aparecerCarrinho = true;
+                                      aparecerVendaTouch = false;
                                       aparecerLista = false;
 
                                       showKeyboardAlfa = false;
@@ -9213,199 +9561,393 @@ class GarcomPageState extends State<GarcomPage>
                               ),
                             ),
                           ),
-                          /* Expanded(
-                            flex: 1,
-                            child: SizedBox(
-                              height: 110,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  final numero =
-                                      numeroProdutoSelecionadoController.text;
-                                  verificacaoSeTemAdicionalObservacao(
-                                    numero,
-                                    funcoesController.listaAdicionaisObservacoes,
-                                  );
-
-                                  if (temAdicionalObservacao) {
-                                    // Dialogo se quer adicionar observação ou adicinal
-                                    shownDialogTwoBottom(
-                                      context: context,
-                                      title: "Deseja adicionar observação ou adicionais?",
-                                      message: "",
-                                      icon: Icons
-                                          .add, // você pode trocar para outro ícone
-                                      /* // 3. Passe os controladores para a função
-                                      textController: mesaController,
-                                      focusNode: mesaFocus, */
-                                      onConfirm: () async {
-                                        final nome = cardapioController.text;
-                                        final numero =
-                                            numeroProdutoSelecionadoController
-                                                .text;
-                                        final quantidade =
-                                            int.tryParse(
-                                              quantidadeProdutoSelecionadoController
-                                                  .text,
-                                            ) ??
-                                            1;
-                                        final observacao =
-                                            observacaoProdutoSelecionadoController
-                                                .text;
-                                        final valor = valorDoProdutoSelecionado
-                                            .toString();
-                                        showModalAdicionaisObservacoes(
-                                          context,
-                                          numeroDoProdutoSelecionado,
-                                          funcoesController.listaAdicionaisObservacoes, // lista vinda da API
-                                          nome,
-                                          valor,
-                                          numero,
-                                          quantidade,
-                                          observacao,
-                                        );
-                                        temAdicionalObservacao = false;
-                                      },
-                                      onCancel: () {
-                                        // Adiciona produto ao carrinho
-                                        final nome = cardapioController.text;
-                                        final numero =
-                                            numeroProdutoSelecionadoController
-                                                .text;
-                                        final quantidade =
-                                            double.tryParse(
-                                              quantidadeProdutoSelecionadoController
-                                                  .text,
-                                            ) ??
-                                            1;
-                                        final observacao =
-                                            observacaoProdutoSelecionadoController
-                                                .text;
-                                        final valor = valorDoProdutoSelecionado
-                                            .toString();
-
-                                        // adiciona no carrinho
-                                        carrinhoController
-                                            .adicionarProdutoAoCarrinho(
-                                              nome,
-                                              valor,
-                                              numero,
-                                              quantidade,
-                                              observacao,
-                                              idDoProdutoSelecionado,
-                                              adicionais:
-                                                  listaAdicionaisSelecionados,
-                                              observacoesTexto:
-                                                  listaObservacoesSelecionadas,
-                                            );
-
-                                        // altera estado visual
-                                        setState(() {
-                                          aparecerConfiguracaoProduto = false;
-                                          aparecerBotoes = true;
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-
-                                          showKeyboardAlfa = false;
-                                          showKeyboardNumero = false;
-                                          showKeyboardQuantidade = false;
-
-                                          mostrarGrupos = true;
-                                          mostrarProdutos = false;
-
-                                          aparecerFazerPedido = true;
-
-                                          quantidadeInicial = 1;
-                                        });
-
-                                        // ações pós-build
-                                        WidgetsBinding.instance
-                                            .addPostFrameCallback((_) {
-                                              if (!mounted) return;
-                                              limparInformacoesProduto();
-                                              cardapioController.clear();
-                                              observacaoProdutoSelecionadoController.clear();
-                                            });
-                                      },
-                                    );
-                                  } else {
-                                    final nome = cardapioController.text;
-                                    final numero =
-                                        numeroProdutoSelecionadoController.text;
-                                    final quantidade =
-                                        double.tryParse(
-                                          quantidadeProdutoSelecionadoController
-                                              .text,
-                                        ) ??
-                                        1.0;
-                                    final observacao =
-                                        observacaoProdutoSelecionadoController
-                                            .text;
-                                    final valor = valorDoProdutoSelecionado
-                                        .toString();
-
-                                    // adiciona no carrinho
-                                    carrinhoController
-                                        .adicionarProdutoAoCarrinho(
-                                          nome,
-                                          valor,
-                                          numero,
-                                          quantidade,
-                                          observacao,
-                                          idDoProdutoSelecionado,
-                                          adicionais: adicionaisSelecionados,
-                                        );
-
-                                    // altera estado visual
-                                    setState(() {
-                                      aparecerConfiguracaoProduto = false;
-                                      aparecerBotoes = true;
-                                      aparecerCarrinho = true;
-                                      aparecerLista = false;
-
-                                      showKeyboardAlfa = false;
-                                      showKeyboardNumero = false;
-                                      showKeyboardQuantidade = false;
-
-                                      mostrarGrupos = true;
-                                      mostrarProdutos = false;
-                                      quantidadeInicial = 1;
-                                    });
-
-                                    // ações pós-build
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                          if (!mounted) return;
-                                          limparInformacoesProduto();
-                                          cardapioController.clear();
-                                          observacaoProdutoSelecionadoController
-                                              .clear();
-                                        });
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: colorScheme.tertiary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.add,
-                                  color: colorScheme.onTertiary,
-                                ),
-                              ),
-                            ),
-                          ), */
                         ],
                       ),
                     ),
                   ),
 
-                if ((!aparecerLista && carrinhoController.carrinho.isEmpty) || (aparecerConfiguracaoProduto))
-                  Expanded(child: Container()),
+                if(aparecerVendaTouch && !aparecerConfiguracaoProduto && aparecerCardapio)
+                Expanded(
+                  child: LayoutBuilder(
+                  builder: (context, boxConstraints) {
+                    // Largura proporcional: grupos ~20%, produtos o restante
+                    final double totalWidth = boxConstraints.maxWidth;
+                    final double gruposWidth = (totalWidth * 0.20).clamp(80.0, 220.0);
+                    return Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // COLUNA DE GRUPOS (largura proporcional ~20%)
+                      SizedBox(
+                        width: gruposWidth,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListView.builder(
+                            itemCount: funcoesController.listaGrupo.length,
+                            itemBuilder: (context, index) {
+                              final grupo = funcoesController.listaGrupo[index];
+                              final selecionado = grupoSelecionadoNoTouch == grupo['numero'].toString();
+
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    grupoSelecionadoNoTouch = grupo['numero'].toString();
+                                    produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
+                                  });
+                                },
+                                child: Container(
+                                  margin: EdgeInsets.all(6),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 20,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selecionado
+                                        ? colorScheme.primary
+                                        : colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      grupo['nome'],
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      style: TextStyle(
+                                        color: selecionado
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                        // fontSize: 8,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(width: 8),
+
+                      // ÁREA DE PRODUTOS (Expanded — ocupa todo o restante)
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Número de colunas adaptável à largura disponível
+                              const double itemMinWidth = 110.0;
+                              final int cols = (constraints.maxWidth / itemMinWidth).floor().clamp(2, 8);
+                              return GridView.builder(
+                            padding: const EdgeInsets.all(8),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: cols,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              childAspectRatio: 1.5,
+                            ),
+                            itemCount: produtosFiltrados.length,
+                            itemBuilder: (context, index) {
+                              final produto = produtosFiltrados[index];
+
+                              return GestureDetector(
+                                onTap: () {
+                                  // Se o produto for do tipo produto
+                                  if (produto['produto_id'] == 'P') {
+                                    if (produto['produto_un'] == "Kg") {
+                                      produtoKilo = true;
+                                    } else {
+                                      produtoKilo = false;
+                                    }
+
+                                    cardapioController.text = produtoKilo
+                                        ? "${produto['produto_nome']} (Kg)"
+                                        : "${produto['produto_nome']} (${produto['produto_un']})";
+                                    numeroProdutoSelecionadoController.text = produto['produto_numero'];
+                                    numeroDoProdutoSelecionado = produto['produto_numero'];
+                                    valorDoProdutoSelecionado = produto['produto_valor'];
+
+                                    quantidadeProdutoSelecionadoController.text = "";
+                                    quantidadeProdutoSelecionadoController.clear();
+
+                                    observacaoProdutoSelecionadoController.text = "";
+                                    observacaoProdutoSelecionadoController.clear();
+
+                                    setState(() {
+                                      idDoProdutoSelecionado = produto['produto_id'];
+                                      aparecerBotoes = false;
+                                      aparecerLista = false;
+                                      aparecerCarrinho = false;
+                                      aparecerConfiguracaoProduto = true;
+                                      aparecerCardapio = true;
+
+                                      if (produtoKilo) {
+                                        showKeyboardAlfa = false;
+                                        showKeyboardNumero = false;
+                                        showKeyboardQuantidade = true;
+                                        _campoAtivo = 'quantidadeProdutoSelecionadoController';
+                                        Future.delayed(
+                                          Duration(milliseconds: 300),
+                                          () {
+                                            if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                              quantidadeProdutoSelecionadoFocus.requestFocus();
+                                            }
+                                          },
+                                        );
+                                      } else {
+                                        showKeyboardAlfa = false;
+                                        showKeyboardNumero = true;
+                                        showKeyboardQuantidade = false;
+                                        _campoAtivo = 'quantidadeProdutoSelecionadoController';
+                                        Future.delayed(
+                                          Duration(milliseconds: 300),
+                                          () {
+                                            if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                              quantidadeProdutoSelecionadoFocus.requestFocus();
+                                            }
+                                          },
+                                        );
+                                      }
+                                    });
+                                  }
+                                  // Se o produto for do tipo pizza
+                                  else if (produto['produto_id'] == 'PZ') {
+                                    Get.offNamed('/pizza',
+                                      preventDuplicates: false,
+                                      arguments: {
+                                        'tamanhoSelecionado': produto['produto_nome'],
+                                        'comanda': comandaController.text,
+                                        'mesa': mesaController.text,
+                                      },
+                                    )?.then((_) {
+                                      if (mounted) {
+                                        setState(() {
+                                          aparecerCarrinho = true;
+                                          aparecerConfiguracaoProduto = false;
+                                        });
+                                      }
+                                    });
+                                  } else if (produto['produto_id'] == 'E') {
+                                    Future.delayed(Duration(milliseconds: 50), () {
+                                      if (!mounted) return;
+
+                                      cardapioController.text = produto['produto_nome'];
+                                      numeroProdutoSelecionadoController.text = produto['produto_numero'];
+                                      numeroDoProdutoSelecionado = produto['produto_numero'];
+                                      valorDoProdutoSelecionado = produto['produto_valor'];
+
+                                      setState(() {
+                                        idDoProdutoSelecionado = produto['produto_id'];
+                                        showKeyboardAlfa = false;
+                                        showKeyboardNumero = true;
+                                        _campoAtivo = 'quantidadeProdutoSelecionadoController';
+
+                                        aparecerLista = false;
+                                        aparecerCarrinho = false;
+                                        aparecerBotoes = false;
+                                        aparecerConfiguracaoProduto = true;
+                                        aparecerCardapio = true;
+                                      });
+
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        if (!mounted) return;
+                                        quantidadeProdutoSelecionadoFocus.requestFocus();
+                                      });
+                                    });
+                                  }
+                                },
+                                // Visual do card de produto
+                                child: 
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      /* // Preço
+                                      Positioned(
+                                        top: 8,
+                                        left: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.primary,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
+                                            style: TextStyle(
+                                              color: colorScheme.onPrimary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                        ),
+                                      ), */
+
+                                      // Nome
+                                      Padding(
+                                        padding: EdgeInsets.fromLTRB(0, 0, 0, 45),
+                                        child: Center(
+                                          child: Text(
+                                            produto['produto_nome'],
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: colorScheme.onSurface,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if(produto['produto_valor'] != "0.00")
+                                      // Preço
+                                      Positioned(
+                                        /* right: 8,
+                                        bottom: 8, */
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.primary,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
+                                            style: TextStyle(
+                                              color: colorScheme.onPrimary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      if(produto['produto_valor'] == "0.00")
+                                      // Preço
+                                      Positioned(
+                                        /* right: 8,
+                                        bottom: 8, */
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.scrim,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Icon(
+                                            Icons.local_pizza,
+                                            size: 20,
+                                            color: colorScheme.onPrimary,
+                                          ),
+                                          /* Text(
+                                            "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
+                                            style: TextStyle(
+                                              color: colorScheme.onPrimary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ), */
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                /* Container(
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: colorScheme.primary.withOpacity(0.3),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: colorScheme.onSurface.withOpacity(0.05),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Nome
+                                      Center(
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              produto['produto_nome'],
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            Text(
+                                              "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
+                                              textAlign: TextAlign.center,
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ), */
+                              );
+                            },
+                          );
+                          }
+                        ),
+                      ),
+                      ),
+                    ],
+                  ),
+                  );
+                  }
+                  ),
+                ),
+
+              
+                if ((!aparecerLista && carrinhoController.carrinho.isEmpty && !aparecerVendaTouch) || (aparecerConfiguracaoProduto) || (empurrarBotoes))
+                  Expanded(child: Container()), 
 
                 // if (aparecerBotoes && !showKeyboardAlfa)
                   // Barra inferior com botões quadrados
-                  Padding(
+                  /* Padding(
                     padding: aparecerNote
                         ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
                         : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 5.0, right: 5.0),
@@ -9474,8 +10016,12 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                 },
                                 borderRadius: BorderRadius.circular(3),
-                                child: Container(
-                                  height: 80,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: 56,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  ),
+                                  child: Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.primary,
                                     borderRadius: BorderRadius.circular(3),
@@ -9486,10 +10032,10 @@ class GarcomPageState extends State<GarcomPage>
                                       children: [
                                         Icon(
                                           Icons.login,
-                                          size: 30,
+                                          size: 26,
                                           color: colorScheme.onPrimary,
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
@@ -9502,6 +10048,7 @@ class GarcomPageState extends State<GarcomPage>
                                         ),
                                       ],
                                     ),
+                                  ),
                                   ),
                                 ),
                               ),
@@ -9573,8 +10120,12 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                 },
                                 borderRadius: BorderRadius.circular(3),
-                                child: Container(
-                                  height: 80,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: 56,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  ),
+                                  child: Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.secondary,
                                     borderRadius: BorderRadius.circular(3),
@@ -9585,10 +10136,10 @@ class GarcomPageState extends State<GarcomPage>
                                       children: [
                                         Icon(
                                           Icons.logout,
-                                          size: 30,
+                                          size: 26,
                                           color: Colors.white,
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
@@ -9601,6 +10152,7 @@ class GarcomPageState extends State<GarcomPage>
                                         ),
                                       ],
                                     ),
+                                  ),
                                   ),
                                 ),
                               ),
@@ -9671,8 +10223,12 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                 },
                                 borderRadius: BorderRadius.circular(3),
-                                child: Container(
-                                  height: 80,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: 56,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  ),
+                                  child: Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.shadow,
                                     borderRadius: BorderRadius.circular(3),
@@ -9682,12 +10238,11 @@ class GarcomPageState extends State<GarcomPage>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
-                                          // Icons.table_restaurant,
                                           Icons.note_add_sharp,
-                                          size: 30,
+                                          size: 26,
                                           color: Colors.white,
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
@@ -9696,12 +10251,12 @@ class GarcomPageState extends State<GarcomPage>
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.white,
-                                              // fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                         ),
                                       ],
                                     ),
+                                  ),
                                   ),
                                 ),
                               ),
@@ -9771,8 +10326,12 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                 },
                                 borderRadius: BorderRadius.circular(3),
-                                child: Container(
-                                  height: 80,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: 56,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  ),
+                                  child: Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.primary,
                                     borderRadius: BorderRadius.circular(3),
@@ -9782,12 +10341,11 @@ class GarcomPageState extends State<GarcomPage>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
-                                          // Icons.table_restaurant,
                                           Icons.person,
-                                          size: 30,
+                                          size: 26,
                                           color: Colors.white,
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
@@ -9796,12 +10354,12 @@ class GarcomPageState extends State<GarcomPage>
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.white,
-                                              // fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                         ),
                                       ],
                                     ),
+                                  ),
                                   ),
                                 ),
                               ),
@@ -9875,8 +10433,12 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                 },
                                 borderRadius: BorderRadius.circular(3),
-                                child: Container(
-                                  height: 80,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: 56,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  ),
+                                  child: Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.scrim,
                                     borderRadius: BorderRadius.circular(3),
@@ -9886,12 +10448,11 @@ class GarcomPageState extends State<GarcomPage>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
-                                          // Icons.table_restaurant,
                                           Icons.map,
-                                          size: 30,
+                                          size: 26,
                                           color: Colors.white,
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
@@ -9906,6 +10467,7 @@ class GarcomPageState extends State<GarcomPage>
                                       ],
                                     ),
                                   ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -9919,8 +10481,12 @@ class GarcomPageState extends State<GarcomPage>
                               child: InkWell(
                                 onTap: () {},
                                 borderRadius: BorderRadius.circular(3),
-                                child: Container(
-                                  height: 80,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: 56,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  ),
+                                  child: Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.secondary,
                                     borderRadius: BorderRadius.circular(3),
@@ -9931,11 +10497,10 @@ class GarcomPageState extends State<GarcomPage>
                                       children: [
                                         Icon(
                                           Icons.table_restaurant,
-                                          // Icons.person,
-                                          size: 30,
+                                          size: 26,
                                           color: Colors.white,
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
@@ -9944,12 +10509,12 @@ class GarcomPageState extends State<GarcomPage>
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.white,
-                                              // fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                         ),
                                       ],
                                     ),
+                                  ),
                                   ),
                                 ),
                               ),
@@ -9957,157 +10522,598 @@ class GarcomPageState extends State<GarcomPage>
                           ),
                       ],
                     ),
-                  ),
-                /* Padding(
-                  padding: aparecerNote
-                      ? EdgeInsets.only(
-                          top: 5.0,
-                          bottom: 15.0,
-                          left: 10.0,
-                          right: 10.0,
-                        )
-                      : EdgeInsets.only(
-                          top: 5.0,
-                          bottom: 15.0,
-                          left: 10.0,
-                          right: 10.0,
-                        ),
+                  ), */
+              ],
+            ),
+          ),
+          /* if(aparecerVendaTouch)
+          Positioned(
+            bottom: 110,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                abrirCarrinhoNaVendaTouch(carrinhoController.carrinho);
+              },
+              child: Icon(Icons.shopping_cart),
+            ),
+          ), */
+
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              color: Theme.of(context).colorScheme.surface,
+              child: Padding(
+                padding: aparecerNote
+                    ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
+                    : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 5.0, right: 5.0),
+                child: Container(
+                  color: Theme.of(context).colorScheme.surface,
                   child: Row(
                     children: [
-                      /* if (!naoAparecerMapa) SizedBox(width: 16), */
-                      if (!naoAparecerMapa)
-                        // Botão Mapa de Mesas
+                      // Botão Check In
+                      if (aparecerCheckIn)
                         Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              if(carrinhoController.carrinho.isNotEmpty){
-                                shownDialogErrorTwoBottom(
-                                  context: context,
-                                  title: "Carrinho cheio!",
-                                  message: "Deseja descartar este pedido?",
-                                  icon: Icons.shopping_cart,
-                                  onConfirm: () async {
-                                    carrinhoController.carrinho.clear();
-                                    zerarAtendimento();
-                                    Navigator.push(
-                                      context,
-                                      PageRouteBuilder(
-                                        transitionDuration:Duration.zero, // sem duração
-                                        reverseTransitionDuration:Duration.zero, // sem duração ao voltar
-                                        pageBuilder:(context,animation,secondaryAnimation) => MapaPage(),
-                                        transitionsBuilder:(context,animation,secondaryAnimation,child){
-                                          return child; // retorna direto, sem animação
-                                        },
-                                      ),
-                                    );
-                                  },
-                                  onCancel: () async {
-                                    _isZerando = false;
-                                    comandaController.removeListener(_onComandaChanged);
-                                    mesaController.removeListener(_onMesaChanged);
-
-                                    comandaController.text = numeroComandaEmUso;
-                                    mesaController.text = numeroMesaEmUso;
-
-                                    comandaController.addListener(_onComandaChanged);
-                                    mesaController.addListener(_onMesaChanged);
-
-                                    setState(() {
-                                      aparecerCardapio = true;
-                                      aparecerCarrinho = true;
-                                      aparecerLista = false;
-                                      aparecerConfiguracaoProduto = false;
-                                    });
-                                  },
-                                );
-                              } else {
-                                zerarAtendimento();
-                                 Navigator.push(
-                                  context,
-                                  PageRouteBuilder(
-                                    transitionDuration:Duration.zero, // sem duração
-                                    reverseTransitionDuration:Duration.zero, // sem duração ao voltar
-                                    pageBuilder:(context,animation,secondaryAnimation) => MapaPage(),
-                                    transitionsBuilder:(context,animation,secondaryAnimation,child){
-                                      return child; // retorna direto, sem animação
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4.0),
+                            child: InkWell(
+                              onTap: () {
+                                if (carrinhoController.carrinho.isNotEmpty) {
+                                  shownDialogErrorTwoBottom(
+                                    context: context,
+                                    title: "Carrinho cheio!",
+                                    message: "Deseja descartar este pedido?",
+                                    icon: Icons.shopping_cart,
+                                    onConfirm: () async {
+                                      _executarLimpezaGeral();
+                                      Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          transitionDuration: Duration.zero, 
+                                          reverseTransitionDuration: Duration.zero, 
+                                          pageBuilder: (context, animation, secondaryAnimation) => CheckinPage(),
+                                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                  return child; 
+                                              },
+                                        ),
+                                      );
                                     },
-                                  ),
-                                );
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(3),
-                            child: Container(
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: colorScheme.scrim,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      // Icons.table_restaurant,
-                                      Icons.map,
-                                      size: 30,
-                                      color: Colors.white,
+                                    onCancel: () async {
+                                      _isZerando = false;
+                                      comandaController.removeListener(_onComandaChanged);
+                                      mesaController.removeListener(_onMesaChanged);
+                              
+                                      comandaController.text = numeroComandaEmUso;
+                                      mesaController.text = numeroMesaEmUso;
+                              
+                                      comandaController.addListener(_onComandaChanged);
+                                      mesaController.addListener(_onMesaChanged);
+                              
+                                      setState(() {
+                                        aparecerCardapio = true;
+                                        aparecerCarrinho = true;
+                                        aparecerLista = false;
+                                        aparecerConfiguracaoProduto = false;
+                                      });
+                                    },
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    PageRouteBuilder(
+                                      transitionDuration: Duration.zero, 
+                                      reverseTransitionDuration: Duration.zero, 
+                                      pageBuilder: (context, animation, secondaryAnimation) => CheckinPage(),
+                                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                        return child; // retorna direto, sem animação
+                                      },
                                     ),
-                                    SizedBox(height: 4),
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        'Mapa',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.white,
+                                  );
+                                  zerarAtendimento();
+                                  _executarLimpezaGeral();
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(3),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 56,
+                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                ),
+                                child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.login,
+                                        size: 26,
+                                        color: colorScheme.onPrimary,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          'Check In',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: colorScheme.onPrimary,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                        
-                      if (!naoAparecerMapa) SizedBox(width: 8),
+                              
+                      // if (aparecerCheckOut) SizedBox(width: 8),
+                              
+                      // Botão Check Out
+                      if (aparecerCheckOut)
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4.0),
+                            child: InkWell(
+                              onTap: () {
+                                if (carrinhoController.carrinho.isNotEmpty) {
+                                  shownDialogErrorTwoBottom(
+                                    context: context,
+                                    title: "Carrinho cheio!",
+                                    message: "Deseja descartar este pedido?",
+                                    icon: Icons.shopping_cart,
+                                    onConfirm: () async {
+                                      _executarLimpezaGeral();
+                                      Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          transitionDuration: Duration.zero, // sem duração
+                                          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                          pageBuilder: (context, animation, secondaryAnimation) => CheckoutPage(),
+                                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                            return child; // retorna direto, sem animação
+                                          },
+                                        ),
+                                      );
+                                    },
+                                    onCancel: () async {
+                                      _isZerando = false;
+                                      comandaController.removeListener(_onComandaChanged);
+                                      mesaController.removeListener(_onMesaChanged);
+                              
+                                      comandaController.text = numeroComandaEmUso;
+                                      mesaController.text = numeroMesaEmUso;
+                              
+                                      comandaController.addListener(_onComandaChanged);
+                                      mesaController.addListener(_onMesaChanged);
+                              
+                                      setState(() {
+                                        aparecerCardapio = true;
+                                        aparecerCarrinho = true;
+                                        aparecerLista = false;
+                                        aparecerConfiguracaoProduto = false;
+                                      });
+                                    },
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    PageRouteBuilder(
+                                      transitionDuration: Duration.zero,
+                                      reverseTransitionDuration: Duration.zero,
+                                      pageBuilder: (context, animation, secondaryAnimation) => CheckoutPage(),
+                                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                        return child; // retorna direto, sem animação
+                                      },
+                                    ),
+                                  );
+                                  zerarAtendimento();
+                                  _executarLimpezaGeral();
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(3),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 56,
+                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                ),
+                                child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.secondary,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.logout,
+                                        size: 26,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          'Check Out',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                              
+                      // if (aparecerNote) SizedBox(width: 8),
+                      if (aparecerNote)
+                        // Botão Notes
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4.0),
+                            child: InkWell(
+                              onTap: () {
+                                if (carrinhoController.carrinho.isNotEmpty) {
+                                  shownDialogErrorTwoBottom(
+                                    context: context,
+                                    title: "Carrinho cheio!",
+                                    message: "Deseja descartar este pedido?",
+                                    icon: Icons.shopping_cart,
+                                    onConfirm: () async {
+                                      _executarLimpezaGeral();
+                                      Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          transitionDuration:Duration.zero, // sem duração
+                                          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                          pageBuilder: (context, animation, secondaryAnimation) => NotesPage(),
+                                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                            return child; // retorna direto, sem animação
+                                          },
+                                        ),
+                                      );
+                                    },
+                                    onCancel: () async {
+                                      _isZerando = false;
+                                      comandaController.removeListener(_onComandaChanged);
+                                      mesaController.removeListener(_onMesaChanged);
+                              
+                                      comandaController.text = numeroComandaEmUso;
+                                      mesaController.text = numeroMesaEmUso;
+                              
+                                      comandaController.addListener(_onComandaChanged);
+                                      mesaController.addListener(_onMesaChanged);
+                              
+                                      setState(() {
+                                        aparecerCardapio = true;
+                                        aparecerCarrinho = true;
+                                        aparecerLista = false;
+                                        aparecerConfiguracaoProduto = false;
+                                      });
+                                    },
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    PageRouteBuilder(
+                                      transitionDuration: Duration.zero, // sem duração
+                                      reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                      pageBuilder: (context, animation, secondaryAnimation) => NotesPage(),
+                                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                        return child; // retorna direto, sem animação
+                                      },
+                                    ),
+                                  );
+                                  zerarAtendimento();
+                                  _executarLimpezaGeral();
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(3),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 56,
+                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                ),
+                                child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.shadow,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.note_add_sharp,
+                                        size: 26,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          'Notes',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      // if (aparecerRecepcao) SizedBox(width: 8),
+                      if (aparecerRecepcao)
+                        // Botão Recepção
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4.0),
+                            child: InkWell(
+                              onTap: () {
+                                if (carrinhoController.carrinho.isNotEmpty) {
+                                  shownDialogErrorTwoBottom(
+                                    context: context,
+                                    title: "Carrinho cheio!",
+                                    message: "Deseja descartar este pedido?",
+                                    icon: Icons.shopping_cart,
+                                    onConfirm: () async {
+                                      _executarLimpezaGeral();
+                                      Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          transitionDuration: Duration.zero, // sem duração
+                                          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                          pageBuilder: (context, animation, secondaryAnimation) => RecepcaoPage(),
+                                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                            return child; // retorna direto, sem animação
+                                          },
+                                        ),
+                                      );
+                                    },
+                                    onCancel: () async {
+                                      _isZerando = false;
+                                      comandaController.removeListener(_onComandaChanged);
+                                      mesaController.removeListener(_onMesaChanged);
+                              
+                                      comandaController.text = numeroComandaEmUso;
+                                      mesaController.text = numeroMesaEmUso;
+                              
+                                      comandaController.addListener(_onComandaChanged);
+                                      mesaController.addListener(_onMesaChanged);
+                              
+                                      setState(() {
+                                        aparecerCardapio = true;
+                                        aparecerCarrinho = true;
+                                        aparecerLista = false;
+                                        aparecerConfiguracaoProduto = false;
+                                      });
+                                    },
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    PageRouteBuilder(
+                                      transitionDuration: Duration.zero, // sem duração
+                                      reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                      pageBuilder: (context, animation, secondaryAnimation) => RecepcaoPage(),
+                                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                        return child; // retorna direto, sem animação
+                                      },
+                                    ),
+                                  );
+                                  zerarAtendimento();
+                                  _executarLimpezaGeral();
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(3),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 56,
+                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                ),
+                                child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.person,
+                                        size: 26,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          'Recepçao',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      // if (!naoAparecerMapa) SizedBox(width: 8),
+                      if (!naoAparecerMapa)
+                        // Botão Mapa de Mesas
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4.0),
+                            child: InkWell(
+                              onTap: () {
+                                if (carrinhoController.carrinho.isNotEmpty) {
+                                  shownDialogErrorTwoBottom(
+                                    context: context,
+                                    title: "Carrinho cheio!",
+                                    message: "Deseja descartar este pedido?",
+                                    icon: Icons.shopping_cart,
+                                    onConfirm: () async {
+                                      _executarLimpezaGeral();
+                                      Get.toNamed('/mapa');
+                                      /* Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          transitionDuration:
+                                              Duration.zero, // sem duração
+                                          reverseTransitionDuration: Duration
+                                              .zero, // sem duração ao voltar
+                                          pageBuilder:
+                                              (
+                                                context,
+                                                animation,
+                                                secondaryAnimation,
+                                              ) => MapaPage(),
+                                          transitionsBuilder:
+                                              (
+                                                context,
+                                                animation,
+                                                secondaryAnimation,
+                                                child,
+                                              ) {
+                                                return child; // retorna direto, sem animação
+                                              },
+                                        ),
+                                      ); */
+                                    },
+                                    onCancel: () async {
+                                      _isZerando = false;
+                                      comandaController.removeListener(_onComandaChanged);
+                                      mesaController.removeListener(_onMesaChanged);
+                              
+                                      comandaController.text = numeroComandaEmUso;
+                                      mesaController.text = numeroMesaEmUso;
+                              
+                                      comandaController.addListener(_onComandaChanged);
+                                      mesaController.addListener(_onMesaChanged);
+                              
+                                      setState(() {
+                                        aparecerCardapio = true;
+                                        aparecerCarrinho = true;
+                                        aparecerLista = false;
+                                        aparecerConfiguracaoProduto = false;
+                                      });
+                                    },
+                                  );
+                                } else {
+                                  zerarAtendimento();
+                                  _executarLimpezaGeral();
+                                  Get.toNamed('/mapa');
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(3),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 56,
+                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                ),
+                                child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.scrim,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.map,
+                                        size: 26,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          'Mapa',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      // if (aparecerGarcom) SizedBox(width: 8),
                       if (aparecerGarcom)
                         // Botão Garçom
                         Expanded(
-                          child: InkWell(
-                            onTap: () { },
-                            borderRadius: BorderRadius.circular(3),
-                            child: Container(
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: colorScheme.secondary,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.table_restaurant,
-                                      // Icons.person,
-                                      size: 30,
-                                      color: Colors.white,
-                                    ),
-                                    SizedBox(height: 4),
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        'Garçom',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.white,
-                                          // fontWeight: FontWeight.bold,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4.0),
+                            child: InkWell(
+                              onTap: () {},
+                              borderRadius: BorderRadius.circular(3),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 56,
+                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                ),
+                                child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.secondary,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.table_restaurant,
+                                        size: 26,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          'Garçom',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                ),
                                 ),
                               ),
                             ),
@@ -10115,354 +11121,10 @@ class GarcomPageState extends State<GarcomPage>
                         ),
                     ],
                   ),
-                ), */
-              ],
+                ),
+              ),
             ),
           ),
-          if (showKeyboardQuantidade)
-            /* Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: aparecerConfiguracaoProduto
-                    ? MediaQuery.of(context).size.height * 0.30
-                    : MediaQuery.of(context).size.height * 0.40,
-                width: MediaQuery.of(context).size.width,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    // GRID DO TECLADO
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final int crossAxisCount = 3;
-                          final int itemCount = 12; // agora vai até 10 somente
-                          final double spacing = 8.0;
-
-                          final int rows = (itemCount / crossAxisCount).ceil();
-
-                          final double cellWidth =
-                              (constraints.maxWidth -
-                                  (spacing * (crossAxisCount - 1))) /
-                              crossAxisCount;
-                          final double cellHeight =
-                              (constraints.maxHeight - (spacing * (rows - 1))) /
-                              rows;
-                          final double childAspectRatio =
-                              cellWidth / cellHeight;
-
-                          return GridView.builder(
-                            padding: const EdgeInsets.all(12),
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: itemCount,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  mainAxisSpacing: spacing,
-                                  crossAxisSpacing: spacing,
-                                  childAspectRatio: childAspectRatio,
-                                ),
-                            itemBuilder: (context, index) {
-                              if (index == 9) {
-                                return ElevatedButton(
-                                  onPressed: _apagarNumeroQuantidade,
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.zero,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    backgroundColor: colorScheme.onPrimary,
-                                  ),
-                                  child: Icon(
-                                    Icons.backspace,
-                                    size: 32,
-                                    color: colorScheme.primary,
-                                  ),
-                                );
-                              } else if (index == 10) {
-                                return ElevatedButton(
-                                  onPressed: () =>
-                                      _adicionarNumeroQuantidade("0"),
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.zero,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: const Text(
-                                      "0",
-                                      style: TextStyle(fontSize: 28),
-                                    ),
-                                  ),
-                                );
-                              } else if (index == 11) {
-                                // Botão para fechar teclado
-                                return AbsorbPointer(
-                                  absorbing: isProcessing,
-                                  child: ElevatedButton(
-                                    onPressed: () =>
-                                        _adicionarNumeroQuantidade("."),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: colorScheme.primary,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.zero,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        ".",
-                                        style: TextStyle(
-                                          fontSize: 28,
-                                          color: colorScheme.onPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              final numero = (index + 1).toString();
-                              return ElevatedButton(
-                                onPressed: () =>
-                                    _adicionarNumeroQuantidade(numero),
-                                style: ElevatedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    numero,
-                                    style: TextStyle(fontSize: 28),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-
-                    // BOTÃO FECHAR TECLADO
-                    Container(
-                      width: double.infinity,
-                      height: 60,
-                      /* padding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: ,
-                    ), */
-                      padding: EdgeInsets.only(
-                        bottom: 8,
-                        top: 8,
-                        right: 12,
-                        left: 12,
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            showKeyboardNumero = false;
-                            showKeyboardQuantidade = false;
-                            aparecerBotoes = true;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(0),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.keyboard_arrow_down_outlined,
-                          size: 32, // ícone maior
-                          color: colorScheme.onPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ), */
-
-          if (showKeyboardNumero && nunca)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: aparecerConfiguracaoProduto
-                    ? MediaQuery.of(context).size.height * 0.30
-                    : MediaQuery.of(context).size.height * 0.40,
-                width: MediaQuery.of(context).size.width,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    // GRID DO TECLADO
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final int crossAxisCount = 3;
-                          final int itemCount = 12; // agora vai até 10 somente
-                          final double spacing = 8.0;
-
-                          final int rows = (itemCount / crossAxisCount).ceil();
-
-                          final double cellWidth =
-                              (constraints.maxWidth -
-                                  (spacing * (crossAxisCount - 1))) /
-                              crossAxisCount;
-                          final double cellHeight =
-                              (constraints.maxHeight - (spacing * (rows - 1))) /
-                              rows;
-                          final double childAspectRatio =
-                              cellWidth / cellHeight;
-
-                          return GridView.builder(
-                            padding: const EdgeInsets.all(12),
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: itemCount,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  mainAxisSpacing: spacing,
-                                  crossAxisSpacing: spacing,
-                                  childAspectRatio: childAspectRatio,
-                                ),
-                            itemBuilder: (context, index) {
-                              if (index == 9) {
-                                return ElevatedButton(
-                                  onPressed: _apagarNumero,
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.zero,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    backgroundColor: colorScheme.onPrimary,
-                                  ),
-                                  child: Icon(
-                                    Icons.backspace,
-                                    size: 32,
-                                    color: colorScheme.primary,
-                                  ),
-                                );
-                              } else if (index == 10) {
-                                return ElevatedButton(
-                                  onPressed: () => _adicionarNumero("0"),
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.zero,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: const Text(
-                                      "0",
-                                      style: TextStyle(fontSize: 28),
-                                    ),
-                                  ),
-                                );
-                              } else if (index == 11) {
-                                // Botão para fechar teclado
-                                return ElevatedButton(
-                                  onPressed: isProcessingConfirmar
-                                      ? null
-                                      : _confirmar,
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.zero,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    backgroundColor: colorScheme.primary,
-                                  ),
-                                  child: Icon(
-                                    Icons.keyboard_return,
-                                    size: 32,
-                                    color: colorScheme.onPrimary,
-                                  ),
-                                );
-                              }
-
-                              final numero = (index + 1).toString();
-                              return ElevatedButton(
-                                onPressed: () => _adicionarNumero(numero),
-                                style: ElevatedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    numero,
-                                    style: TextStyle(fontSize: 28),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-
-                    // BOTÃO FECHAR TECLADO
-                    Container(
-                      width: double.infinity,
-                      height: 60,
-                      /* padding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: ,
-                    ), */
-                      padding: EdgeInsets.only(
-                        bottom: 8,
-                        top: 8,
-                        right: 12,
-                        left: 12,
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            showKeyboardNumero = false;
-                            showKeyboardQuantidade = false;
-                            aparecerBotoes = true;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(0),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.keyboard_arrow_down_outlined,
-                          size: 32, // ícone maior
-                          color: colorScheme.onPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
         ), // fecha Stack
       ), // fecha AbsorbPointer
