@@ -66,7 +66,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> notes = ['Notes'];
   Set<String> notesSelecionados = {};
 
-  List<String> check = ['Ckeck-in', 'Check-out'];
+  List<String> check = ['Check-in', 'Check-out'];
   Set<String> checkSelecionados = {};
 
   List<String> garcom = ['Modo Garçom'];

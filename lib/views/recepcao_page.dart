@@ -2985,25 +2985,25 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     final checkJson = prefs.getString('check_padrao');
     if (checkJson != null) {
       final checksSalvos = Set<String>.from(jsonDecode(checkJson));
-      if (checksSalvos.contains("Ckeck-in") &&
+      if (checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
           aparecerCheckOut = false;
         });
       } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Ckeck-in")) {
+          !checksSalvos.contains("Check-in")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = true;
         });
-      } else if (!checksSalvos.contains("Ckeck-in") &&
+      } else if (!checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = false;
         });
-      } else if (checksSalvos.contains("Ckeck-in") &&
+      } else if (checksSalvos.contains("Check-in") &&
           checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;

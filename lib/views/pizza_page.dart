@@ -2546,6 +2546,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                           child: Icon(
                               Icons.arrow_back,
                               color: colorScheme.onPrimary,
+                              size: 30,
                             ),
                         ),
                       ),

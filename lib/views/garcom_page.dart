@@ -360,14 +360,15 @@ class GarcomPageState extends State<GarcomPage>
     _carregargarcom();
     _loadNumeroLicenca();
     _loadNomeEmpresa();
-    carregarUltimaConfiguracao();
     listaProdutoFiltrada = funcoesController.listaProduto;
 
     // Se já existem itens no carrinho OU foi passado algum argumento, restaura o estado ANTES de ligar os listeners
     if (carrinhoController.carrinho.isNotEmpty || Get.arguments != null) {
       iniciaComCarrinho();
+      carregarUltimaConfiguracao();
     } else {
-      chamarFoco();
+      // chamarFoco();
+      chamarFocoInicial();
       carrinhoController.carrinho.clear();
     }
 
@@ -382,7 +383,10 @@ class GarcomPageState extends State<GarcomPage>
   Future<void> salvarUltimaConfiguracao(String rotasSalvas) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('carregar_ultima_configuracao', jsonEncode(rotasSalvas));
+      await prefs.setString(
+        'carregar_ultima_configuracao',
+        rotasSalvas,
+      );
     } catch (e, st) {
       // debugPrint("Erro salvarRota(): $e\n$st");
     }
@@ -391,9 +395,9 @@ class GarcomPageState extends State<GarcomPage>
   // Carregar ultima configuracao
   Future<void> carregarUltimaConfiguracao() async {
     final prefs = await SharedPreferences.getInstance();
-    final rota = prefs.getString('carregar_ultima_configuracao');
+    final modo = prefs.getString('carregar_ultima_configuracao');
 
-    if (rota == "Touch") {
+    if (modo == "Touch") {
       entrarModoTouch();
     } else {
       sairModoTouch();
@@ -426,10 +430,11 @@ class GarcomPageState extends State<GarcomPage>
       if (!mounted) return;
       _selecionarPrimeiroGrupo();
     });
-    salvarUltimaConfiguracao("Touch");
+    String modo = "Touch";
+    salvarUltimaConfiguracao(modo);
   }
 
-  sairModoTouch(){ // carrinho
+  sairModoTouch(){ //carrinho
     FocusScope.of(context).unfocus();
     setState(() {
       aparecerCarrinho = true;
@@ -442,7 +447,8 @@ class GarcomPageState extends State<GarcomPage>
         cardapioFocus.requestFocus();
       }
     }); 
-    salvarUltimaConfiguracao("Carrinho");
+    String modo = "Carrinho";
+    salvarUltimaConfiguracao(modo);
   }
 
   Future<void> tirarFoco() async {
@@ -1594,8 +1600,35 @@ class GarcomPageState extends State<GarcomPage>
     }
   }
 
+  void chamarFocoInicial() {
+    if (funcoesController.logicaPorComanda.value ||
+        funcoesController.logicaPorComandaNaMesa.value) {
+      setState(() {
+        showKeyboardNumero = true;
+        empurrarBotoes = false;
+        _campoAtivo = 'comandaController';
+      });
+      Future.delayed(Duration(milliseconds: 300), () {
+        if (comandaFocus.canRequestFocus) {
+          comandaFocus.requestFocus();
+        }
+      });
+    } else if (funcoesController.logicaPorMesa.value) {
+      setState(() {
+        showKeyboardNumero = true;
+        empurrarBotoes = false;
+        _campoAtivo = 'mesaController';
+      });
+      Future.delayed(Duration(milliseconds: 300), () {
+        if (mesaFocus.canRequestFocus) {
+          mesaFocus.requestFocus();
+        }
+      });
+    }
+  }
+
   // Função para chamar foco
-  Future<void> chamarFoco() async {
+  void chamarFoco() {
     // Se o bloqueio de foco estiver ativo (diálogo visível), aborta silenciosamente
     if (_bloqueandoFoco) return;
 
@@ -1608,30 +1641,24 @@ class GarcomPageState extends State<GarcomPage>
         funcoesController.logicaPorComandaNaMesa.value) {
       setState(() {
         showKeyboardNumero = true;
-
         empurrarBotoes = false;
-
         _campoAtivo = 'comandaController';
-
-        Future.delayed(Duration(milliseconds: 300), () {
-          if (!_bloqueandoFoco && comandaFocus.canRequestFocus) {
-            comandaFocus.requestFocus();
-          }
-        });
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_bloqueandoFoco && mounted && comandaFocus.canRequestFocus) {
+          comandaFocus.requestFocus();
+        }
       });
     } else if (funcoesController.logicaPorMesa.value) {
       setState(() {
         showKeyboardNumero = true;
-
         _campoAtivo = 'mesaController';
-
         empurrarBotoes = false;
-
-        Future.delayed(Duration(milliseconds: 300), () {
-          if (!_bloqueandoFoco && mesaFocus.canRequestFocus) {
-            mesaFocus.requestFocus();
-          }
-        });
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_bloqueandoFoco && mounted && mesaFocus.canRequestFocus) {
+          mesaFocus.requestFocus();
+        }
       });
     }
   }
@@ -1748,13 +1775,20 @@ class GarcomPageState extends State<GarcomPage>
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
             _campoAtivo = 'comandaController';
-            FocusScope.of(context).requestFocus(comandaFocus);
           } else if (funcoesController.logicaPorMesa.value) {
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
             _campoAtivo = 'mesaController';
-            FocusScope.of(context).requestFocus(mesaFocus);
           }
+          
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+             if (!_bloqueandoFoco && mounted) {
+                FocusNode node = funcoesController.logicaPorMesa.value ? mesaFocus : comandaFocus;
+                if (node.canRequestFocus) {
+                  node.requestFocus();
+                }
+             }
+          });
         }
       });
     }
@@ -2408,120 +2442,6 @@ class GarcomPageState extends State<GarcomPage>
     }
   }
 
-  /* // Função que busca grupos
-  Future<void> buscarGrupos() async {
-    try {
-      String dadosJson = await Connection().select(
-        "SELECT numero, nome, ID FROM grupos WHERE mobile='1' ORDER BY nome;",
-      );
-
-      List<dynamic> lista = jsonDecode(dadosJson);
-
-      if (lista.isNotEmpty) {
-        // pega apenas o campo resultado
-        String valor = lista[0]['numero'].toString();
-        String valor2 = lista[0]['nome'];
-        String valor3 = lista[0]['ID'].toString();
-
-        setState(() {
-          numeroDoGrupo = valor;
-          nomeDoGrupo = valor2;
-          idDoGrupo = valor3;
-          listaGrupo = lista;
-        });
-      } else {
-        setState(() {
-          numeroDoGrupo = "";
-          nomeDoGrupo = "";
-          idDoGrupo = "";
-          listaGrupo = [];
-        });
-      }
-    } catch (e) {
-      print("Erro ao carregar configuracaoServico: $e");
-      setState(() {
-        numeroDoGrupo = "";
-        nomeDoGrupo = "";
-        idDoGrupo = "";
-        listaGrupo = [];
-      });
-    }
-  } */
-
-  /* // Função que busca produtos
-  Future<void> buscarProdutos() async {
-    try {
-      /* String dadosJson = await Connection().select(
-        """
-        SELECT 
-          g.numero AS grupo_numero,
-          g.nome   AS grupo_nome,
-          pr.numero AS produto_numero,
-          pr.nome   AS produto_nome,
-          pr.valor  AS produto_valor,
-          pr.id AS produto_id
-        FROM produtos AS pr
-        JOIN grupos AS g 
-          ON g.numero = pr.numerogrupocardapio_FK
-        
-        WHERE g.mobile = '1'
-          AND pr.ativo = '1';
-        """
-      ); */
-
-      String dadosJson = await Connection().select("""
-        SELECT 
-          g.numero AS grupo_numero,
-          g.nome   AS grupo_nome,
-          pr.numero AS produto_numero,
-          pr.nome   AS produto_nome,
-          pr.valor  AS produto_valor,
-          pr.id AS produto_id,
-          un.simbolo AS produto_un
-        FROM produtos AS pr
-        JOIN grupos AS g 
-          ON g.numero = pr.numerogrupocardapio_FK
-        JOIN unidades AS un
-          ON un.numero = pr.numerounidade_FK
-        
-        WHERE g.mobile = '1'
-          AND pr.ativo = '1';
-        """);
-      List<dynamic> lista = jsonDecode(dadosJson);
-
-      if (lista.isNotEmpty) {
-        // pega apenas o campo resultado
-        String valor = lista[0]['grupo_numero'].toString();
-        String valor2 = lista[0]['produto_numero'].toString();
-        String valor3 = lista[0]['produto_nome'].toString();
-        String valor4 = lista[0]['produto_valor'].toString();
-
-        setState(() {
-          numeroDoProduto = valor;
-          nomeDoProduto = valor2;
-          idDoProduto = valor3;
-          listaProduto = lista;
-          listaProdutoFiltrada = lista;
-        });
-      } else {
-        setState(() {
-          numeroDoProduto = "";
-          nomeDoProduto = "";
-          idDoProduto = "";
-          listaProduto = [];
-        });
-      }
-    } catch (e) {
-      print("Erro ao carregar configuracaoServico: $e");
-      setState(() {
-        numeroDoProduto = "";
-        nomeDoProduto = "";
-        idDoProduto = "";
-        listaProduto = [];
-      });
-    }
-  } */
-
   // Função auxiliar para normalizar texto (remove acentos e caracteres especiais)
   String _normalizarTexto(String texto) {
     const comAcento =
@@ -2609,76 +2529,6 @@ class GarcomPageState extends State<GarcomPage>
       });
     });
   }
-  /* filtrarProdutos(String termo) {
-    setState(() {
-      aparecerLista = true;
-
-      if (termo.isEmpty) {
-        aparecerLista = false;
-        //  = funcoesController.listaProduto;
-        return;
-      }
-
-      final termos = _normalizarTexto(
-        termo,
-      ).split(' ').where((t) => t.isNotEmpty).toList();
-
-      listaProdutoFiltrada = funcoesController.listaProduto.where((produto) {
-        final nome = _normalizarTexto(produto['produto_nome'] ?? '');
-        final numero = produto['produto_numero']?.toString() ?? '';
-
-        return termos.every((t) {
-          final isNumero = double.tryParse(t) != null;
-
-          // FILTRO POR NÚMERO
-          if (isNumero) {
-            return numero.startsWith(t);
-          }
-
-          // FILTRO POR 
-          if(termo.length < 2){
-            /* aparecerLista = false;
-            return true; */
-            return nome
-              .split(' ')
-              .any((palavra) => palavra.startsWith(t));
-          }
-          return nome
-              .split(' ')
-              .any((palavra) => palavra.startsWith(t));
-        });
-      }).toList();
-    });
-  } */
-  /* filtrarProdutos(String termo) {
-    setState(() {
-      aparecerLista = true;
-
-      if (termo.isEmpty) {
-        listaProdutoFiltrada = funcoesController.listaProduto;
-        return;
-      }
-
-      final termos = _normalizarTexto(
-        termo,
-      ).split(' ').where((t) => t.isNotEmpty).toList();
-
-      listaProdutoFiltrada = funcoesController.listaProduto.where((produto) {
-        final nome = _normalizarTexto(produto['produto_nome'] ?? '');
-        final numero = produto['produto_numero']?.toString() ?? '';
-
-        return termos.every((t) {
-          final isNumero = double.tryParse(t) != null;
-
-          if (isNumero) {
-            return numero.contains(t);
-          } else {
-            return nome.contains(t);
-          }
-        });
-      }).toList();
-    });
-  } */
   
   // Lista que vincula produtos e grupo
   List<dynamic> produtosPorGrupo(String idDoGrupo) {
@@ -4532,25 +4382,25 @@ class GarcomPageState extends State<GarcomPage>
     if (checkJson != null) {
       final checksSalvos = Set<String>.from(jsonDecode(checkJson));
 
-      if (checksSalvos.contains("Ckeck-in") &&
+      if (checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
           aparecerCheckOut = false;
         });
       } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Ckeck-in")) {
+          !checksSalvos.contains("Check-in")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = true;
         });
-      } else if (!checksSalvos.contains("Ckeck-in") &&
+      } else if (!checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = false;
         });
-      } else if (checksSalvos.contains("Ckeck-in") &&
+      } else if (checksSalvos.contains("Check-in") &&
           checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
@@ -5217,6 +5067,7 @@ class GarcomPageState extends State<GarcomPage>
             cardapioFocus.requestFocus();
           }
         });
+        carregarUltimaConfiguracao();
       });
       return;
     }
@@ -5242,6 +5093,7 @@ class GarcomPageState extends State<GarcomPage>
             cardapioFocus.requestFocus();
           }
         });
+        carregarUltimaConfiguracao();
       });
       return;
     }
@@ -5888,147 +5740,6 @@ class GarcomPageState extends State<GarcomPage>
                       ),
                     ),
                   ),
-
-                /* // Teclado
-                Container(
-                  height:
-                      MediaQuery.of(context).size.height *
-                      0.35, // tamanho teclado
-                  width: MediaQuery.of(context).size.width,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    /* borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ), */
-                  ),
-                  child: Column(
-                    children: [
-                      // GRID DO TECLADO
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final int crossAxisCount = 3;
-                            final int itemCount =
-                                12; // agora vai até 10 somente
-                            final double spacing = 8.0;
-
-                            final int rows = (itemCount / crossAxisCount)
-                                .ceil();
-
-                            final double cellWidth =
-                                (constraints.maxWidth -
-                                    (spacing * (crossAxisCount - 1))) /
-                                crossAxisCount;
-                            final double cellHeight =
-                                (constraints.maxHeight -
-                                    (spacing * (rows - 1))) /
-                                rows;
-                            final double childAspectRatio =
-                                cellWidth / cellHeight;
-
-                            return GridView.builder(
-                              padding: const EdgeInsets.all(12),
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: itemCount,
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: crossAxisCount,
-                                    mainAxisSpacing: spacing,
-                                    crossAxisSpacing: spacing,
-                                    childAspectRatio: childAspectRatio,
-                                  ),
-                              itemBuilder: (context, index) {
-                                if (index == 9) {
-                                  return ElevatedButton(
-                                    onPressed: () =>
-                                        _apagarNumeroNoPopup(textController),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.zero,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      backgroundColor: Theme.of(
-                                        ctx,
-                                      ).colorScheme.onPrimary,
-                                    ),
-                                    child: Icon(
-                                      Icons.backspace,
-                                      size: 32,
-                                      color: Theme.of(ctx).colorScheme.primary,
-                                    ),
-                                  );
-                                } else if (index == 10) {
-                                  return ElevatedButton(
-                                    onPressed: () => _adicionarNumeroNoPopup(
-                                      "0",
-                                      textController,
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.zero,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                    child: const Text(
-                                      "0",
-                                      style: TextStyle(fontSize: 28),
-                                    ),
-                                  );
-                                } else if (index == 11) {
-                                  // Botão para fechar teclado
-                                  return ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.of(ctx).pop();
-                                      if (onConfirm != null) onConfirm();
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Theme.of(
-                                        ctx,
-                                      ).colorScheme.primary,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.zero,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                    child: Icon(
-                                      Icons.keyboard_return,
-                                      size: 32,
-                                      color: Theme.of(
-                                        ctx,
-                                      ).colorScheme.onPrimary,
-                                    ),
-                                  );
-                                }
-
-                                final numero = (index + 1).toString();
-                                return ElevatedButton(
-                                  onPressed: () => _adicionarNumeroNoPopup(
-                                    numero,
-                                    textController,
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.zero,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      numero,
-                                      style: TextStyle(fontSize: 28),
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ), */
 
                 // Botões centralizados
                 Padding(
@@ -6822,117 +6533,7 @@ class GarcomPageState extends State<GarcomPage>
                                       ),
                                     ),
                                   ),
-                                  /* if (aparecerFazerPedido && carrinhoController.carrinho.isNotEmpty && comandaCarrinhoController.isEmpty)
-                                    Expanded(
-                                      child: GestureDetector(
-                                        // quando clicar em fazer pedido
-                                        onTap: funcoesController.isEnviandoPedido.value ? null : () async {
-                                          try {
-                                            funcoesController.iniciarAtendimento();
-                                            fizPedido = true;
-                                            if (carrinhoController.carrinho.isNotEmpty) {
-                                              if (comandaController.text == '') {
-                                                comandaController.text = '0';
-                                              }
-                                              if (mesaController.text == '') {
-                                                mesaController.text = '0';
-                                              }
-                                              await enviarCarrinho(
-                                                numeroComanda: comandaController.text,
-                                                numeroMesa: mesaController.text,
-                                                numeroTradepoint: numeroDaLicencaSelecionada,
-                                              );
-
-                                              setState(() {
-                                                aparecerCardapio = false;
-                                                aparecerCarrinho = false;
-                                                aparecerCheckOut = false;
-                                                aparecerLista = false;
-                                              });
-
-                                              if (funcoesController.logicaPorComanda.value ||
-                                                  funcoesController
-                                                      .logicaPorComandaNaMesa
-                                                      .value) {
-                                                setState(() {
-                                                  showKeyboardNumero = true;
-                                                  showKeyboardAlfa = false;
-                                                  _campoAtivo = 'comandaController';
-                                                  FocusScope.of(context).requestFocus(comandaFocus);
-                                                });
-                                                conectarBanco();
-                                              } else if (funcoesController.logicaPorMesa.value) {
-                                                setState(() {
-                                                  showKeyboardNumero = true;
-                                                  showKeyboardAlfa = false;
-                                                  _campoAtivo = 'mesaController';
-                                                  FocusScope.of(context).requestFocus(mesaFocus);
-                                                });
-                                                conectarBanco();
-                                              } else {
-                                                setState(() {
-                                                  showKeyboardNumero = true;
-                                                  showKeyboardAlfa = false;
-                                                  _campoAtivo = 'comandaController';
-                                                  FocusScope.of(context).requestFocus(comandaFocus);
-                                                });
-                                                conectarBanco();
-                                              }
-                                            }
-                                          } finally {
-                                            await funcoesController.zerarAtendimentoGlobal();
-                                          }
-                                        },
-                                        // Fazer pedido carrinho
-                                        child: Container(
-                                          color: funcoesController.isEnviandoPedido.value
-                                              ? colorScheme.surfaceDim
-                                              : (carrinhoController.carrinho.isNotEmpty
-                                                    ? colorScheme.secondary
-                                                    : colorScheme.surfaceDim),
-                                          child: Padding(
-                                            padding: EdgeInsets.all(15.0),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              crossAxisAlignment: CrossAxisAlignment.center,
-                                              children: [
-                                                // SizedBox(width: 4),
-                                                Flexible(
-                                                  child: Text(
-                                                    funcoesController.isEnviandoPedido.value
-                                                        ? "ENVIANDO..."
-                                                        : "FAZER PEDIDO",
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      color: colorScheme.onPrimary,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 18,
-                                                    ),
-                                                  ),
-                                                ),
-                                                funcoesController.isEnviandoPedido.value
-                                                    ? SizedBox(
-                                                        width: 15,
-                                                        height: 15,
-                                                        child: CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          color: colorScheme.onPrimary,
-                                                        ),
-                                                      )
-                                                    : Icon(
-                                                        Icons.check,
-                                                        size: 15,
-                                                        color: colorScheme
-                                                            .onPrimary,
-                                                      ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      )),
-                                    ), */
+                                 
                                   // Fazer pedido carrinho
                                   if (comandaCarrinhoController.isNotEmpty &&
                                       aparecerFazerPedido)
@@ -7057,115 +6658,6 @@ class GarcomPageState extends State<GarcomPage>
                                         ),
                                       ),
                                     ),
-                                  /* // Fazer pedido
-                                  if (comandaCarrinhoController.isNotEmpty &&
-                                      aparecerFazerPedido)
-                                    Expanded(
-                                      child: Obx(() => GestureDetector(
-                                        // quando clicar em fazer pedido
-                                        onTap: funcoesController.isEnviandoPedido.value ? null : () async {
-                                          try {
-                                            funcoesController.iniciarAtendimento();
-                                            fizPedido = true; // Define que o pedido foi iniciado
-                                            if (carrinhoController.carrinho.isNotEmpty) {
-                                              numeroMesaParaCarrinho = mesaController.text;
-
-                                              comandaCarrinhoController.salvarCarrinho(
-                                                mesaController.text, // Número da mesa
-                                                comandaController.text, // Número da comanda
-                                                carrinhoController.carrinho, // Lista de produtos atual
-                                              );
-
-                                              // Chama funcao para fazer pedido - Esta função já chama zerarAtendimento() internamente em caso de sucesso
-                                              await enviarCarrinhoComandas(
-                                                comandaCarrinhoController,
-                                              );
-                                            } else {
-                                              setState(() {
-                                                fizPedido = false;
-                                              });
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Carrinho vazio, acrescente produtos ao carrinho!',
-                                                  ),
-                                                  backgroundColor:
-                                                      colorScheme.error,
-                                                  behavior:
-                                                      SnackBarBehavior.floating,
-                                                  margin: EdgeInsets.fromLTRB(0, 0, 0, 0),
-                                                  duration: Duration(seconds: 3),
-                                                ),
-                                              );
-                                            }
-                                          } catch (e) {
-                                            if (mounted) {
-                                              setState(() {
-                                                fizPedido = false;
-                                              });
-                                            }
-                                            print(
-                                              "Erro ao enviar carrinho de comandas: $e<<<<<<<<<<",
-                                            );
-                                          } finally {
-                                            await funcoesController.zerarAtendimentoGlobal();
-                                          }
-                                        },
-                                        // Fazer pedido
-                                        child: Container(
-                                          color: funcoesController.isEnviandoPedido.value ? colorScheme.surfaceDim : (carrinhoController.carrinho.isNotEmpty ? colorScheme.tertiary : colorScheme.surfaceDim),
-                                          child: Padding(
-                                            padding: EdgeInsets.all(15.0),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
-                                              children: [
-                                                // SizedBox(width: 4),
-                                                Flexible(
-                                                  child: Text(
-                                                    funcoesController.isEnviandoPedido.value
-                                                        ? "ENVIANDO..."
-                                                        : "FAZER PEDIDO CARRINHO",
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      color:
-                                                          colorScheme.onPrimary,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 18,
-                                                    ),
-                                                  ),
-                                                ),
-                                                funcoesController.isEnviandoPedido.value
-                                                    ? SizedBox(
-                                                        width: 15,
-                                                        height: 15,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color: colorScheme
-                                                                  .onPrimary,
-                                                            ),
-                                                      )
-                                                    : Icon(
-                                                        Icons.check,
-                                                        size: 15,
-                                                        color: colorScheme
-                                                            .onPrimary,
-                                                      ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      )),
-                                    ), */
                                 ],
                               ),
                             ),
@@ -7360,127 +6852,6 @@ class GarcomPageState extends State<GarcomPage>
                                       ),
                                     ),
                                   ),
-                                  /* Flexible(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(
-                                        left: 20,
-                                        right: comandaValida ? 20 : 90,
-                                        top: 10,
-                                        bottom: 10,
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          // TextField da comanda
-                                          KeyboardActions(
-                                            config: KeyboardActionsConfig(
-                                              keyboardActionsPlatform: KeyboardActionsPlatform.IOS,
-                                              nextFocus: false,
-                                              actions: [
-                                                KeyboardActionsItem(
-                                                  focusNode: comandaFocus,
-                                                  toolbarButtons: [
-                                                    (node) {
-                                                      return GestureDetector(
-                                                        onTap: () {
-                                                          // executa exatamente o mesmo que onSubmitted
-                                                          _confirmar();
-
-                                                          node.unfocus();
-                                                        },
-                                                        child: Container(
-                                                          padding: EdgeInsets.symmetric(horizontal: 16),
-                                                          child: Text(
-                                                            "OK",
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      );
-                                                    }
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                            child: TextField(
-                                              onTap: () {
-                                                setState(() {
-                                                  showKeyboardNumero = true;
-                                                  showKeyboardAlfa = false;
-                                                  _campoAtivo ='comandaController';
-                                                  vinculandoMesa = false;
-                                                  FocusScope.of(context,).requestFocus(comandaFocus);
-                                                });
-                                              },
-                                            
-                                              onChanged: (value) {
-                                                if (value.isNotEmpty) {
-                                                  if (comandaValida) {
-                                                    zerarAtendimento();
-                                                  }
-                                                }
-                                              },
-                                            
-                                              // ENTER do teclado
-                                              onSubmitted: (value) {
-                                                if(value.isNotEmpty){
-                                                  _confirmar();
-                                                }
-                                              },
-                                            
-                                              // Cursor aparecer
-                                              readOnly: false,
-                                              showCursor: true,
-                                              keyboardType: TextInputType.number,
-                                              enableInteractiveSelection: false,
-                                              cursorColor: colorScheme.onPrimary,
-                                            
-                                              controller: comandaController,
-                                              focusNode: comandaFocus,
-                                              textAlign: TextAlign.center,
-                                              decoration: InputDecoration(
-                                                hintText: "Insira o número da comanda:",
-                                                hintStyle: TextStyle(
-                                                  color: colorScheme.onPrimary,
-                                                ),
-                                                filled: true,
-                                                fillColor: colorScheme.secondary
-                                                    .withOpacity(0.5),
-                                                contentPadding:
-                                                    EdgeInsets.symmetric(
-                                                      vertical: 0,
-                                                    ),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  borderSide: BorderSide(
-                                                    color: colorScheme.primary,
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  borderSide: BorderSide(
-                                                    color: colorScheme.secondary,
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                              ),
-                                              style: TextStyle(
-                                                fontSize: 40,
-                                                color: colorScheme.onPrimary,
-                                                fontWeight: FontWeight.bold,
-                                                height: 1.0,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ), */
                                   // Botão de adicionar comanda
                                   if (comandaValida)
                                     GestureDetector(
@@ -7659,11 +7030,11 @@ class GarcomPageState extends State<GarcomPage>
                                 children: [
                                   // botão mesa
                                   GestureDetector(
-                                    onTap: () {
+                                    onTap: () async {
                                       if (carrinhoController.carrinho.isNotEmpty) {
-                                        zerarAtendimento();
+                                        await zerarAtendimento();
                                       } else {
-                                        zerarAtendimento();
+                                        await zerarAtendimento();
                                         mesaController.clear();
                                         setState(() {
                                           aparecerCardapio = false;
@@ -7671,6 +7042,12 @@ class GarcomPageState extends State<GarcomPage>
                                           aparecerLista = false;
                                           aparecerConfiguracaoProduto = false;
                                           aparecerBotoes = true;
+                                        });
+                                        
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (!_bloqueandoFoco && mounted && mesaFocus.canRequestFocus) {
+                                            mesaFocus.requestFocus();
+                                          }
                                         });
                                       }
                                     },
@@ -7746,6 +7123,7 @@ class GarcomPageState extends State<GarcomPage>
                                             onChanged: (value) {
                                               if (value.isNotEmpty) {
                                                 if (mesaValida) {
+                                                  FocusScope.of(context).unfocus();
                                                   zerarAtendimento();
                                                   limparAmbas();
                                                   limparInformacoesProduto();
@@ -7850,11 +7228,11 @@ class GarcomPageState extends State<GarcomPage>
                                 children: [
                                   // botão comanda
                                   GestureDetector(
-                                    onTap: () {
+                                    onTap: () async {
                                       if (carrinhoController.carrinho.isNotEmpty) {
-                                        zerarAtendimento();
+                                        await zerarAtendimento();
                                       } else {
-                                        zerarAtendimento();
+                                        await zerarAtendimento();
                                         comandaController.clear();
                                         setState(() {
                                           aparecerCardapio = false;
@@ -7863,6 +7241,12 @@ class GarcomPageState extends State<GarcomPage>
                                           aparecerConfiguracaoProduto = false;
                                           aparecerBotoes = true;
                                           empurrarBotoes = true;
+                                        });
+                                        
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (!_bloqueandoFoco && mounted && comandaFocus.canRequestFocus) {
+                                            comandaFocus.requestFocus();
+                                          }
                                         });
                                       }
                                     },
@@ -7954,12 +7338,11 @@ class GarcomPageState extends State<GarcomPage>
 
                                             onChanged: (value) async {
                                               if (value.isNotEmpty && comandaValida) {
+                                                FocusScope.of(context).unfocus();
                                                 zerarAtendimento();
                                                 limparAmbas();
                                                 limparInformacoesProduto();
-                                                Future.delayed(const Duration(milliseconds: 2000), () {
-                                                  chamarFoco();
-                                                });
+                                                chamarFoco();
                                               }
                                             },
 
@@ -9876,57 +9259,6 @@ class GarcomPageState extends State<GarcomPage>
                                     ],
                                   ),
                                 ),
-                                /* Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: colorScheme.primary.withOpacity(0.3),
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: colorScheme.onSurface.withOpacity(0.05),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Nome
-                                      Center(
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              produto['produto_nome'],
-                                              textAlign: TextAlign.center,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: colorScheme.onSurface,
-                                              ),
-                                            ),
-                                            Text(
-                                              "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
-                                              textAlign: TextAlign.center,
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: colorScheme.onSurface,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ), */
                               );
                             },
                           );
@@ -9944,585 +9276,6 @@ class GarcomPageState extends State<GarcomPage>
               
                 if ((!aparecerLista && carrinhoController.carrinho.isEmpty && !aparecerVendaTouch) || (aparecerConfiguracaoProduto) || (empurrarBotoes))
                   Expanded(child: Container()), 
-
-                // if (aparecerBotoes && !showKeyboardAlfa)
-                  // Barra inferior com botões quadrados
-                  /* Padding(
-                    padding: aparecerNote
-                        ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
-                        : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 5.0, right: 5.0),
-                    child: Row(
-                      children: [
-                        // Botão Check In
-                        if (aparecerCheckIn)
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 4.0),
-                              child: InkWell(
-                                onTap: () {
-                                  if (carrinhoController.carrinho.isNotEmpty) {
-                                    shownDialogErrorTwoBottom(
-                                      context: context,
-                                      title: "Carrinho cheio!",
-                                      message: "Deseja descartar este pedido?",
-                                      icon: Icons.shopping_cart,
-                                      onConfirm: () async {
-                                        _executarLimpezaGeral();
-                                        Navigator.push(
-                                          context,
-                                          PageRouteBuilder(
-                                            transitionDuration: Duration.zero, 
-                                            reverseTransitionDuration: Duration.zero, 
-                                            pageBuilder: (context, animation, secondaryAnimation) => CheckinPage(),
-                                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                                    return child; 
-                                                },
-                                          ),
-                                        );
-                                      },
-                                      onCancel: () async {
-                                        _isZerando = false;
-                                        comandaController.removeListener(_onComandaChanged);
-                                        mesaController.removeListener(_onMesaChanged);
-
-                                        comandaController.text = numeroComandaEmUso;
-                                        mesaController.text = numeroMesaEmUso;
-
-                                        comandaController.addListener(_onComandaChanged);
-                                        mesaController.addListener(_onMesaChanged);
-
-                                        setState(() {
-                                          aparecerCardapio = true;
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-                                          aparecerConfiguracaoProduto = false;
-                                        });
-                                      },
-                                    );
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      PageRouteBuilder(
-                                        transitionDuration: Duration.zero, 
-                                        reverseTransitionDuration: Duration.zero, 
-                                        pageBuilder: (context, animation, secondaryAnimation) => CheckinPage(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return child; // retorna direto, sem animação
-                                        },
-                                      ),
-                                    );
-                                    zerarAtendimento();
-                                    _executarLimpezaGeral();
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(3),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: 56,
-                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
-                                  ),
-                                  child: Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.login,
-                                          size: 26,
-                                          color: colorScheme.onPrimary,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Check In',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: colorScheme.onPrimary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // if (aparecerCheckOut) SizedBox(width: 8),
-
-                        // Botão Check Out
-                        if (aparecerCheckOut)
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 4.0),
-                              child: InkWell(
-                                onTap: () {
-                                  if (carrinhoController.carrinho.isNotEmpty) {
-                                    shownDialogErrorTwoBottom(
-                                      context: context,
-                                      title: "Carrinho cheio!",
-                                      message: "Deseja descartar este pedido?",
-                                      icon: Icons.shopping_cart,
-                                      onConfirm: () async {
-                                        _executarLimpezaGeral();
-                                        Navigator.push(
-                                          context,
-                                          PageRouteBuilder(
-                                            transitionDuration: Duration.zero, // sem duração
-                                            reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-                                            pageBuilder: (context, animation, secondaryAnimation) => CheckoutPage(),
-                                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                              return child; // retorna direto, sem animação
-                                            },
-                                          ),
-                                        );
-                                      },
-                                      onCancel: () async {
-                                        _isZerando = false;
-                                        comandaController.removeListener(_onComandaChanged);
-                                        mesaController.removeListener(_onMesaChanged);
-
-                                        comandaController.text = numeroComandaEmUso;
-                                        mesaController.text = numeroMesaEmUso;
-
-                                        comandaController.addListener(_onComandaChanged);
-                                        mesaController.addListener(_onMesaChanged);
-
-                                        setState(() {
-                                          aparecerCardapio = true;
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-                                          aparecerConfiguracaoProduto = false;
-                                        });
-                                      },
-                                    );
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      PageRouteBuilder(
-                                        transitionDuration: Duration.zero,
-                                        reverseTransitionDuration: Duration.zero,
-                                        pageBuilder: (context, animation, secondaryAnimation) => CheckoutPage(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return child; // retorna direto, sem animação
-                                        },
-                                      ),
-                                    );
-                                    zerarAtendimento();
-                                    _executarLimpezaGeral();
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(3),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: 56,
-                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
-                                  ),
-                                  child: Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.secondary,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.logout,
-                                          size: 26,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Check Out',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // if (aparecerNote) SizedBox(width: 8),
-                        if (aparecerNote)
-                          // Botão Notes
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 4.0),
-                              child: InkWell(
-                                onTap: () {
-                                  if (carrinhoController.carrinho.isNotEmpty) {
-                                    shownDialogErrorTwoBottom(
-                                      context: context,
-                                      title: "Carrinho cheio!",
-                                      message: "Deseja descartar este pedido?",
-                                      icon: Icons.shopping_cart,
-                                      onConfirm: () async {
-                                        _executarLimpezaGeral();
-                                        Navigator.push(
-                                          context,
-                                          PageRouteBuilder(
-                                            transitionDuration:Duration.zero, // sem duração
-                                            reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-                                            pageBuilder: (context, animation, secondaryAnimation) => NotesPage(),
-                                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                              return child; // retorna direto, sem animação
-                                            },
-                                          ),
-                                        );
-                                      },
-                                      onCancel: () async {
-                                        _isZerando = false;
-                                        comandaController.removeListener(_onComandaChanged);
-                                        mesaController.removeListener(_onMesaChanged);
-
-                                        comandaController.text = numeroComandaEmUso;
-                                        mesaController.text = numeroMesaEmUso;
-
-                                        comandaController.addListener(_onComandaChanged);
-                                        mesaController.addListener(_onMesaChanged);
-
-                                        setState(() {
-                                          aparecerCardapio = true;
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-                                          aparecerConfiguracaoProduto = false;
-                                        });
-                                      },
-                                    );
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      PageRouteBuilder(
-                                        transitionDuration: Duration.zero, // sem duração
-                                        reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-                                        pageBuilder: (context, animation, secondaryAnimation) => NotesPage(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return child; // retorna direto, sem animação
-                                        },
-                                      ),
-                                    );
-                                    zerarAtendimento();
-                                    _executarLimpezaGeral();
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(3),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: 56,
-                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
-                                  ),
-                                  child: Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.shadow,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.note_add_sharp,
-                                          size: 26,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Notes',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        // if (aparecerRecepcao) SizedBox(width: 8),
-                        if (aparecerRecepcao)
-                          // Botão Recepção
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 4.0),
-                              child: InkWell(
-                                onTap: () {
-                                  if (carrinhoController.carrinho.isNotEmpty) {
-                                    shownDialogErrorTwoBottom(
-                                      context: context,
-                                      title: "Carrinho cheio!",
-                                      message: "Deseja descartar este pedido?",
-                                      icon: Icons.shopping_cart,
-                                      onConfirm: () async {
-                                        _executarLimpezaGeral();
-                                        Navigator.push(
-                                          context,
-                                          PageRouteBuilder(
-                                            transitionDuration: Duration.zero, // sem duração
-                                            reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-                                            pageBuilder: (context, animation, secondaryAnimation) => RecepcaoPage(),
-                                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                              return child; // retorna direto, sem animação
-                                            },
-                                          ),
-                                        );
-                                      },
-                                      onCancel: () async {
-                                        _isZerando = false;
-                                        comandaController.removeListener(_onComandaChanged);
-                                        mesaController.removeListener(_onMesaChanged);
-
-                                        comandaController.text = numeroComandaEmUso;
-                                        mesaController.text = numeroMesaEmUso;
-
-                                        comandaController.addListener(_onComandaChanged);
-                                        mesaController.addListener(_onMesaChanged);
-
-                                        setState(() {
-                                          aparecerCardapio = true;
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-                                          aparecerConfiguracaoProduto = false;
-                                        });
-                                      },
-                                    );
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      PageRouteBuilder(
-                                        transitionDuration: Duration.zero, // sem duração
-                                        reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-                                        pageBuilder: (context, animation, secondaryAnimation) => RecepcaoPage(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return child; // retorna direto, sem animação
-                                        },
-                                      ),
-                                    );
-                                    zerarAtendimento();
-                                    _executarLimpezaGeral();
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(3),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: 56,
-                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
-                                  ),
-                                  child: Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.person,
-                                          size: 26,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Recepçao',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        // if (!naoAparecerMapa) SizedBox(width: 8),
-                        if (!naoAparecerMapa)
-                          // Botão Mapa de Mesas
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 4.0),
-                              child: InkWell(
-                                onTap: () {
-                                  if (carrinhoController.carrinho.isNotEmpty) {
-                                    shownDialogErrorTwoBottom(
-                                      context: context,
-                                      title: "Carrinho cheio!",
-                                      message: "Deseja descartar este pedido?",
-                                      icon: Icons.shopping_cart,
-                                      onConfirm: () async {
-                                        _executarLimpezaGeral();
-                                        Get.toNamed('/mapa');
-                                        /* Navigator.push(
-                                          context,
-                                          PageRouteBuilder(
-                                            transitionDuration:
-                                                Duration.zero, // sem duração
-                                            reverseTransitionDuration: Duration
-                                                .zero, // sem duração ao voltar
-                                            pageBuilder:
-                                                (
-                                                  context,
-                                                  animation,
-                                                  secondaryAnimation,
-                                                ) => MapaPage(),
-                                            transitionsBuilder:
-                                                (
-                                                  context,
-                                                  animation,
-                                                  secondaryAnimation,
-                                                  child,
-                                                ) {
-                                                  return child; // retorna direto, sem animação
-                                                },
-                                          ),
-                                        ); */
-                                      },
-                                      onCancel: () async {
-                                        _isZerando = false;
-                                        comandaController.removeListener(_onComandaChanged);
-                                        mesaController.removeListener(_onMesaChanged);
-
-                                        comandaController.text = numeroComandaEmUso;
-                                        mesaController.text = numeroMesaEmUso;
-
-                                        comandaController.addListener(_onComandaChanged);
-                                        mesaController.addListener(_onMesaChanged);
-
-                                        setState(() {
-                                          aparecerCardapio = true;
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-                                          aparecerConfiguracaoProduto = false;
-                                        });
-                                      },
-                                    );
-                                  } else {
-                                    zerarAtendimento();
-                                    _executarLimpezaGeral();
-                                    Get.toNamed('/mapa');
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(3),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: 56,
-                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
-                                  ),
-                                  child: Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.scrim,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.map,
-                                          size: 26,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Mapa',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        // if (aparecerGarcom) SizedBox(width: 8),
-                        if (aparecerGarcom)
-                          // Botão Garçom
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 4.0),
-                              child: InkWell(
-                                onTap: () {},
-                                borderRadius: BorderRadius.circular(3),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: 56,
-                                    maxHeight: MediaQuery.of(context).size.height * 0.10,
-                                  ),
-                                  child: Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.secondary,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.table_restaurant,
-                                          size: 26,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            'Garçom',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ), */
               ],
             ),
           ),
