@@ -604,9 +604,9 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   @override
   void dispose() {
     _timer.cancel();
-    super.dispose();
     _focusNode.dispose();
     animationController.dispose();
+    super.dispose();
   }
 
   // Load nomeEmpresa

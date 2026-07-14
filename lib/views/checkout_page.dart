@@ -463,9 +463,10 @@ class CheckoutPageState extends State<CheckoutPage>
   @override
   void dispose() {
     _timer.cancel();
-    super.dispose();
-    comandaFocus.dispose();
     _conexaoSubscription?.cancel();
+    comandaFocus.dispose();
+    comandaController.dispose();
+    super.dispose();
   }
 
   // Adiciona um número

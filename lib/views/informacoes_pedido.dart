@@ -805,9 +805,9 @@ class InformacoesPedidoPageState extends State<InformacoesPedidoPage>
   @override
   void dispose() {
     _timer.cancel();
-    super.dispose();
     _focusNode.dispose();
     animationController.dispose();
+    super.dispose();
   }
 
   // Salavr comanda

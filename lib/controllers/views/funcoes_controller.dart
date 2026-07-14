@@ -201,8 +201,12 @@ class FuncoesController extends GetxController {
     // Função que retorna adicionais e observações dos produtos
     Future<void> adicionaisObservacoesProdutos() async {
       try {
-        String dadosJson = await Connection().select(
+        /* String dadosJson = await Connection().select(
           "SELECT numeroproduto_FK AS numeroproduto, if(numeroobservacao_FK = '0','0',(SELECT observacao FROM observacoes WHERE numero=numeroobservacao_FK)) AS nomeobservacao, numeroprodutoadicional_FK AS numeroadicional, if(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero=numeroprodutoadicional_FK)) AS nomeadicional, numeroobservacao_FK as numeroobservacao FROM observacoesadicionaisprodutos ORDER BY numeroproduto_FK;",
+        ); */
+
+        String dadosJson = await Connection().select(
+          "SELECT numeroproduto_FK AS numeroproduto, if(numeroobservacao_FK = '0','0',(SELECT observacao FROM observacoes WHERE numero=numeroobservacao_FK)) AS nomeobservacao, numeroprodutoadicional_FK AS numeroadicional, if(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero=numeroprodutoadicional_FK)) AS nomeadicional, numeroobservacao_FK as numeroobservacao FROM observacoesadicionaisprodutos ORDER BY nomeadicional, nomeobservacao;",
         );
 
         List<dynamic> lista = jsonDecode(dadosJson);

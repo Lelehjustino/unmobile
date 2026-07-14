@@ -286,10 +286,10 @@ class PagamentoPageState extends State<PagamentoPage>
     );
 
     _timer.cancel();
-    super.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     animationController.dispose();
+    super.dispose();
   }
 
   void fecharTeclado() {

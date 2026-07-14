@@ -98,6 +98,7 @@ class GarcomPageState extends State<GarcomPage>
   final TextEditingController numeroProdutoSelecionadoController = TextEditingController();
   final TextEditingController quantidadeProdutoSelecionadoController = TextEditingController();
   final TextEditingController observacaoProdutoSelecionadoController = TextEditingController();
+  final TextEditingController quantidadeProdutoSelecionadoModalController = TextEditingController();
   final TextEditingController adicionalProdutoSelecionadoController = TextEditingController();
   final TextEditingController senhaController = TextEditingController();
 
@@ -105,6 +106,7 @@ class GarcomPageState extends State<GarcomPage>
   final FocusNode mesaFocus = FocusNode();
   final FocusNode cardapioFocus = FocusNode();
   final FocusNode numeroProdutoSelecionadoFocus = FocusNode();
+  final FocusNode quantidadeProdutoSelecionadoModalFocus = FocusNode();
   final FocusNode quantidadeProdutoSelecionadoFocus = FocusNode();
   final FocusNode observacaoProdutoSelecionadoFocus = FocusNode();
   final FocusNode senhaFocus = FocusNode();
@@ -304,6 +306,8 @@ class GarcomPageState extends State<GarcomPage>
 
   bool empurrarBotoes = false;
 
+  bool modoAnteriorTouch = false;
+
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
     debugLabel: 'focoBloqueioDialogo',
@@ -419,17 +423,15 @@ class GarcomPageState extends State<GarcomPage>
     FocusScope.of(context).unfocus();
 
     setState(() {
+      modoAnteriorTouch = false;
       aparecerCarrinho = false;
       aparecerConfiguracaoProduto = false;
       aparecerVendaTouch = true;
       grupoSelecionadoNoTouch = "";
+      cardapioController.clear();
+      cardapioController.text = "";
     });
-    // Seleciona o primeiro grupo após o frame atual para garantir que
-    // a lista já está disponível (sem Future.delayed — usa o frame callback nativo)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _selecionarPrimeiroGrupo();
-    });
+    _selecionarPrimeiroGrupo();
     String modo = "Touch";
     salvarUltimaConfiguracao(modo);
   }
@@ -437,10 +439,13 @@ class GarcomPageState extends State<GarcomPage>
   sairModoTouch(){ //carrinho
     FocusScope.of(context).unfocus();
     setState(() {
+      modoAnteriorTouch = true;
       aparecerCarrinho = true;
       aparecerConfiguracaoProduto = false;
       aparecerVendaTouch = false;
       grupoSelecionadoNoTouch = "";
+      cardapioController.clear();
+      cardapioController.text = "";
     });
     Future.delayed(Duration(milliseconds: 300), () {
       if (cardapioFocus.canRequestFocus) {
@@ -2835,6 +2840,20 @@ class GarcomPageState extends State<GarcomPage>
     }
   }
 
+  void mostrarAdicionaisEObservacoes(numeroDoProdutoSelecionadoFuncao, nomeFuncao, valorFuncao, numeroFuncao, quantidadeFuncao, observacaoFuncao){
+    showModalAdicionaisObservacoes(
+      context,
+      numeroDoProdutoSelecionadoFuncao,
+      funcoesController.listaAdicionaisObservacoes, 
+      nomeFuncao,
+      valorFuncao,
+      numeroFuncao,
+      quantidadeFuncao,
+      observacaoFuncao,
+    );
+    temAdicionalObservacao = false;
+  }
+
   // Função que eu abro para aparecer adicionais e observações
   void showModalAdicionaisObservacoes(
     BuildContext context,
@@ -2873,32 +2892,15 @@ class GarcomPageState extends State<GarcomPage>
           return e;
         })
         .toList();
-    quantidadeProdutoSelecionadoController.text = quantidadeInicial.toString();
-    // quantidadeInicial = int.tryParse(quantidadeProdutoSelecionadoController.text,) ?? 1;
+    double quantidadeInicial = produtoQuantidade;
 
-    /*    // Colocando os adicionais e observações do produto em uma outra lista
-    listaAdicionaisObservacoesDoProduto = itensProduto;
+    quantidadeProdutoSelecionadoController.text = produtoKilo
+        ? quantidadeInicial.toString()
+        : quantidadeInicial.toInt().toString();
 
-    // Separando observações
-    listaAdicionaisDoProduto = itensProduto
-        .where((e) => e['numeroadicional'].toString() != '0')
-        .map((e) {
-          e['selecionado'] = false; // para controlar o ckeck box
-          return e;
-        })
-        .toList();
-
-    // Separando adicionais
-    listaObservacaoesDoProduto = itensProduto
-        .where((e) => e['nomeobservacao'].toString() != '0')
-        .map((e) {
-          e['selecionado'] = false; // para controlar o ckeck box
-          return e;
-        })
-        .toList();
-    quantidadeProdutoSelecionadoController.text = quantidadeInicial.toString();
-    // quantidadeInicial = int.tryParse(quantidadeProdutoSelecionadoController.text,) ?? 1; */
-
+    quantidadeProdutoSelecionadoModalController.text = produtoKilo
+        ? quantidadeInicial.toString()
+        : quantidadeInicial.toInt().toString();
     // Lista para adicionar as quantidades de cada adicional
     for (var item in listaAdicionaisDoProduto) {
       final numero = item['numeroadicional'].toString();
@@ -2932,23 +2934,22 @@ class GarcomPageState extends State<GarcomPage>
                   children: [
                     Center(
                       child: Text(
-                        'Adicionais e Observações',
+                        produtoNome,
+                        // 'Adicionais e Observações',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    SizedBox(height: 12),
 
-                    if (listaObservacaoesDoProduto.isEmpty &&
-                        listaAdicionaisDoProduto.isEmpty)
-                      Center(
-                        child: Text(
-                          'Este produto não tem observações ou adicionais:(',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                    /* if (listaObservacaoesDoProduto.isEmpty && listaAdicionaisDoProduto.isEmpty)
+                    Center(
+                      child: Text(
+                        'Este produto não tem observações ou adicionais:(',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
+                    ), */
 
                     Expanded(
                       child: ListView(
@@ -2976,14 +2977,10 @@ class GarcomPageState extends State<GarcomPage>
                             physics: NeverScrollableScrollPhysics(),
                             itemCount: listaObservacaoesDoProduto.length,
                             itemBuilder: (context, index) {
-                              final observacao =
-                                  listaObservacaoesDoProduto[index];
-                              final nome = observacao['nomeobservacao']
-                                  .toString();
-                              final numero = observacao['numeroobservacao']
-                                  .toString();
-                              final quantidade =
-                                  quantidadesObservacoes[numero] ?? 0;
+                              final observacao = listaObservacaoesDoProduto[index];
+                              final nome = observacao['nomeobservacao'].toString();
+                              final numero = observacao['numeroobservacao'].toString();
+                              final quantidade = quantidadesObservacoes[numero] ?? 0;
 
                               return Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 8),
@@ -3081,15 +3078,9 @@ class GarcomPageState extends State<GarcomPage>
                               physics: NeverScrollableScrollPhysics(),
                               itemCount: listaAdicionaisDoProduto.length,
                               itemBuilder: (context, index) {
-                                final adicionais =
-                                    listaAdicionaisDoProduto[index];
-                                final numero = adicionais['numeroadicional']
-                                    .toString();
-                                final quantidade =
-                                    double.tryParse(
-                                      quantidadesAdicionais[numero].toString(),
-                                    ) ??
-                                    1;
+                                final adicionais = listaAdicionaisDoProduto[index];
+                                final numero = adicionais['numeroadicional'].toString();
+                                final quantidade =  double.tryParse(quantidadesAdicionais[numero].toString(),) ?? 1;
 
                                 return Padding(
                                   padding: EdgeInsets.symmetric(
@@ -3098,8 +3089,7 @@ class GarcomPageState extends State<GarcomPage>
                                   ),
                                   child: Card(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -3111,10 +3101,8 @@ class GarcomPageState extends State<GarcomPage>
                                                 ),
                                                 child: Text(
                                                   adicionais['nomeadicional'],
-                                                  maxLines:
-                                                      1, // limita a 1 linha
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                  maxLines: 1, // limita a 1 linha
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ),
@@ -3189,124 +3177,174 @@ class GarcomPageState extends State<GarcomPage>
                             // Nome do produto e controlardor de quantidade
                             Column(
                               children: [
-                                Text(produtoNome),
+                                // Text(produtoNome),
 
                                 // Linha com os controladores de quantidade e Text field de quantidade
                                 Center(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      // Botão de menos
-                                      Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: IconButton(
-                                          onPressed: () {
-                                            if (quantidadeInicial > 1) {
-                                              setState(() {
-                                                quantidadeInicial--;
-                                                quantidadeProdutoSelecionadoController
-                                                    .text = quantidadeInicial
-                                                    .toString();
-                                              });
-                                            }
-                                          },
-                                          icon: Icon(Icons.remove),
-                                        ),
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 0,
+                                      vertical: 8,
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.surface,
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                       ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          // Botão de menos
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                if (quantidadeInicial > 1) {
+                                                  setModalState(() {
+                                                    quantidadeInicial--;
 
-                                      // Text Field de quantidade
-                                      Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: SizedBox(
-                                          width:
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.width *
-                                              0.4,
-                                          child: TextField(
-                                            controller:
-                                                quantidadeProdutoSelecionadoController,
-                                            focusNode:
-                                                quantidadeProdutoSelecionadoFocus,
-                                            readOnly:
-                                                true, // impede digitação pelo teclado nativo
-                                            showCursor:
-                                                true, // FORÇA o cursor piscando
-                                            cursorColor: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurface,
-                                            keyboardType: TextInputType
-                                                .none, // garante que o teclado não abra
-                                            enableInteractiveSelection:
-                                                false, // evita seleção/copiar
-                                            textAlign: TextAlign.center,
-                                            onTap: () {
-                                              if (produtoKilo) {
-                                                showKeyboardNumero = false;
-                                                showKeyboardAlfa = false;
-                                                showKeyboardQuantidade = true;
-                                                _campoAtivo =
-                                                    'quantidadeProdutoSelecionadoController';
-                                                Future.delayed(
-                                                  Duration(milliseconds: 400),
-                                                  () {
-                                                    if (quantidadeProdutoSelecionadoFocus
-                                                        .canRequestFocus) {
-                                                      quantidadeProdutoSelecionadoFocus
-                                                          .requestFocus();
-                                                    }
-                                                  },
-                                                );
-                                              } else {
-                                                showKeyboardNumero = true;
-                                                showKeyboardAlfa = false;
-                                                showKeyboardQuantidade = false;
-                                                _campoAtivo =
-                                                    'quantidadeProdutoSelecionadoController';
-                                                Future.delayed(
-                                                  Duration(milliseconds: 400),
-                                                  () {
-                                                    if (quantidadeProdutoSelecionadoFocus
-                                                        .canRequestFocus) {
-                                                      quantidadeProdutoSelecionadoFocus
-                                                          .requestFocus();
-                                                    }
-                                                  },
-                                                );
-                                              }
-                                            },
-                                            decoration: InputDecoration(
-                                              hintText: 'Qtde',
-                                              filled: true,
-                                              fillColor: Theme.of(
-                                                context,
-                                              ).colorScheme.surfaceDim,
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: BorderSide.none,
+                                                    final texto = quantidadeInicial.toInt().toString();
+
+                                                    quantidadeProdutoSelecionadoController.text = texto;
+                                                    quantidadeProdutoSelecionadoModalController.text = texto;
+                                                  });
+                                                }
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                                padding: const EdgeInsets.symmetric(
+                                                  vertical: 20,
+                                                  horizontal: 20,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                              ),
+                                              child: Icon(
+                                                Icons.remove,
+                                                color: Theme.of(context).colorScheme.onPrimary,
+                                                size: 28,
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ),
+                                          /* Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: IconButton(
+                                              onPressed: () {
+                                                if (quantidadeInicial > 1) {
+                                                  setModalState(() {
+                                                    quantidadeInicial--;
 
-                                      // Botão de mais
-                                      Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: IconButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              quantidadeInicial++;
-                                              quantidadeProdutoSelecionadoController
-                                                  .text = quantidadeInicial
-                                                  .toString();
-                                            });
-                                          },
-                                          icon: Icon(Icons.add),
-                                        ),
+                                                    final texto = quantidadeInicial.toInt().toString();
+
+                                                    quantidadeProdutoSelecionadoController.text = texto;
+                                                    quantidadeProdutoSelecionadoModalController.text = texto;
+                                                  });
+                                                }
+                                              },
+                                              icon: Icon(Icons.remove),
+                                            ),
+                                          ), */
+                                      
+                                          // Text Field de quantidade
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: SizedBox(
+                                              width: MediaQuery.of(context,).size.width * 0.4,
+                                              child: TextField(
+                                                controller: quantidadeProdutoSelecionadoModalController,
+                                                focusNode: quantidadeProdutoSelecionadoModalFocus,
+                                                style: TextStyle(
+                                                  fontSize: 20, // aumenta o tamanho do número
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                readOnly: true, // impede digitação pelo teclado nativo
+                                                showCursor: false, // FORÇA o cursor piscando
+                                                cursorColor: Theme.of(context,).colorScheme.onSurface,
+                                                keyboardType: TextInputType.none, // garante que o teclado não abra
+                                                enableInteractiveSelection: false, // evita seleção/copiar
+                                                textAlign: TextAlign.center,
+                                                onTap: () {
+                                                  if (produtoKilo) {
+                                                    showKeyboardNumero = false;
+                                                    showKeyboardAlfa = false;
+                                                    showKeyboardQuantidade = true;
+                                                  } else {
+                                                    showKeyboardNumero = true;
+                                                    showKeyboardAlfa = false;
+                                                    showKeyboardQuantidade = false;
+                                                  }
+                                                },
+                                                decoration: InputDecoration(
+                                                  filled: true,
+                                                  fillColor: Theme.of(context,).colorScheme.primary.withOpacity(0.5),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    borderSide: BorderSide.none,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      
+                                          // Botão de mais
+                                          /* Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: IconButton(
+                                              onPressed: () {
+                                                setModalState(() {
+                                                  quantidadeInicial++;
+
+                                                  final texto = produtoKilo
+                                                      ? quantidadeInicial.toString()
+                                                      : quantidadeInicial.toInt().toString();
+
+                                                  quantidadeProdutoSelecionadoController.text = texto;
+                                                  quantidadeProdutoSelecionadoModalController.text = texto;
+                                                });
+                                              },
+                                              icon: Icon(Icons.add),
+                                            ),
+                                          ), */
+                                          // Botão de mais
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                setModalState(() {
+                                                  quantidadeInicial++;
+
+                                                  final texto = produtoKilo
+                                                      ? quantidadeInicial.toString()
+                                                      : quantidadeInicial.toInt().toString();
+
+                                                  quantidadeProdutoSelecionadoController.text = texto;
+                                                  quantidadeProdutoSelecionadoModalController.text = texto;
+                                                });
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                                padding: const EdgeInsets.symmetric(
+                                                  vertical: 20,
+                                                  horizontal: 20,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                              ),
+                                              child: Icon(
+                                                Icons.add,
+                                                color: Theme.of(context).colorScheme.onPrimary,
+                                                size: 28,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -3316,11 +3354,16 @@ class GarcomPageState extends State<GarcomPage>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 // Botão de fechar
-                                Flexible(
+                                Expanded(
                                   child: ElevatedButton(
                                     onPressed: () {
                                       Navigator.pop(context);
-                                      quantidadeInicial = 1;
+                                      if(!modoAnteriorTouch){
+                                        entrarModoTouch();
+                                      }else{
+                                        sairModoTouch();
+                                      }
+                                      // quantidadeInicial = 1;
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Theme.of(
@@ -3350,7 +3393,7 @@ class GarcomPageState extends State<GarcomPage>
                                 SizedBox(width: 6),
 
                                 // Botão de Adicionar
-                                Flexible(
+                                Expanded(
                                   child: ElevatedButton(
                                     onPressed: () {
                                       // Montando a lista de adicionais
@@ -3422,37 +3465,21 @@ class GarcomPageState extends State<GarcomPage>
                                           }
                                         });
                                       }
-                                      /* List<String> observacoesSelecionadas = [];
-
-                                      quantidadesObservacoes.forEach((nome, quantidade) {
-                                        for (int i = 0; i < quantidade; i++) {
-                                          observacoesSelecionadas.add(nome);
-                                        }
-                                      }); */
-                                      /* List<String> observacoesSelecionadas = [];
-
-                                      quantidadesObservacoes.forEach((nome, quantidade) {
-                                        for (int i = 0; i < quantidade; i++) {
-                                          observacoesSelecionadas.add(nome);
-                                        }
-                                      }); */
 
                                       // Adicionando o produto ao carrinho
                                       carrinhoController
-                                          .adicionarProdutoAoCarrinho(
-                                            produtoNome,
-                                            produtoValor,
-                                            produtoNumero,
-                                            quantidadeInicial.toDouble(),
-                                            produtoObservacao,
-                                            idDoProdutoSelecionado,
-                                            adicionais:
-                                                listaAdicionaisSelecionados,
-                                            observacoesTexto:
-                                                observacoesSelecionadas,
-                                          );
-
-                                        sairModoTouch();
+                                      .adicionarProdutoAoCarrinho(
+                                        produtoNome,
+                                        produtoValor,
+                                        produtoNumero,
+                                        quantidadeInicial.toDouble(),
+                                        produtoObservacao,
+                                        idDoProdutoSelecionado,
+                                        adicionais:
+                                            listaAdicionaisSelecionados,
+                                        observacoesTexto:
+                                            observacoesSelecionadas,
+                                      );
 
                                       // Limpa listas
                                       listaAdicionaisSelecionados.clear();
@@ -3465,15 +3492,16 @@ class GarcomPageState extends State<GarcomPage>
                                       Navigator.pop(context);
 
                                       setState(() {
-                                        aparecerCardapio = true;
-                                        aparecerCarrinho = true;
                                         aparecerConfiguracaoProduto = false;
                                         aparecerBotoes = true;
-                                        showKeyboardAlfa = false;
-                                        showKeyboardNumero = false;
-                                        showKeyboardQuantidade = false;
                                         quantidadeInicial = 1;
                                       });
+
+                                      if(!modoAnteriorTouch){
+                                        entrarModoTouch();
+                                      }else{
+                                        sairModoTouch();
+                                      }
                                     },
 
                                     style: ElevatedButton.styleFrom(
@@ -4560,20 +4588,33 @@ class GarcomPageState extends State<GarcomPage>
 
   @override
   void dispose() {
-    cardapioFocus.removeListener(_syncKeyboardAlfaFromFocus);
+    /* cardapioFocus.removeListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.removeListener(_syncKeyboardAlfaFromFocus);
     _timer.cancel();
     _focoBloqueio.dispose(); // dispose do nó de bloqueio global de foco
-    super.dispose();
     _focusNode.dispose();
-    animationController.dispose();
+    _focusNodeCardapio.dispose(); */
+/*     animationController.dispose();
     comandaController.removeListener(_onComandaChanged);
     comandaController.dispose();
     mesaController.removeListener(_onMesaChanged);
     mesaController.dispose();
     comandaFocus.dispose();
     mesaFocus.dispose();
-    _timer.cancel();
+    cardapioFocus.dispose();
+    numeroProdutoSelecionadoFocus.dispose();
+    quantidadeProdutoSelecionadoFocus.dispose();
+    observacaoProdutoSelecionadoFocus.dispose();
+    senhaFocus.dispose();
+    servidorController.dispose();
+    cardapioController.dispose();
+    numeroProdutoSelecionadoController.dispose();
+    quantidadeProdutoSelecionadoController.dispose();
+    observacaoProdutoSelecionadoController.dispose();
+    adicionalProdutoSelecionadoController.dispose();
+    senhaController.dispose();
+    _scrollController.dispose(); */
+    super.dispose();
   }
 
   // Função para limpar comanda
@@ -7713,7 +7754,13 @@ class GarcomPageState extends State<GarcomPage>
                                           aparecerCarrinho = true;
                                           aparecerLista = false;
                                           // abrirSelecaoGrupoProduto();
-                                          sairModoTouch();
+                                          if(aparecerConfiguracaoProduto && !modoAnteriorTouch){
+                                            entrarModoTouch();
+                                          } else if(aparecerConfiguracaoProduto && modoAnteriorTouch){
+                                            sairModoTouch();
+                                          } else {
+                                            sairModoTouch();
+                                          }
                                         } else {
                                           // modo touch 
                                           entrarModoTouch();
@@ -7936,32 +7983,45 @@ class GarcomPageState extends State<GarcomPage>
                                         produtoKilo = false;
                                       }
 
+                                      idDoProdutoSelecionado = produto['produto_id'];
+
+                                      verificacaoSeTemAdicionalObservacao(
+                                        produto['produto_numero'],
+                                        funcoesController.listaAdicionaisObservacoes,
+                                      );
+
                                       // Atualiza os controladores fora do setState para evitar loops de rebuild
                                       cardapioController.text = produtoKilo
                                           ? "${produto['produto_nome']} (Kg)"
                                           : "${produto['produto_nome']} (${produto['produto_un']})";
-                                      numeroProdutoSelecionadoController.text =
-                                          produto['produto_numero'];
+                                      numeroProdutoSelecionadoController.text = produto['produto_numero'];
 
                                       // Atribuições de lógica que não dependem do setState
-                                      idDoProdutoSelecionado =
-                                          produto['produto_id'];
-                                      _campoAtivo =
-                                          'quantidadeProdutoSelecionadoController';
-                                      numeroDoProdutoSelecionado =
-                                          produto['produto_numero'];
-                                      valorDoProdutoSelecionado =
-                                          produto['produto_valor'];
-                                      quantidadeProdutoSelecionadoController
-                                              .text =
-                                          "";
-                                      quantidadeProdutoSelecionadoController
-                                          .clear();
-                                      observacaoProdutoSelecionadoController
-                                              .text =
-                                          "";
-                                      observacaoProdutoSelecionadoController
-                                          .clear();
+                                      idDoProdutoSelecionado = produto['produto_id'];
+                                      _campoAtivo = 'quantidadeProdutoSelecionadoController';
+                                      numeroDoProdutoSelecionado = produto['produto_numero'];
+                                      valorDoProdutoSelecionado = produto['produto_valor'];
+                                      quantidadeProdutoSelecionadoController.text = "";
+                                      quantidadeProdutoSelecionadoController.clear();
+                                      observacaoProdutoSelecionadoController.text = "";
+                                      observacaoProdutoSelecionadoController.clear();
+
+                                      final numeroProduto = produto['produto_numero'];
+                                      double quantidade = 1;
+                                      final nome = cardapioController.text;
+                                      final observacao = observacaoProdutoSelecionadoController.text;
+                                      final valor = produto['produto_valor'].toString();
+
+                                      if(temAdicionalObservacao){
+                                        mostrarAdicionaisEObservacoes(
+                                          numeroProduto, 
+                                          nome, 
+                                          valor, 
+                                          numeroProduto, 
+                                          quantidade, 
+                                          observacao
+                                        );
+                                      }
 
                                       setState(() {
                                         aparecerBotoes = false;
@@ -7969,40 +8029,38 @@ class GarcomPageState extends State<GarcomPage>
                                         aparecerCarrinho = false;
                                         aparecerConfiguracaoProduto = true;
                                         showKeyboardAlfa = false;
-                                        _campoAtivo =
-                                            "quantidadeProdutoSelecionadoController";
+                                        _campoAtivo =  "quantidadeProdutoSelecionadoController";
                                         if (produtoKilo) {
                                           showKeyboardNumero = false;
                                           showKeyboardAlfa = false;
                                           showKeyboardQuantidade = true;
-                                          _campoAtivo =
-                                              'quantidadeProdutoSelecionadoController';
-                                          Future.delayed(
-                                            Duration(milliseconds: 400),
-                                            () {
-                                              if (quantidadeProdutoSelecionadoFocus
-                                                  .canRequestFocus) {
-                                                quantidadeProdutoSelecionadoFocus
-                                                    .requestFocus();
-                                              }
-                                            },
-                                          );
+                                          _campoAtivo = 'quantidadeProdutoSelecionadoController';
+                                          if(!temAdicionalObservacao){
+                                            Future.delayed(
+                                              Duration(milliseconds: 300),
+                                              () {
+                                                if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                                  quantidadeProdutoSelecionadoFocus.requestFocus();
+                                                }
+                                              },
+                                            );
+                                          }
                                         } else {
                                           showKeyboardNumero = true;
                                           showKeyboardAlfa = false;
                                           showKeyboardQuantidade = false;
                                           _campoAtivo =
                                               'quantidadeProdutoSelecionadoController';
-                                          Future.delayed(
-                                            Duration(milliseconds: 400),
-                                            () {
-                                              if (quantidadeProdutoSelecionadoFocus
-                                                  .canRequestFocus) {
-                                                quantidadeProdutoSelecionadoFocus
-                                                    .requestFocus();
-                                              }
-                                            },
-                                          );
+                                          if(!temAdicionalObservacao){
+                                            Future.delayed(
+                                              Duration(milliseconds: 300),
+                                              () {
+                                                if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                                  quantidadeProdutoSelecionadoFocus.requestFocus();
+                                                }
+                                              },
+                                            );
+                                          }
                                         }
                                       });
                                     } else if (produto['produto_id'] == 'PZ') {
@@ -8021,8 +8079,7 @@ class GarcomPageState extends State<GarcomPage>
                                       });
                                     } else if (produto['produto_id'] == 'E') {
                                       // Atualiza os controladores fora do setState para evitar loops de rebuild
-                                      cardapioController.text =
-                                          produto['produto_nome'];
+                                      cardapioController.text = produto['produto_nome'];
                                       numeroProdutoSelecionadoController.text =
                                           produto['produto_numero'];
 
@@ -8047,53 +8104,46 @@ class GarcomPageState extends State<GarcomPage>
                                           showKeyboardQuantidade = true;
                                           _campoAtivo =
                                               'quantidadeProdutoSelecionadoController';
-                                          Future.delayed(
-                                            Duration(milliseconds: 400),
-                                            () {
-                                              if (quantidadeProdutoSelecionadoFocus
-                                                  .canRequestFocus) {
-                                                quantidadeProdutoSelecionadoFocus
-                                                    .requestFocus();
-                                              }
-                                            },
-                                          );
+                                          if(!temAdicionalObservacao){
+                                            Future.delayed(
+                                              Duration(milliseconds: 300),
+                                              () {
+                                                if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                                  quantidadeProdutoSelecionadoFocus.requestFocus();
+                                                }
+                                              },
+                                            );
+                                          }
                                         } else {
                                           showKeyboardNumero = true;
                                           showKeyboardAlfa = false;
                                           showKeyboardQuantidade = false;
                                           _campoAtivo =
                                               'quantidadeProdutoSelecionadoController';
-                                          Future.delayed(
-                                            Duration(milliseconds: 400),
-                                            () {
-                                              if (quantidadeProdutoSelecionadoFocus
-                                                  .canRequestFocus) {
-                                                quantidadeProdutoSelecionadoFocus
-                                                    .requestFocus();
-                                              }
-                                            },
-                                          );
+                                          if(!temAdicionalObservacao){
+                                            Future.delayed(
+                                              Duration(milliseconds: 300),
+                                              () {
+                                                if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                                  quantidadeProdutoSelecionadoFocus.requestFocus();
+                                                }
+                                              },
+                                            );
+                                          }
                                         }
                                       });
 
                                       // Solicita o foco após a construção do frame para evitar engasgos
-                                      Future.delayed(
-                                        Duration(milliseconds: 300),
-                                        () {
-                                          if (quantidadeProdutoSelecionadoFocus
-                                              .canRequestFocus) {
-                                            quantidadeProdutoSelecionadoFocus
-                                                .requestFocus();
-                                          }
-                                        },
-                                      );
-                                      /* WidgetsBinding.instance.addPostFrameCallback((_) {
-                                      if (mounted) {
-                                        FocusScope.of(context).requestFocus(
-                                          quantidadeProdutoSelecionadoFocus,
+                                      if(!temAdicionalObservacao){
+                                        Future.delayed(
+                                          Duration(milliseconds: 300),
+                                          () {
+                                            if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                              quantidadeProdutoSelecionadoFocus.requestFocus();
+                                            }
+                                          },
                                         );
                                       }
-                                    }); */
                                     }
                                   },
                                   child: Container(
@@ -8226,79 +8276,50 @@ class GarcomPageState extends State<GarcomPage>
                                 ],
                               ),
                             ),
-                            /* ElevatedButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  aparecerLista = false;
-                                  aparecerCardapio = true;
-                                  aparecerCarrinho = true;
-                                });
-                              },
-                              icon: Icon(Icons.shopping_cart, color: colorScheme.onPrimary),
-                              label: Text(
-                                'Voltar ao Carrinho',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onPrimary,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.primary,
-                                minimumSize: Size(double.infinity, 50),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 4,
-                              ),
-                            ), */
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                /* // Aparece para eu visualisar o carrinho DAS COMANDAS ADICIONADAS
-                  if(comandaCarrinhoController.isNotEmpty) ...[
-                    Padding(
-                      padding: EdgeInsets.only(left: 8,right: 8, top: 0,bottom: 4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(10),
+                // Quando nao tem carrinho cheio
+                if (carrinhoController.carrinho.isEmpty && !aparecerLista && !aparecerConfiguracaoProduto && !aparecerVendaTouch && (comandaValida || mesaValida)) ...[
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.shopping_cart,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
-                        child: GestureDetector(
-                          onTap: () {
-                            // IR PARA A TELA DE VISUALIZAÇÃO DAS COMANDAS ADICIONADAS
-                            Get.toNamed('/carrinho_comandas');
-                          },
-                          child: Row(
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Text(
-                                  'Visualizar comandas adicionadas',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ),
-                              Expanded(child: Container()),
-                              Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Icon(
-                                  Icons.arrow_forward,
-                                  color: colorScheme.onPrimary,
-                                ),
-                              ),
-                            ],
+                        SizedBox(width: 4),
+                        Text(
+                          'Meu carrinho:',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            color: colorScheme.primary,
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ], */
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                        'Carrinho vazio :(',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: colorScheme.primary.withOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 // Carrinho
                 if (carrinhoController.carrinho.isNotEmpty && !aparecerLista && !aparecerConfiguracaoProduto && !aparecerVendaTouch) ...[
@@ -8652,12 +8673,9 @@ class GarcomPageState extends State<GarcomPage>
                                     // Número do produto
                                     Expanded(
                                       child: TextField(
-                                        controller:
-                                            numeroProdutoSelecionadoController,
-                                        readOnly:
-                                            true, // impede digitação pelo teclado nativo
-                                        showCursor:
-                                            false, // FORÇA o cursor piscando
+                                        controller: numeroProdutoSelecionadoController,
+                                        readOnly: true, // impede digitação pelo teclado nativo
+                                        showCursor:false, // FORÇA o cursor piscando
                                         cursorColor: Theme.of(
                                           context,
                                         ).colorScheme.onSurface,
@@ -8681,64 +8699,18 @@ class GarcomPageState extends State<GarcomPage>
                                     // Quantidade
                                     Expanded(
                                       child: 
-                                      /* KeyboardActions(
-                                        config: KeyboardActionsConfig(
-                                          keyboardActionsPlatform: KeyboardActionsPlatform.IOS,
-                                          nextFocus: false,
-                                          actions: [
-                                            KeyboardActionsItem(
-                                              focusNode: quantidadeProdutoSelecionadoFocus,
-                                              toolbarButtons: [
-                                                (node) {
-                                                  return GestureDetector(
-                                                    onTap: () {
-                                                      node.unfocus();
-                                                    },
-                                                    child: Container(
-                                                      padding: EdgeInsets.symmetric(horizontal: 16),
-                                                      child: Text(
-                                                        "OK",
-                                                        style: TextStyle(
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  );
-                                                }
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        child:  */
                                         TextField(
                                           controller: quantidadeProdutoSelecionadoController,
                                           focusNode: quantidadeProdutoSelecionadoFocus,
-                                          readOnly: false, // impede digitação pelo teclado nativo
-                                          showCursor: true, // FORÇA o cursor piscando
+                                          readOnly: false, 
+                                          showCursor: true, 
                                           cursorColor: Theme.of(context).colorScheme.onSurface,
                                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                                           onTap: () {
-                                            if (produtoKilo) {
-                                              showKeyboardNumero = false;
-                                              showKeyboardAlfa = false;
-                                              showKeyboardQuantidade = true;
-                                              _campoAtivo = 'quantidadeProdutoSelecionadoController';
-                                              Future.delayed(Duration(milliseconds: 400), () {
-                                                  if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
-                                                    quantidadeProdutoSelecionadoFocus.requestFocus();
-                                                  }
-                                                },
+                                            if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                              FocusScope.of(context).requestFocus(
+                                                quantidadeProdutoSelecionadoFocus,
                                               );
-                                            } else {
-                                              showKeyboardNumero = true;
-                                              showKeyboardAlfa = false;
-                                              showKeyboardQuantidade = false;
-                                              _campoAtivo ='quantidadeProdutoSelecionadoController';
-                                              Future.delayed(Duration(milliseconds: 400), () {
-                                                  if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
-                                                    quantidadeProdutoSelecionadoFocus.requestFocus();
-                                                  }
-                                              });
                                             }
                                           },
                                           onChanged: (value){
@@ -8748,6 +8720,7 @@ class GarcomPageState extends State<GarcomPage>
                                               permitirApenasInteiros(value);
                                             }
                                           },
+                                          
                                           decoration: InputDecoration(
                                             hintText: 'Qtde.',
                                             filled: true,
@@ -8775,21 +8748,28 @@ class GarcomPageState extends State<GarcomPage>
                                       height: 48,
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          final nome = cardapioController.text;
+                                          if(listaObservacaoesDoProduto.isEmpty && listaAdicionaisDoProduto.isEmpty){
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text("Este produto não tem observações ou adicionais:("),
+                                                backgroundColor: Theme.of(context).colorScheme.error,
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                          
                                           final numero = numeroProdutoSelecionadoController.text;
                                           double quantidade = double.tryParse(quantidadeProdutoSelecionadoController.text) ?? 1.0;
-                                         
+                                          final nome = cardapioController.text;
                                           final observacao = observacaoProdutoSelecionadoController.text;
                                           final valor = valorDoProdutoSelecionado.toString();
-                                          showModalAdicionaisObservacoes(
-                                            context,
-                                            numeroDoProdutoSelecionado,
-                                            funcoesController.listaAdicionaisObservacoes,
-                                            nome,
-                                            valor,
-                                            numero,
-                                            quantidade,
-                                            observacao,
+                                          mostrarAdicionaisEObservacoes(
+                                            numero, 
+                                            nome, 
+                                            valor, 
+                                            numero, 
+                                            quantidade, 
+                                            observacao
                                           );
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -8857,13 +8837,71 @@ class GarcomPageState extends State<GarcomPage>
                               child: ElevatedButton(
                                 onPressed: () {
                                   final numero = numeroProdutoSelecionadoController.text;
-                                  verificacaoSeTemAdicionalObservacao(
+                                  final nome = cardapioController.text;
+                                  final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
+                                  final quantidade = produtoKilo 
+                                      ? (double.tryParse(qtdText) ?? 1.0)
+                                      : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
+                                  final observacao = observacaoProdutoSelecionadoController.text;
+                                  final valor = valorDoProdutoSelecionado.toString();
+
+                                  // adiciona no carrinho
+                                  carrinhoController.adicionarProdutoAoCarrinho(
+                                    nome,
+                                    valor,  
+                                    numero,
+                                    quantidade,
+                                    observacao,
+                                    idDoProdutoSelecionado,
+                                    adicionais: adicionaisSelecionados,
+                                  );
+
+                                  // altera estado visual
+                                  setState(() {
+                                    aparecerConfiguracaoProduto = false;
+                                    aparecerBotoes = true;
+                                    aparecerLista = false;
+                                    temAdicionalObservacao = false;
+                                    quantidadeInicial = 1;
+                                  });
+
+                                  if(modoAnteriorTouch){
+                                    sairModoTouch();
+                                  } else {
+                                    entrarModoTouch();
+                                  }
+
+                                  /* // ações pós-build
+                                  WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                      if (!mounted) return;
+                                      limparInformacoesProduto();
+                                      cardapioController.clear();
+                                      observacaoProdutoSelecionadoController.clear();
+                                    }); */
+                                  /* verificacaoSeTemAdicionalObservacao(
                                     numero,
                                     funcoesController.listaAdicionaisObservacoes,
                                   );
 
                                   if (temAdicionalObservacao) {
-                                    // Dialogo se quer adicionar observação ou adicinal
+                                    final nome = cardapioController.text;
+                                    final numero = numeroProdutoSelecionadoController.text;
+                                    final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
+                                    final quantidade = produtoKilo 
+                                        ? (double.tryParse(qtdText) ?? 1.0)
+                                        : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
+                                    final observacao = observacaoProdutoSelecionadoController.text;
+                                    final valor = valorDoProdutoSelecionado.toString();
+                                    mostrarAdicionaisEObservacoes(
+                                      numero, 
+                                      nome, 
+                                      valor, 
+                                      numero, 
+                                      quantidade, 
+                                      observacao
+                                    );
+                                    /* // Dialogo se quer adicionar observação ou adicinal
                                     final nome = cardapioController.text;
                                     final numero = numeroProdutoSelecionadoController.text;
                                     final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
@@ -8882,7 +8920,7 @@ class GarcomPageState extends State<GarcomPage>
                                       quantidade,
                                       observacao,
                                     );
-                                    temAdicionalObservacao = false;
+                                    temAdicionalObservacao = false; */
                                   } else {
                                     final nome = cardapioController.text;
                                     final numero = numeroProdutoSelecionadoController.text;
@@ -8911,6 +8949,7 @@ class GarcomPageState extends State<GarcomPage>
                                       aparecerCarrinho = true;
                                       aparecerVendaTouch = false;
                                       aparecerLista = false;
+                                      temAdicionalObservacao = false;
 
                                       showKeyboardAlfa = false;
                                       showKeyboardNumero = false;
@@ -8929,7 +8968,7 @@ class GarcomPageState extends State<GarcomPage>
                                         cardapioController.clear();
                                         observacaoProdutoSelecionadoController.clear();
                                       });
-                                  }
+                                  } */
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: colorScheme.tertiary,
@@ -8962,6 +9001,7 @@ class GarcomPageState extends State<GarcomPage>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // COLUNA DE GRUPOS (largura proporcional ~20%)
+                      if(funcoesController.listaGrupo.length > 1)
                       SizedBox(
                         width: gruposWidth,
                         child: Container(
@@ -8983,7 +9023,12 @@ class GarcomPageState extends State<GarcomPage>
                                   });
                                 },
                                 child: Container(
-                                  margin: EdgeInsets.all(6),
+                                  margin: EdgeInsets.only(
+                                    top: 6,
+                                    bottom: 0,
+                                    left: 6,
+                                    right: 6,
+                                  ),
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 20,
@@ -9041,9 +9086,18 @@ class GarcomPageState extends State<GarcomPage>
                             itemCount: produtosFiltrados.length,
                             itemBuilder: (context, index) {
                               final produto = produtosFiltrados[index];
+                              final numeroProduto = produto['produto_id'];
+                              double quantidade = 1;
+                              final nome = cardapioController.text;
+                              final observacao = observacaoProdutoSelecionadoController.text;
+                              final valor = produto['produto_valor'].toString();
 
                               return GestureDetector(
                                 onTap: () {
+                                  verificacaoSeTemAdicionalObservacao(
+                                    produto['produto_numero'],
+                                    funcoesController.listaAdicionaisObservacoes,
+                                  );
                                   // Se o produto for do tipo produto
                                   if (produto['produto_id'] == 'P') {
                                     if (produto['produto_un'] == "Kg") {
@@ -9078,27 +9132,51 @@ class GarcomPageState extends State<GarcomPage>
                                         showKeyboardNumero = false;
                                         showKeyboardQuantidade = true;
                                         _campoAtivo = 'quantidadeProdutoSelecionadoController';
-                                        Future.delayed(
-                                          Duration(milliseconds: 300),
-                                          () {
-                                            if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
-                                              quantidadeProdutoSelecionadoFocus.requestFocus();
-                                            }
-                                          },
-                                        );
+                                        if(!temAdicionalObservacao){
+                                          Future.delayed(
+                                            Duration(milliseconds: 300),
+                                            () {
+                                              if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                                quantidadeProdutoSelecionadoFocus.requestFocus();
+                                              }
+                                            },
+                                          );
+                                        }
+                                        if(temAdicionalObservacao){
+                                          mostrarAdicionaisEObservacoes(
+                                            produto['produto_numero'], 
+                                            produto['produto_nome'], 
+                                            produto['produto_valor'].toString(), 
+                                            produto['produto_numero'], 
+                                            1.0, 
+                                            ""
+                                          );
+                                        } 
                                       } else {
                                         showKeyboardAlfa = false;
                                         showKeyboardNumero = true;
                                         showKeyboardQuantidade = false;
                                         _campoAtivo = 'quantidadeProdutoSelecionadoController';
-                                        Future.delayed(
-                                          Duration(milliseconds: 300),
-                                          () {
-                                            if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
-                                              quantidadeProdutoSelecionadoFocus.requestFocus();
-                                            }
-                                          },
-                                        );
+                                        if(!temAdicionalObservacao){
+                                          Future.delayed(
+                                            Duration(milliseconds: 300),
+                                            () {
+                                              if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                                quantidadeProdutoSelecionadoFocus.requestFocus();
+                                              }
+                                            },
+                                          );
+                                        }
+                                        if(temAdicionalObservacao){
+                                          mostrarAdicionaisEObservacoes(
+                                            produto['produto_numero'], 
+                                            produto['produto_nome'], 
+                                            produto['produto_valor'].toString(), 
+                                            produto['produto_numero'], 
+                                            1.0, 
+                                            ""
+                                          );
+                                        }
                                       }
                                     });
                                   }
@@ -9141,11 +9219,27 @@ class GarcomPageState extends State<GarcomPage>
                                         aparecerCardapio = true;
                                       });
 
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                                        if (!mounted) return;
-                                        quantidadeProdutoSelecionadoFocus.requestFocus();
-                                      });
+                                      if(!temAdicionalObservacao){
+                                        Future.delayed(
+                                          Duration(milliseconds: 300),
+                                          () {
+                                            if (quantidadeProdutoSelecionadoFocus.canRequestFocus) {
+                                              quantidadeProdutoSelecionadoFocus.requestFocus();
+                                            }
+                                          },
+                                        );
+                                      }
                                     });
+                                    if(temAdicionalObservacao){
+                                      mostrarAdicionaisEObservacoes(
+                                        produto['produto_numero'], 
+                                        produto['produto_nome'], 
+                                        produto['produto_valor'].toString(), 
+                                        produto['produto_numero'], 
+                                        1.0, 
+                                        ""
+                                      );
+                                    }
                                   }
                                 },
                                 // Visual do card de produto
@@ -9272,10 +9366,13 @@ class GarcomPageState extends State<GarcomPage>
                   }
                   ),
                 ),
-
+                if(aparecerVendaTouch && !aparecerConfiguracaoProduto && aparecerCardapio)
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.12,
+                ),
               
-                if ((!aparecerLista && carrinhoController.carrinho.isEmpty && !aparecerVendaTouch) || (aparecerConfiguracaoProduto) || (empurrarBotoes))
-                  Expanded(child: Container()), 
+                /* if ((!aparecerLista && carrinhoController.carrinho.isEmpty && !aparecerVendaTouch) || (aparecerConfiguracaoProduto) || (empurrarBotoes))
+                  Expanded(child: Container()),  */
               ],
             ),
           ),
@@ -9291,6 +9388,25 @@ class GarcomPageState extends State<GarcomPage>
             ),
           ), */
 
+          /* if (carrinhoController.carrinho.isEmpty && !aparecerLista && !aparecerConfiguracaoProduto && !aparecerVendaTouch && (comandaValida || mesaValida))
+          Positioned(
+            left: 0,
+              right: 0,
+              top: MediaQuery.of(context).size.height * 0.05,
+              bottom: 0,
+              child: Center(
+                child: Text(
+                'Carrinho vazio :(',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: colorScheme.primary.withOpacity(0.5),
+                ),
+              ),
+            ),
+          ), */
+
+          // Botoes de baixo
           Positioned(
             left: 0,
             right: 0,
