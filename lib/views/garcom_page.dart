@@ -308,6 +308,8 @@ class GarcomPageState extends State<GarcomPage>
 
   bool modoAnteriorTouch = false;
 
+  bool arrastei = true;
+
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
     debugLabel: 'focoBloqueioDialogo',
@@ -410,15 +412,25 @@ class GarcomPageState extends State<GarcomPage>
   }
 
   /// Seleciona automaticamente o primeiro grupo disponível e carrega seus produtos.
-  /// Deve ser chamado sempre que o modo touch é ativado ou a lista de grupos é recarregada.
   void _selecionarPrimeiroGrupo() {
     if (funcoesController.listaGrupo.isEmpty) return;
+
     final primeiro = funcoesController.listaGrupo.first;
     setState(() {
       grupoSelecionadoNoTouch = primeiro['numero'].toString();
       produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
     });
   }
+
+  /* void _selecionarUltimoGrupo(posicao) {
+    if (funcoesController.listaGrupo.isEmpty) return;
+
+    final ultimo = funcoesController.listaGrupo[posicao];
+    setState(() {
+      grupoSelecionadoNoTouch = ultimo['numero'].toString();
+      produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
+    });
+  }  */
 
   entrarModoTouch(){
     FocusScope.of(context).unfocus();
@@ -428,10 +440,11 @@ class GarcomPageState extends State<GarcomPage>
       aparecerCarrinho = false;
       aparecerConfiguracaoProduto = false;
       aparecerVendaTouch = true;
-      grupoSelecionadoNoTouch = "";
       cardapioController.clear();
       cardapioController.text = "";
     });
+    
+    // _selecionarPrimeiroGrupo();
     String modo = "Touch";
     salvarUltimaConfiguracao(modo);
     Future.delayed(const Duration(milliseconds: 300), () {
@@ -2875,6 +2888,7 @@ class GarcomPageState extends State<GarcomPage>
     double produtoQuantidade,
     String produtoObservacao,
   ) {
+    arrastei = true;
     // Vendo de qual produto que são as observações e os adicionais
     final itensProduto = listaCompleta
         .where(
@@ -2945,10 +2959,13 @@ class GarcomPageState extends State<GarcomPage>
                     Center(
                       child: Text(
                         produtoNome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         // 'Adicionais e Observações',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.shadow,
                         ),
                       ),
                     ),
@@ -2977,6 +2994,7 @@ class GarcomPageState extends State<GarcomPage>
                                     'Observações',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                                     ),
                                   ),
                                 ),
@@ -3075,6 +3093,7 @@ class GarcomPageState extends State<GarcomPage>
                                     'Adicionais',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                                     ),
                                   ),
                                 ),
@@ -3198,11 +3217,8 @@ class GarcomPageState extends State<GarcomPage>
                                     ),
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.surface,
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        color: Theme.of(context).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
@@ -3224,10 +3240,10 @@ class GarcomPageState extends State<GarcomPage>
                                                 }
                                               },
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                                backgroundColor: Color.fromRGBO(216, 216, 216, 0.843),
                                                 padding: const EdgeInsets.symmetric(
-                                                  vertical: 20,
-                                                  horizontal: 20,
+                                                  vertical: 15,
+                                                  horizontal: 15,
                                                 ),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius: BorderRadius.circular(16),
@@ -3240,36 +3256,19 @@ class GarcomPageState extends State<GarcomPage>
                                               ),
                                             ),
                                           ),
-                                          /* Padding(
-                                            padding: EdgeInsets.all(8.0),
-                                            child: IconButton(
-                                              onPressed: () {
-                                                if (quantidadeInicial > 1) {
-                                                  setModalState(() {
-                                                    quantidadeInicial--;
-
-                                                    final texto = quantidadeInicial.toInt().toString();
-
-                                                    quantidadeProdutoSelecionadoController.text = texto;
-                                                    quantidadeProdutoSelecionadoModalController.text = texto;
-                                                  });
-                                                }
-                                              },
-                                              icon: Icon(Icons.remove),
-                                            ),
-                                          ), */
                                       
                                           // Text Field de quantidade
                                           Padding(
-                                            padding: EdgeInsets.all(8.0),
+                                            padding: EdgeInsets.only(top: 4.0, bottom: 4.0, left: 4.0, right: 4.0),
                                             child: SizedBox(
-                                              width: MediaQuery.of(context,).size.width * 0.4,
+                                              width: MediaQuery.of(context,).size.width * 0.3,
                                               child: TextField(
                                                 controller: quantidadeProdutoSelecionadoModalController,
                                                 focusNode: quantidadeProdutoSelecionadoModalFocus,
                                                 style: TextStyle(
-                                                  fontSize: 20, // aumenta o tamanho do número
+                                                  fontSize: 30, // aumenta o tamanho do número
                                                   fontWeight: FontWeight.bold,
+                                                  height: 1,
                                                 ),
                                                 readOnly: true, // impede digitação pelo teclado nativo
                                                 showCursor: false, // FORÇA o cursor piscando
@@ -3290,7 +3289,7 @@ class GarcomPageState extends State<GarcomPage>
                                                 },
                                                 decoration: InputDecoration(
                                                   filled: true,
-                                                  fillColor: Theme.of(context,).colorScheme.primary.withOpacity(0.5),
+                                                  fillColor: Theme.of(context,).colorScheme.primary.withOpacity(0.2),
                                                   border: OutlineInputBorder(
                                                     borderRadius: BorderRadius.circular(8),
                                                     borderSide: BorderSide.none,
@@ -3299,26 +3298,6 @@ class GarcomPageState extends State<GarcomPage>
                                               ),
                                             ),
                                           ),
-                                      
-                                          // Botão de mais
-                                          /* Padding(
-                                            padding: EdgeInsets.all(8.0),
-                                            child: IconButton(
-                                              onPressed: () {
-                                                setModalState(() {
-                                                  quantidadeInicial++;
-
-                                                  final texto = produtoKilo
-                                                      ? quantidadeInicial.toString()
-                                                      : quantidadeInicial.toInt().toString();
-
-                                                  quantidadeProdutoSelecionadoController.text = texto;
-                                                  quantidadeProdutoSelecionadoModalController.text = texto;
-                                                });
-                                              },
-                                              icon: Icon(Icons.add),
-                                            ),
-                                          ), */
                                           // Botão de mais
                                           Padding(
                                             padding: const EdgeInsets.all(8.0),
@@ -3336,10 +3315,10 @@ class GarcomPageState extends State<GarcomPage>
                                                 });
                                               },
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                                backgroundColor: Color.fromRGBO(216, 216, 216, 0.843),
                                                 padding: const EdgeInsets.symmetric(
-                                                  vertical: 20,
-                                                  horizontal: 20,
+                                                  vertical: 15,
+                                                  horizontal: 15,
                                                 ),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius: BorderRadius.circular(16),
@@ -3360,187 +3339,231 @@ class GarcomPageState extends State<GarcomPage>
                               ],
                             ),
                             // Botões
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Botão de fechar
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      if(!modoAnteriorTouch){
-                                        entrarModoTouch();
-                                      }else{
-                                        sairModoTouch();
-                                      }
-                                      // quantidadeInicial = 1;
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 20,
-                                        horizontal: 40,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Fechar',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onPrimary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final fontSize = (MediaQuery.of(context).size.width * 0.025).clamp(20.0, 32.0);
 
-                                SizedBox(width: 6),
+                                final iconSize = (MediaQuery.of(context).size.width * 0.030).clamp(24.0, 36.0);
 
-                                // Botão de Adicionar
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      // Montando a lista de adicionais
-                                      List<Produto>
-                                      listaAdicionaisSelecionados = [];
-                                      if (quantidadesAdicionais.isNotEmpty) {
-                                        quantidadesAdicionais.forEach((
-                                          numero,
-                                          quantidade,
-                                        ) {
-                                          if (quantidade > 0) {
-                                            final item =
-                                                listaAdicionaisDoProduto
-                                                    .firstWhere(
-                                                      (e) =>
-                                                          e['numeroadicional']
-                                                              .toString() ==
-                                                          numero,
-                                                    );
-
-                                            for (
-                                              int i = 0;
-                                              i < quantidade;
-                                              i++
-                                            ) {
-                                              listaAdicionaisSelecionados.add(
-                                                Produto(
-                                                  nome: item['nomeadicional'],
-                                                  preco: item['valoradicionasl']
-                                                      .toString(),
-                                                  numero: numero,
-                                                  quantidade: 1, // SEMPRE 1
-                                                  observacaoEscrita: "",
-                                                  id: idDoProdutoSelecionado,
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    // Botão de fechar
+                                    Expanded(
+                                      flex: 4,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          arrastei = false;
+                                          Navigator.pop(context);
+                                          if(!modoAnteriorTouch){
+                                            entrarModoTouch();
+                                          }else{
+                                            sairModoTouch();
+                                          }
+                                          // quantidadeInicial = 1;
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Theme.of(context).colorScheme.error.withOpacity(0.55),
+                                          // backgroundColor: Colors.red.withOpacity(0.55),
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 30,
+                                            horizontal: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                        ),
+                                        child: 
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.close,
+                                                size: iconSize,
+                                                color: Theme.of(context).colorScheme.onPrimary,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'Fechar',
+                                                style: TextStyle(
+                                                  fontSize: fontSize,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(context).colorScheme.onPrimary,
                                                 ),
-                                              );
-                                            }
-                                          }
-                                        });
-                                      }
-
-                                      // Montando a lista de observações
-                                      List<String> observacoesSelecionadas = [];
-                                      if (quantidadesObservacoes.isNotEmpty) {
-                                        quantidadesObservacoes.forEach((
-                                          numero,
-                                          quantidade,
-                                        ) {
-                                          if (quantidade > 0) {
-                                            final item =
-                                                listaObservacaoesDoProduto
-                                                    .firstWhere(
-                                                      (e) =>
-                                                          e['numeroobservacao']
-                                                              .toString() ==
-                                                          numero,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        /* FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.close,
+                                                size: 24,
+                                                color: Theme.of(context).colorScheme.onPrimary,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Fechar',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(context).colorScheme.onPrimary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ), */
+                                      ),
+                                    ),
+                                
+                                    SizedBox(width: 6),
+                                
+                                    // Botão de Adicionar
+                                    Expanded(
+                                      flex: 6,
+                                      child: ElevatedButton(
+                                          onPressed: () {
+                                            arrastei = false;
+                                            // Montando a lista de adicionais
+                                            List<Produto> listaAdicionaisSelecionados = [];
+                                            if (quantidadesAdicionais.isNotEmpty) {
+                                              quantidadesAdicionais.forEach((numero, quantidade) {
+                                                if (quantidade > 0) {
+                                                  final item = listaAdicionaisDoProduto.firstWhere((e) => e['numeroadicional'].toString() == numero);
+                                        
+                                                  for (int i = 0; i < quantidade; i++) {
+                                                    listaAdicionaisSelecionados.add(
+                                                      Produto(
+                                                        nome: item['nomeadicional'],
+                                                        preco: item['valoradicionasl'].toString(),
+                                                        numero: numero,
+                                                        quantidade: 1, // SEMPRE 1
+                                                        observacaoEscrita: "",
+                                                        id: idDoProdutoSelecionado,
+                                                      ),
                                                     );
-
-                                            for (
-                                              int i = 0;
-                                              i < quantidade;
-                                              i++
-                                            ) {
-                                              observacoesSelecionadas.add(
-                                                item['nomeobservacao']
-                                                    .toString(),
-                                              );
+                                                  }
+                                                }
+                                              });
                                             }
-                                          }
-                                        });
-                                      }
-
-                                      // Adicionando o produto ao carrinho
-                                      carrinhoController
-                                      .adicionarProdutoAoCarrinho(
-                                        produtoNome,
-                                        produtoValor,
-                                        produtoNumero,
-                                        quantidadeInicial.toDouble(),
-                                        produtoObservacao,
-                                        idDoProdutoSelecionado,
-                                        adicionais:
-                                            listaAdicionaisSelecionados,
-                                        observacoesTexto:
-                                            observacoesSelecionadas,
-                                      );
-
-                                      // Limpa listas
-                                      listaAdicionaisSelecionados.clear();
-                                      observacoesSelecionadas.clear();
-                                      cardapioController.clear();
-                                      quantidadesObservacoes.clear();
-                                      quantidadesAdicionais.clear();
-                                      limparInformacoesProduto();
-
-                                      Navigator.pop(context);
-
-                                      setState(() {
-                                        aparecerConfiguracaoProduto = false;
-                                        aparecerBotoes = true;
-                                        quantidadeInicial = 1;
-                                      });
-
-                                      sairModoTouch();
-
-                                      /* if(!modoAnteriorTouch){
-                                        entrarModoTouch();
-                                      }else{
-                                        sairModoTouch();
-                                      } */
-                                    },
-
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 20,
-                                        horizontal: 40,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                                        
+                                            // Montando a lista de observações
+                                            List<String> observacoesSelecionadas = [];
+                                            if (quantidadesObservacoes.isNotEmpty) {
+                                              quantidadesObservacoes.forEach((numero, quantidade) {
+                                                if (quantidade > 0) {
+                                                  final item = listaObservacaoesDoProduto.firstWhere((e) => e['numeroobservacao'].toString() == numero);
+                                        
+                                                  for (int i = 0; i < quantidade; i++) {
+                                                    observacoesSelecionadas.add(item['nomeobservacao'].toString());
+                                                  }
+                                                }
+                                              });
+                                            }
+                                        
+                                            // Adicionando o produto ao carrinho
+                                            carrinhoController.adicionarProdutoAoCarrinho(
+                                              produtoNome,
+                                              produtoValor,
+                                              produtoNumero,
+                                              quantidadeInicial.toDouble(),
+                                              produtoObservacao,
+                                              idDoProdutoSelecionado,
+                                              adicionais: listaAdicionaisSelecionados,
+                                              observacoesTexto: observacoesSelecionadas,
+                                            );
+                                        
+                                            // Limpa listas
+                                            listaAdicionaisSelecionados.clear();
+                                            observacoesSelecionadas.clear();
+                                            cardapioController.clear();
+                                            quantidadesObservacoes.clear();
+                                            quantidadesAdicionais.clear();
+                                            limparInformacoesProduto();
+                                        
+                                            Navigator.pop(context);
+                                        
+                                            setState(() {
+                                              aparecerConfiguracaoProduto = false;
+                                              aparecerBotoes = true;
+                                              quantidadeInicial = 1;
+                                            });
+                                        
+                                            sairModoTouch();
+                                        
+                                            /* if(!modoAnteriorTouch){
+                                              entrarModoTouch();
+                                            }else{
+                                              sairModoTouch();
+                                            } */
+                                          },
+                                        
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 30,
+                                              horizontal: 12,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.check,
+                                                  size: iconSize,
+                                                  color: Theme.of(context).colorScheme.onPrimary,
+                                                ),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Confirmar',
+                                                  style: TextStyle(
+                                                    fontSize: fontSize,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Theme.of(context).colorScheme.onPrimary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          /* FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.check,
+                                                  size: 24,
+                                                  color: Theme.of(context).colorScheme.onPrimary,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Confirmar',
+                                                  style: TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Theme.of(context).colorScheme.onPrimary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ), */
                                       ),
                                     ),
-                                    child: Text(
-                                      'Adicionar',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onPrimary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                  ],
+                                );
+                              }
                             ),
                           ],
                         ),
@@ -3553,7 +3576,16 @@ class GarcomPageState extends State<GarcomPage>
           },
         );
       },
-    );
+    ).then((_) {
+      // Executa após o usuário fechar o modal
+      if(arrastei){
+        if(!modoAnteriorTouch){
+          entrarModoTouch();
+        }else{
+          sairModoTouch();
+        }
+      }
+    });
   }
 
   // Função que retorna informações garçom
@@ -8304,8 +8336,8 @@ class GarcomPageState extends State<GarcomPage>
                         'Carrinho vazio :(',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          color: colorScheme.primary.withOpacity(0.5),
+                          fontSize: 35,
+                          color: colorScheme.primary.withOpacity(0.15),
                           ),
                         ),
                       ],
@@ -8884,6 +8916,9 @@ class GarcomPageState extends State<GarcomPage>
                     // Largura proporcional: grupos ~20%, produtos o restante
                     final double totalWidth = boxConstraints.maxWidth;
                     final double gruposWidth = (totalWidth * 0.20).clamp(80.0, 220.0);
+                    final double totalHeight = boxConstraints.maxHeight;
+                    final double gruposHeight = (totalHeight * 0.05).clamp(80.0, 220.0);
+                    final double alturaItemGrupo = (boxConstraints.maxHeight * 0.08).clamp(55.0, 80.0);
                     return Padding(
                     padding: const EdgeInsets.all(8),
                     child: Row(
@@ -8893,6 +8928,7 @@ class GarcomPageState extends State<GarcomPage>
                       if(funcoesController.listaGrupo.length > 1)
                       SizedBox(
                         width: gruposWidth,
+                        height: gruposHeight,
                         child: Container(
                           decoration: BoxDecoration(
                             color: colorScheme.surfaceContainerHighest,
@@ -8912,15 +8948,11 @@ class GarcomPageState extends State<GarcomPage>
                                   });
                                 },
                                 child: Container(
-                                  margin: EdgeInsets.only(
+                                  height: alturaItemGrupo,
+                                  margin: const EdgeInsets.only(
                                     top: 6,
-                                    bottom: 0,
                                     left: 6,
                                     right: 6,
-                                  ),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 20,
                                   ),
                                   decoration: BoxDecoration(
                                     color: selecionado
@@ -8929,22 +8961,63 @@ class GarcomPageState extends State<GarcomPage>
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Center(
-                                    child: Text(
-                                      grupo['nome'],
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      style: TextStyle(
-                                        color: selecionado
-                                            ? colorScheme.onPrimary
-                                            : colorScheme.onSurface,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10,
-                                        // fontSize: 8,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Text(
+                                        grupo['nome'],
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: selecionado
+                                              ? colorScheme.onPrimary
+                                              : colorScheme.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               );
+
+                              /* return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    grupoSelecionadoNoTouch = grupo['numero'].toString();
+                                    produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
+                                    // ultimoGrupoSelecionadoNoTouch = grupoSelecionadoNoTouch;
+                                  });
+                                },
+                                child: Container(
+                                  margin: EdgeInsets.only(
+                                    top: 6,
+                                    bottom: 0,
+                                    left: 6,
+                                    right: 6,
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selecionado ? colorScheme.primary : colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      grupo['nome'],
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      style: TextStyle(
+                                        color: selecionado ? colorScheme.onPrimary : colorScheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ); */
                             },
                           ),
                         ),
