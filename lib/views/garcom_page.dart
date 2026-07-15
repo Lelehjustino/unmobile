@@ -365,6 +365,7 @@ class GarcomPageState extends State<GarcomPage>
     _loadNumeroLicenca();
     _loadNomeEmpresa();
     listaProdutoFiltrada = funcoesController.listaProduto;
+    _selecionarPrimeiroGrupo();
 
     // Se já existem itens no carrinho OU foi passado algum argumento, restaura o estado ANTES de ligar os listeners
     if (carrinhoController.carrinho.isNotEmpty || Get.arguments != null) {
@@ -431,9 +432,11 @@ class GarcomPageState extends State<GarcomPage>
       cardapioController.clear();
       cardapioController.text = "";
     });
-    _selecionarPrimeiroGrupo();
     String modo = "Touch";
     salvarUltimaConfiguracao(modo);
+    Future.delayed(const Duration(milliseconds: 300), () {
+      cardapioFocus.unfocus();
+    });
   }
 
   sairModoTouch(){ //carrinho
@@ -3497,11 +3500,13 @@ class GarcomPageState extends State<GarcomPage>
                                         quantidadeInicial = 1;
                                       });
 
-                                      if(!modoAnteriorTouch){
+                                      sairModoTouch();
+
+                                      /* if(!modoAnteriorTouch){
                                         entrarModoTouch();
                                       }else{
                                         sairModoTouch();
-                                      }
+                                      } */
                                     },
 
                                     style: ElevatedButton.styleFrom(
@@ -6476,6 +6481,8 @@ class GarcomPageState extends State<GarcomPage>
                                               numeroTradepoint: numeroDaLicencaSelecionada,
                                             );
 
+                                            _selecionarPrimeiroGrupo();
+
                                             setState(() {
                                               aparecerCardapio = false;
                                               aparecerCarrinho = false;
@@ -6597,53 +6604,37 @@ class GarcomPageState extends State<GarcomPage>
                                           });
 
                                           try {
-                                            fizPedido =
-                                                true; // Define que o pedido foi iniciado
-                                            if (carrinhoController
-                                                .carrinho
-                                                .isNotEmpty) {
-                                              numeroMesaParaCarrinho =
-                                                  mesaController.text;
+                                            fizPedido = true; // Define que o pedido foi iniciado
+                                            if (carrinhoController.carrinho.isNotEmpty) {
+                                              numeroMesaParaCarrinho = mesaController.text;
 
                                               comandaCarrinhoController.salvarCarrinho(
-                                                mesaController
-                                                    .text, // Número da mesa
-                                                comandaController
-                                                    .text, // Número da comanda
-                                                carrinhoController
-                                                    .carrinho, // Lista de produtos atual
+                                                mesaController.text, // Número da mesa
+                                                comandaController.text, // Número da comanda
+                                                carrinhoController.carrinho, // Lista de produtos atual
                                               );
 
                                               // Chama funcao para fazer pedido - Esta função já chama zerarAtendimento() internamente em caso de sucesso
                                               await enviarCarrinhoComandas(
                                                 comandaCarrinhoController,
                                               );
+
+                                              _selecionarPrimeiroGrupo();
                                             } else {
                                               setState(() {
                                                 isProcessing = false;
                                                 cliqueiFazerPedido = false;
                                                 fizPedido = false;
                                               });
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
+                                              ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
                                                   content: Text(
                                                     'Carrinho vazio, acrescente produtos ao carrinho!',
                                                   ),
-                                                  backgroundColor:
-                                                      colorScheme.error,
-                                                  behavior:
-                                                      SnackBarBehavior.floating,
-                                                  margin: EdgeInsets.fromLTRB(
-                                                    0,
-                                                    0,
-                                                    0,
-                                                    0,
-                                                  ),
-                                                  duration: Duration(
-                                                    seconds: 3,
-                                                  ),
+                                                  backgroundColor: colorScheme.error,
+                                                  behavior: SnackBarBehavior.floating,
+                                                  margin: EdgeInsets.fromLTRB(0, 0, 0, 0),
+                                                  duration: Duration(seconds: 3),
                                                 ),
                                               );
                                             }
@@ -6655,9 +6646,7 @@ class GarcomPageState extends State<GarcomPage>
                                                 fizPedido = false;
                                               });
                                             }
-                                            print(
-                                              "Erro ao enviar carrinho de comandas: $e<<<<<<<<<<",
-                                            );
+                                            print("Erro ao enviar carrinho de comandas: $e<<<<<<<<<<");
                                           }
                                         },
                                         // Fazer pedido
@@ -6674,18 +6663,13 @@ class GarcomPageState extends State<GarcomPage>
                                                 // SizedBox(width: 4),
                                                 Flexible(
                                                   child: Text(
-                                                    isProcessing
-                                                        ? "ENVIANDO..."
-                                                        : "FAZER PEDIDO CARRINHO",
+                                                    isProcessing ? "ENVIANDO..." : "FAZER PEDIDO CARRINHO",
                                                     maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                    overflow: TextOverflow.ellipsis,
                                                     textAlign: TextAlign.center,
                                                     style: TextStyle(
-                                                      color:
-                                                          colorScheme.onPrimary,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                      color: colorScheme.onPrimary,
+                                                      fontWeight: FontWeight.bold,
                                                       fontSize: 18,
                                                     ),
                                                   ),
@@ -8284,7 +8268,7 @@ class GarcomPageState extends State<GarcomPage>
 
                 // Quando nao tem carrinho cheio
                 if (carrinhoController.carrinho.isEmpty && !aparecerLista && !aparecerConfiguracaoProduto && !aparecerVendaTouch && (comandaValida || mesaValida)) ...[
-                  Padding(
+                  /* Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -8293,7 +8277,7 @@ class GarcomPageState extends State<GarcomPage>
                           Icons.shopping_cart,
                           color: Theme.of(context).colorScheme.primary,
                         ),
-                        SizedBox(width: 4),
+                        SizedBox(width: 4),50
                         Text(
                           'Meu carrinho:',
                           style: TextStyle(
@@ -8304,7 +8288,7 @@ class GarcomPageState extends State<GarcomPage>
                         ),
                       ],
                     ),
-                  ),
+                  ), */
                   Expanded(
                     child: Column(
                       children: [
@@ -8324,7 +8308,7 @@ class GarcomPageState extends State<GarcomPage>
                 // Carrinho
                 if (carrinhoController.carrinho.isNotEmpty && !aparecerLista && !aparecerConfiguracaoProduto && !aparecerVendaTouch) ...[
                   // TÍTULO DO CARRINHO
-                  Padding(
+                  /* Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -8344,7 +8328,7 @@ class GarcomPageState extends State<GarcomPage>
                         ),
                       ],
                     ),
-                  ),
+                  ), */
 
                   // LISTA DO CARRINHO
                   Expanded(
@@ -8857,118 +8841,15 @@ class GarcomPageState extends State<GarcomPage>
                                   );
 
                                   // altera estado visual
-                                  setState(() {
+                                  // setState(() {
                                     aparecerConfiguracaoProduto = false;
                                     aparecerBotoes = true;
                                     aparecerLista = false;
                                     temAdicionalObservacao = false;
                                     quantidadeInicial = 1;
-                                  });
+                                  // });
 
-                                  if(modoAnteriorTouch){
-                                    sairModoTouch();
-                                  } else {
-                                    entrarModoTouch();
-                                  }
-
-                                  /* // ações pós-build
-                                  WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                      if (!mounted) return;
-                                      limparInformacoesProduto();
-                                      cardapioController.clear();
-                                      observacaoProdutoSelecionadoController.clear();
-                                    }); */
-                                  /* verificacaoSeTemAdicionalObservacao(
-                                    numero,
-                                    funcoesController.listaAdicionaisObservacoes,
-                                  );
-
-                                  if (temAdicionalObservacao) {
-                                    final nome = cardapioController.text;
-                                    final numero = numeroProdutoSelecionadoController.text;
-                                    final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
-                                    final quantidade = produtoKilo 
-                                        ? (double.tryParse(qtdText) ?? 1.0)
-                                        : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
-                                    final observacao = observacaoProdutoSelecionadoController.text;
-                                    final valor = valorDoProdutoSelecionado.toString();
-                                    mostrarAdicionaisEObservacoes(
-                                      numero, 
-                                      nome, 
-                                      valor, 
-                                      numero, 
-                                      quantidade, 
-                                      observacao
-                                    );
-                                    /* // Dialogo se quer adicionar observação ou adicinal
-                                    final nome = cardapioController.text;
-                                    final numero = numeroProdutoSelecionadoController.text;
-                                    final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
-                                    final quantidade = produtoKilo 
-                                        ? (double.tryParse(qtdText) ?? 1.0)
-                                        : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
-                                    final observacao = observacaoProdutoSelecionadoController.text;
-                                    final valor = valorDoProdutoSelecionado.toString();
-                                    showModalAdicionaisObservacoes(
-                                      context,
-                                      numeroDoProdutoSelecionado,
-                                      funcoesController.listaAdicionaisObservacoes, 
-                                      nome,
-                                      valor,
-                                      numero,
-                                      quantidade,
-                                      observacao,
-                                    );
-                                    temAdicionalObservacao = false; */
-                                  } else {
-                                    final nome = cardapioController.text;
-                                    final numero = numeroProdutoSelecionadoController.text;
-                                    final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
-                                    final quantidade = produtoKilo 
-                                        ? (double.tryParse(qtdText) ?? 1.0)
-                                        : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
-                                    final observacao = observacaoProdutoSelecionadoController.text;
-                                    final valor = valorDoProdutoSelecionado.toString();
-
-                                    // adiciona no carrinho
-                                    carrinhoController.adicionarProdutoAoCarrinho(
-                                          nome,
-                                          valor,  
-                                          numero,
-                                          quantidade,
-                                          observacao,
-                                          idDoProdutoSelecionado,
-                                          adicionais: adicionaisSelecionados,
-                                        );
-
-                                    // altera estado visual
-                                    setState(() {
-                                      aparecerConfiguracaoProduto = false;
-                                      aparecerBotoes = true;
-                                      aparecerCarrinho = true;
-                                      aparecerVendaTouch = false;
-                                      aparecerLista = false;
-                                      temAdicionalObservacao = false;
-
-                                      showKeyboardAlfa = false;
-                                      showKeyboardNumero = false;
-                                      showKeyboardQuantidade = false;
-
-                                      mostrarGrupos = true;
-                                      mostrarProdutos = false;
-                                      quantidadeInicial = 1;
-                                    });
-
-                                    // ações pós-build
-                                    WidgetsBinding.instance
-                                      .addPostFrameCallback((_) {
-                                        if (!mounted) return;
-                                        limparInformacoesProduto();
-                                        cardapioController.clear();
-                                        observacaoProdutoSelecionadoController.clear();
-                                      });
-                                  } */
+                                  sairModoTouch();
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: colorScheme.tertiary,
