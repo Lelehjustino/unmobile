@@ -440,7 +440,7 @@ class GarcomPageState extends State<GarcomPage>
   }
 
   sairModoTouch(){ //carrinho
-    FocusScope.of(context).unfocus();
+    // FocusScope.of(context).unfocus();
     setState(() {
       modoAnteriorTouch = true;
       aparecerCarrinho = true;
@@ -450,11 +450,18 @@ class GarcomPageState extends State<GarcomPage>
       cardapioController.clear();
       cardapioController.text = "";
     });
-    Future.delayed(Duration(milliseconds: 300), () {
+    /* Future.delayed(Duration(milliseconds: 300), () {
       if (cardapioFocus.canRequestFocus) {
         cardapioFocus.requestFocus();
       }
-    }); 
+    });  */
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          cardapioFocus.canRequestFocus &&
+          cardapioFocus.context != null) {
+        cardapioFocus.requestFocus();
+      }
+    });
     String modo = "Carrinho";
     salvarUltimaConfiguracao(modo);
   }
@@ -7995,17 +8002,7 @@ class GarcomPageState extends State<GarcomPage>
                                       final nome = cardapioController.text;
                                       final observacao = observacaoProdutoSelecionadoController.text;
                                       final valor = produto['produto_valor'].toString();
-
-                                      if(temAdicionalObservacao){
-                                        mostrarAdicionaisEObservacoes(
-                                          numeroProduto, 
-                                          nome, 
-                                          valor, 
-                                          numeroProduto, 
-                                          quantidade, 
-                                          observacao
-                                        );
-                                      }
+                                    
 
                                       setState(() {
                                         aparecerBotoes = false;
@@ -8047,6 +8044,17 @@ class GarcomPageState extends State<GarcomPage>
                                           }
                                         }
                                       });
+
+                                      if(temAdicionalObservacao){
+                                        mostrarAdicionaisEObservacoes(
+                                          numeroProduto, 
+                                          nome, 
+                                          valor, 
+                                          numeroProduto, 
+                                          quantidade, 
+                                          observacao
+                                        );
+                                      }
                                     } else if (produto['produto_id'] == 'PZ') {
                                       Navigator.pop(context);
                                       Get.toNamed('/pizza',
