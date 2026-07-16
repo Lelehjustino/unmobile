@@ -12,11 +12,13 @@ import 'package:un_recepcao/services/servicoNotificacao.dart';
 
 import 'package:un_recepcao/views/carrinho_comandas_page.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
+import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/configuracoes_page.dart';
 import 'package:un_recepcao/views/expedicao_motoboy_page.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/inicial_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
+import 'package:un_recepcao/views/notes_page.dart';
 import 'package:un_recepcao/views/painel_cliente.dart';
 import 'package:un_recepcao/views/painel_cozinha.dart';
 import 'package:un_recepcao/views/pizza_page.dart';
@@ -154,6 +156,8 @@ class _AppState extends State<App> {
         ),
         GetPage(name: '/splash', page: () => SplashPage()),
         GetPage(name: '/recepcao', page: () => RecepcaoPage()),
+        GetPage(name: '/notes', page: () => NotesPage()),
+        GetPage(name: '/checkout', page: () => CheckoutPage()),
       ],
     );
   }

@@ -13,10 +13,13 @@ import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
+import 'package:un_recepcao/views/expedicao_motoboy_page.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/inicial_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
 import 'package:un_recepcao/views/notes_page.dart';
+import 'package:un_recepcao/views/painel_cliente.dart';
+import 'package:un_recepcao/views/painel_cozinha.dart';
 import 'package:un_recepcao/views/recepcao_page.dart';
 import 'package:un_recepcao/widgets/side_nav.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -150,6 +153,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   String rotaAntiga = "";
   String rotaNova = "";
 
+  // Variaveis de Painel
+  bool aparecerExpedicaoCliente = false;
+  bool aparecerKDS = false;
+  bool aparecerExpedicaoMotoboy = false;
+
   @override
   void initState() {
     super.initState();
@@ -207,53 +215,45 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {}
 
   navegar() async {
-    // debugPrint('\n─── navegar() chamado ───');
-    // debugPrint('  rotaPainelCliente: $rotaPainelCliente');
-    // debugPrint('  aparecerGarcom   : $aparecerGarcom');
-    // debugPrint('  aparecerCheckIn  : $aparecerCheckIn');
-    // debugPrint('  aparecerCheckOut : $aparecerCheckOut');
-    // debugPrint('  naoAparecerMapa  : $naoAparecerMapa  (mapa=${!naoAparecerMapa})');
-    // debugPrint('  aparecerRecepcao : $aparecerRecepcao');
-    // debugPrint('  aparecerNote     : $aparecerNote');
-
     if (rotaPainelCliente) {
-      // debugPrint('  → Navegando para: /painel_cliente');
       Get.toNamed('/painel_cliente');
     } else {
       if (aparecerGarcom) {
-        // debugPrint('  → Navegando para: /garcom');
         Get.toNamed('/garcom');
       } else if (aparecerCheckIn) {
-        // debugPrint('  → Navegando para: CheckinPage');
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => CheckinPage()));
+        Get.toNamed('/checkin');
       } else if (aparecerCheckOut) {
-        // debugPrint('  → Navegando para: CheckoutPage');
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => CheckoutPage()));
+        Get.toNamed('/checkout');
       } else if (!naoAparecerMapa) {
-        // debugPrint('  → Navegando para: MapaPage');
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => MapaPage()));
+        Get.toNamed('/mapa');
       } else if (aparecerRecepcao) {
-        // debugPrint('  → Navegando para: RecepcaoPage');
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => RecepcaoPage()));
+        Get.toNamed('/recepcao');
       } else if (aparecerNote) {
-        // debugPrint('  → Navegando para: NotesPage');
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => NotesPage()));
-      } else {
-        // debugPrint('  → Fallback: Navegando para /garcom (nenhuma opção configurada)');
-        Get.toNamed('/garcom');
+        Get.toNamed('/notes');
+      } 
+      // expedicao cliente
+      else if(aparecerExpedicaoCliente){
+        Get.toNamed('/painel_cliente');
+      }
+      // KDS
+      else if(aparecerKDS){
+        Get.toNamed('/painel_cozinha');
+      }
+      // expedicao motoboy
+      else if(aparecerExpedicaoMotoboy){
+        Get.toNamed('/expedicao_motoboy');
+      }
+      else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Selecione uma rota!',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
-    // debugPrint('─────────────────────────\n');
   }
 
   void pegarServidorAntigo() async {
@@ -642,25 +642,25 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     if (checkJson != null) {
       final checksSalvos = Set<String>.from(jsonDecode(checkJson));
 
-      if (checksSalvos.contains("Ckeck-in") &&
+      if (checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
           aparecerCheckOut = false;
         });
       } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Ckeck-in")) {
+          !checksSalvos.contains("Check-in")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = true;
         });
-      } else if (!checksSalvos.contains("Ckeck-in") &&
+      } else if (!checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = false;
         });
-      } else if (checksSalvos.contains("Ckeck-in") &&
+      } else if (checksSalvos.contains("Check-in") &&
           checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
@@ -668,8 +668,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         });
       } else {
         setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
+          aparecerCheckIn = false;
+          aparecerCheckOut = false;
         });
       }
     } else {
@@ -729,6 +729,31 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       });
     }
   }
+  /* Future<void> _carregarNote() async {
+    final prefs = await SharedPreferences.getInstance();
+    final noteJson = prefs.getString('note_padrao');
+
+    if (noteJson != null) {
+      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
+
+      if (notesSalvos.contains('Notes')) {
+        // se note selecionado
+        setState(() {
+          aparecerNote = true;
+        });
+      } else {
+        // se note nao selecionado
+        setState(() {
+          aparecerNote = false;
+        });
+      }
+    } else {
+      // configuração padrao
+      setState(() {
+        aparecerNote = false;
+      });
+    }
+  } */
 
   // Carregar recepcao
   Future<void> _carregarRecepcao() async {
@@ -1053,17 +1078,77 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     }
   }
 
-  /// Deriva as variáveis booleanas de navegação diretamente dos Sets em memória.
-  /// Deve ser chamada APÓS salvar os Sets, eliminando a necessidade de reler
-  /// o SharedPreferences e evitando race conditions.
-  void _aplicarConfiguracoesDaMemoria() {
-    // debugPrint('\n═══ _aplicarConfiguracoesDaMemoria ═══');
-    // debugPrint('  modosSelecionados   : $modosSelecionados');
-    // debugPrint('  checkSelecionados   : $checkSelecionados');
-    // debugPrint('  garcomSelecionados  : $garcomSelecionados');
-    // debugPrint('  notesSelecionados   : $notesSelecionados');
-    // debugPrint('  recepcaoSelecionados: $recepcaoSelecionados');
-    // debugPrint('  rotasSelecionadas   : $rotasSelecionadas');
+  // Carregar/Salvar garçom
+  Future<void> _loadPaineis() async {
+    final prefs = await SharedPreferences.getInstance();
+    final painelJson = prefs.getString('painel_padrao');
+
+    if (painelJson != null) {
+      final painelSalvos = Set<String>.from(jsonDecode(painelJson));
+
+      if (painelSalvos.contains("KDS")) {
+        // home
+        setState(() {
+          aparecerKDS = true;
+        });
+      } else if (painelSalvos.contains("Expedição cliente")) {
+        // painel cliente
+        setState(() {
+          aparecerExpedicaoCliente = true;
+          
+        });
+      } else if (painelSalvos.contains("Expedição motoboy")) {
+        // painel cliente
+        setState(() {
+          aparecerExpedicaoMotoboy = true;
+        });
+      }  else {
+        // home
+        setState(() {
+          aparecerExpedicaoCliente = false;
+          aparecerKDS = false;
+          aparecerExpedicaoMotoboy = false;
+        });
+      }
+    } else {  
+      setState(() {
+        aparecerExpedicaoCliente = false;
+        aparecerKDS = false;
+        aparecerExpedicaoMotoboy = false;
+      });
+    }
+  }
+
+  Future<void> _salvarConfiguracoes() async {
+    await salvarModoSalvo(modosSelecionados);
+    await salvarNoteSalvo(notesSelecionados);
+    await salvarRecepcaoSalvo(recepcaoSelecionados);
+    await _saveServidor(servidorController.text);
+    await salvarCheckSalvo(checkSelecionados);
+    await salvarGarcomSalvo(garcomSelecionados);
+    await salvarPainelSalvo(paineisSelecionados);
+    await salvarRota(rotasSelecionadas);
+  }
+
+  // Deriva as variáveis booleanas de navegação diretamente dos Sets em memória.
+  Future<void> _aplicarConfiguracoesDaMemoria() async {
+    // Modos - mapa
+    await _carregarModos();
+    // Notes
+    await _carregarNote();
+    // Recepção
+    await _carregarRecepcao();
+    // Check-in / Check-out
+    await _carregarchecks();
+    // Garçom
+    await _carregargarcom();
+    // KDS // Expedição cliente // Expedição motoboy
+    await _loadPaineis();
+    // Rota
+    await carregarRota();
+  }
+
+  /* void _aplicarConfiguracoesDaMemoria() {
 
     // --- Modos (Mesa / Comanda) → mapa e check-in/out ---
     final temMesa = modosSelecionados.contains('Mesa');
@@ -1100,17 +1185,15 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     // --- Atualiza rotaNova para comparação com rotaAntiga ---
     rotaNova = rotaPainelCliente ? 'Painel cliente' : 'Home';
 
-    // debugPrint('  ─── Resultado ───');
-    // debugPrint('  aparecerGarcom    : $aparecerGarcom');
-    // debugPrint('  aparecerCheckIn   : $aparecerCheckIn');
-    // debugPrint('  aparecerCheckOut  : $aparecerCheckOut');
-    // debugPrint('  naoAparecerMapa   : $naoAparecerMapa  (mapa=${!naoAparecerMapa})');
-    // debugPrint('  aparecerRecepcao  : $aparecerRecepcao');
-    // debugPrint('  aparecerNote      : $aparecerNote');
-    // debugPrint('  rotaPainelCliente : $rotaPainelCliente');
-    // debugPrint('  rotaNova          : $rotaNova');
-    // debugPrint('════════════════════════════════════════\n');
-  }
+    // --- Expedição cliente ---
+    aparecerExpedicaoCliente = paineisSelecionados.contains('Expedição cliente');
+
+    // --- KDS ---
+    aparecerKDS = paineisSelecionados.contains('KDS');
+
+    // --- Expedição motoboy ---
+    aparecerExpedicaoMotoboy = paineisSelecionados.contains('Expedição motoboy');
+  } */
 
   Future<void> salvarGarcomSalvo(Set<String> garcomSalvos) async {
     try {
@@ -1423,13 +1506,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                     numeroDaLicencaDisponivel,
                                   );
                                   await _saveLicenca(nomeDaLicencaSelecionada);
-                                  navegar();
+                                  await navegar();
                                   servidorAntigo = servidorController.text;
                                   _saveServidorAntigo(servidorAntigo);
-                                  funcoesController
-                                      .controlarAparecimentoBotaoPagar(
-                                        funcaoDoGarcomFuncao,
-                                      );
+                                  funcoesController.controlarAparecimentoBotaoPagar(funcaoDoGarcomFuncao);
                                   print("Senha correta");
                                   setDialogState(() {
                                     isloadingSenha = true;
@@ -1509,7 +1589,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                     await _saveNumeroGarcom(
                                       numeroDoGarcomFuncao,
                                     );
-                                    navegar();
+                                    await navegar();
                                     servidorAntigo = servidorController.text;
                                     _saveServidorAntigo(servidorAntigo);
                                     funcoesController
@@ -2588,22 +2668,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             final String servidorNovo = servidorController.text.trim();
                             bool servidorMudou = servidorAntigoFuncao != servidorNovo;
 
-                            // ── PASSO 1: Salva todos os Sets no SharedPreferences ──
-                            await salvarModoSalvo(modosSelecionados);
-                            await salvarNoteSalvo(notesSelecionados);
-                            await salvarRecepcaoSalvo(recepcaoSelecionados);
-                            await _saveServidor(servidorController.text);
-                            await salvarCheckSalvo(checkSelecionados);
-                            await salvarGarcomSalvo(garcomSelecionados);
-                            await salvarPainelSalvo(paineisSelecionados);
-                            await salvarRota(rotasSelecionadas);
+                            await _salvarConfiguracoes();
+                            await _aplicarConfiguracoesDaMemoria();
 
-                            // ── PASSO 2: Deriva booleanos de navegação DIRETO da memória ──
-                            // Não relemos o SharedPreferences — os Sets em memória já são a
-                            // fonte da verdade. Isso elimina I/O desnecessário e race conditions.
-                            _aplicarConfiguracoesDaMemoria();
-
-                            // ── PASSO 3: Conecta ao banco e navega ──
                             bool conectado = await Connection.conectarBanco();
 
                             if (!mounted) return;

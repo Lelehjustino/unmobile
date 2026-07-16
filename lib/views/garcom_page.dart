@@ -4710,8 +4710,7 @@ class GarcomPageState extends State<GarcomPage>
     // print('Servidor carregado: $servidorSalvo'); // Log para ver o valor carregado
     if (servidorSalvo != null) {
       setState(() {
-        servidorController.text =
-            servidorSalvo; // Atualiza o controller com o valor carregado
+        servidorController.text = servidorSalvo; // Atualiza o controller com o valor carregado
       });
     }
   }
