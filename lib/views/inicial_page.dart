@@ -454,10 +454,13 @@ class InicialPageState extends State<InicialPage> {
         if (!mounted) return;
 
         // Sempre exige seleção de usuário ao entrar (sem restaurar sessão anterior)
-        if (listaGarcom.isNotEmpty) {
+        await carregarRota();
+        if (listaGarcom.isNotEmpty && !rotaPainelCliente) {
           await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
           await Get.find<ZerarAtendimentoController>().zerarAtendimento();
           popupSelecionarGarcom();
+        } else {
+          navegacao_inteligente();
         }
       } else {
         // Sem licença válida para este dispositivo — exige seleção de licença
@@ -1739,8 +1742,11 @@ class InicialPageState extends State<InicialPage> {
                             if (!mounted) return;
                             await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
                             await Get.find<ZerarAtendimentoController>().zerarAtendimento();
-                            if (listaGarcom.isNotEmpty) {
+                            await carregarRota();
+                            if (listaGarcom.isNotEmpty && !rotaPainelCliente) {
                               popupSelecionarGarcom();
+                            } else {
+                              navegacao_inteligente();
                             }
                           },
                         ),
@@ -2333,8 +2339,14 @@ class InicialPageState extends State<InicialPage> {
                                             });
                                             await informacoesGarcom();
                                             if (!mounted) return;
-                                            if (listaGarcom.isNotEmpty) {
+                                            /* if (listaGarcom.isNotEmpty) {
                                               popupSelecionarGarcom();
+                                            } */
+                                           await carregarRota();
+                                           if (listaGarcom.isNotEmpty && !rotaPainelCliente) {
+                                              popupSelecionarGarcom();
+                                            } else {
+                                              navegacao_inteligente();
                                             }
                                           } else {
                                             // Não tem licença, mostra popup para selecionar
@@ -2660,123 +2672,6 @@ class InicialPageState extends State<InicialPage> {
           ),
         ),
       ),
-      /* bottomNavigationBar: Padding(
-        padding: EdgeInsets.all(10),
-        child: !licencaSelecionada && nomeDaLicenca != ""
-            ? AbsorbPointer(
-                absorbing: isLoadingSalvar,
-                child: isLoadingSalvar
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 6,
-                          valueColor: AlwaysStoppedAnimation(
-                            colorScheme.primary,
-                          ),
-                        ),
-                      )
-                    : ElevatedButton(
-                        onPressed: () async {
-                          setState(() => isLoadingSalvar = true);
-
-                          try {
-                            // Verificação e salvamento de IP do servidor
-                            if (servidorController.text.isNotEmpty) {
-                              await _saveServidor(servidorController.text);
-                              await _saveServidorAntigo(servidorController.text);
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Por favor, se conecte ao servidor local',
-                                  ),
-                                  backgroundColor: colorScheme.error,
-                                ),
-                              );
-                            }
-
-                            // Verificação e salvamento da licença selecionada
-                            if (licencaSelecionada) {
-                              await _saveLicenca(nomeDaLicenca);
-                              await _saveLicenca(nomeDaLicencaSelecionada);
-                              await _saveNumeroLicenca(
-                                numeroDaLicencaSelecionada,
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Por favor, selecione uma licença',
-                                  ),
-                                  backgroundColor: colorScheme.error,
-                                ),
-                              );
-                            }
-
-                            if (servidorController.text.isNotEmpty &&
-                                licencaSelecionada &&
-                                servidorConectado &&
-                                nomeDaLicenca.isNotEmpty &&
-                                nomeDaLicenca != "0") {
-                              _saveNomeEmpresa(nomeEmpresa);
-                              _saveLicenca(nomeDaLicenca);
-
-                              // Zera o atendimento
-                              await zerarAtendimentoController
-                                  .loadNumeroLicenca();
-                              await zerarAtendimentoController
-                                  .zerarAtendimento();
-
-                              // Selecionar o garçom
-                              popupSelecionarGarcom();
-
-                              _saveGarcom(nomeGarcom);
-
-                              await funcoesController.carregarTudo();
-
-                              // Se estiver tudo certo, navega para a próxima tela
-                              /* await navegacao_inteligente(); */
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Não foi possível entrar na aplicação, tente novamente',
-                                  ),
-                                  backgroundColor: colorScheme.error,
-                                ),
-                              );
-                            }
-                          } catch (e, st) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Erro ao entrar na aplicação'),
-                                backgroundColor: colorScheme.error,
-                              ),
-                            );
-                          } finally {
-                            if (mounted) {
-                              setState(() => isLoadingSalvar = false);
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: Text(
-                          'Entrar',
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-              )
-            : SizedBox(width: 1),
-      ), */
     );
   }
 }
