@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -410,6 +412,26 @@ class GarcomPageState extends State<GarcomPage>
       sairModoTouch();
     }
   }
+
+  /* Future<void> _carregarPreco() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modo = prefs.getString('carregar_aparecer_preco');
+
+    if (modo == "Sim") {
+      aparecerPreco = true;
+    } else {
+      aparecerPreco = false;
+    }
+  }
+
+  Future<void> salvarAparecerPreco(String modo) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('carregar_aparecer_preco', modo);
+    } catch (e, st) {
+      // debugPrint("Erro salvarRota(): $e\n$st");
+    }
+  } */
 
   /// Seleciona automaticamente o primeiro grupo disponível e carrega seus produtos.
   void _selecionarPrimeiroGrupo() {
@@ -9044,6 +9066,9 @@ class GarcomPageState extends State<GarcomPage>
                               // Número de colunas adaptável à largura disponível
                               const double itemMinWidth = 110.0;
                               final int cols = (constraints.maxWidth / itemMinWidth).floor().clamp(2, 8);
+                              final bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+                              // Fonte fixa na vertical
+                              final double fontSize = isLandscape ? (constraints.maxWidth * 0.018).clamp(10.0, 20.0) : 14.0;
                               return GridView.builder(
                             padding: const EdgeInsets.all(8),
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -9221,8 +9246,24 @@ class GarcomPageState extends State<GarcomPage>
                                     children: [
                                       // Nome ocupa todo o espaço restante
                                       Expanded(
+                                        child: Center(
+                                          child: AutoSizeText(
+                                            produto['produto_nome'],
+                                            textAlign: TextAlign.center,
+                                            maxLines: 3,
+                                            minFontSize: 8,
+                                            maxFontSize: isLandscape ? 12 : 14,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: isLandscape ? 12 : 14,
+                                              fontWeight: FontWeight.w500,
+                                            ), 
+                                          ),
+                                        ),
+                                      ),
+                                      /* Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.all(8),
+                                          padding: EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 0),
                                           child: Center(
                                             child: Text(
                                               produto['produto_nome'],
@@ -9230,14 +9271,14 @@ class GarcomPageState extends State<GarcomPage>
                                               maxLines: 3,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
-                                                fontSize: 14,
+                                                fontSize: fontSize,
                                                 fontWeight: FontWeight.bold,
                                                 color: colorScheme.onSurface,
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
+                                      ), */
 
                                       // Preço
                                       Align(
@@ -9260,12 +9301,12 @@ class GarcomPageState extends State<GarcomPage>
                                             style: TextStyle(
                                               color: colorScheme.onPrimary,
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 13,
+                                              fontSize: isLandscape ? 10 : 15,
                                             ),
                                           )
                                         : Icon(
                                             Icons.local_pizza,
-                                            size: 20,
+                                            size: isLandscape ? 12 : 20,
                                             color: colorScheme.onPrimary,
                                           ),
                                         ),
@@ -9273,115 +9314,7 @@ class GarcomPageState extends State<GarcomPage>
                                     ],
                                   ),
                                 ),
-                                /* Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Stack(
-                                    children: [
-                                      /* // Preço
-                                      Positioned(
-                                        top: 8,
-                                        left: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.primary,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
-                                            style: TextStyle(
-                                              color: colorScheme.onPrimary,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                            ),
-                                          ),
-                                        ),
-                                      ), */
-
-                                      // Nome
-                                      Padding(
-                                        padding: EdgeInsets.fromLTRB(8, 8, 8, 42),
-                                        child: Center(
-                                          child: Text(
-                                            produto['produto_nome'],
-                                            textAlign: TextAlign.center,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: colorScheme.onSurface,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      if(produto['produto_valor'] != "0.00")
-                                      // Preço
-                                      Positioned(
-                                        /* right: 8,
-                                        bottom: 8, */
-                                        right: 0,
-                                        bottom: 0,
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.primary,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
-                                            style: TextStyle(
-                                              color: colorScheme.onPrimary,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-                                      if(produto['produto_valor'] == "0.00")
-                                      // Preço
-                                      Positioned(
-                                        /* right: 8,
-                                        bottom: 8, */
-                                        right: 0,
-                                        bottom: 0,
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.scrim,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Icon(
-                                            Icons.local_pizza,
-                                            size: 20,
-                                            color: colorScheme.onPrimary,
-                                          ),
-                                          /* Text(
-                                            "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
-                                            style: TextStyle(
-                                              color: colorScheme.onPrimary,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                            ),
-                                          ), */
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ), */
+                                
                               );
                             },
                           );
@@ -9516,7 +9449,10 @@ class GarcomPageState extends State<GarcomPage>
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: 56,
-                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  maxHeight: math.max(
+                                    56.0,
+                                    MediaQuery.of(context).size.height * 0.10,
+                                  ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -9620,7 +9556,10 @@ class GarcomPageState extends State<GarcomPage>
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: 56,
-                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  maxHeight: math.max(
+      56.0,
+      MediaQuery.of(context).size.height * 0.10,
+    ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -9723,7 +9662,10 @@ class GarcomPageState extends State<GarcomPage>
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: 56,
-                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  maxHeight: math.max(
+      56.0,
+      MediaQuery.of(context).size.height * 0.10,
+    ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -9826,7 +9768,10 @@ class GarcomPageState extends State<GarcomPage>
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: 56,
-                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  maxHeight: math.max(
+      56.0,
+      MediaQuery.of(context).size.height * 0.10,
+    ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -9933,7 +9878,10 @@ class GarcomPageState extends State<GarcomPage>
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: 56,
-                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  maxHeight: math.max(
+      56.0,
+      MediaQuery.of(context).size.height * 0.10,
+    ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -9981,7 +9929,10 @@ class GarcomPageState extends State<GarcomPage>
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: 56,
-                                  maxHeight: MediaQuery.of(context).size.height * 0.10,
+                                  maxHeight: math.max(
+      56.0,
+      MediaQuery.of(context).size.height * 0.10,
+    ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
