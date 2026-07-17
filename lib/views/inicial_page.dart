@@ -115,6 +115,13 @@ class InicialPageState extends State<InicialPage> {
 
   bool aparecerModificarLicencaGarcom = false;
 
+  bool rotaHome = true;
+  bool rotaPainelCliente = false;
+
+  bool aparecerKDS = false;
+  bool aparecerExpedicaoCliente = false;
+  bool aparecerExpedicaoMotoboy = false;
+
   void _atualizarHora() {
     if (mounted) {
       setState(() {
@@ -146,6 +153,8 @@ class InicialPageState extends State<InicialPage> {
     _carregarNote();
     _carregarRecepcao();
     _carregargarcom();
+    carregarRota();
+    _loadPaineis();
   }
 
   @override
@@ -155,11 +164,88 @@ class InicialPageState extends State<InicialPage> {
     super.dispose();
   }
 
+  // Carregar rota
+  Future<void> carregarRota() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rotaJson = prefs.getString('rota_padrao');
+
+    if (rotaJson != null) {
+      final rotasSalvos = Set<String>.from(jsonDecode(rotaJson));
+
+      if (rotasSalvos.contains("Home") &&
+          !rotasSalvos.contains("Expedição cliente")) {
+        // home
+        setState(() {
+          rotaHome = true;
+          rotaPainelCliente = false;
+        });
+      } else if (rotasSalvos.contains("Expedição cliente") &&
+          !rotasSalvos.contains("Home")) {
+        // painel cliente
+        setState(() {
+          rotaHome = false;
+          rotaPainelCliente = true;
+        });
+      } else {
+        // home
+        setState(() {
+          rotaHome = true;
+          rotaPainelCliente = false;
+        });
+      }
+    } else {
+      // home
+      setState(() {
+        rotaHome = true;
+        rotaPainelCliente = false;
+      });
+    }
+  }
+
   navegacao_inteligente() async {
     await funcoesController.carregarTudo();
     await _saveNumeroLicenca(numeroDaLicencaSelecionada);
     await _saveLicenca(nomeDaLicencaSelecionada);
-    if (aparecerGarcom) {
+    if (rotaPainelCliente) {
+      Get.toNamed('/painel_cliente');
+    } else {
+      if (aparecerGarcom) {
+        Get.toNamed('/garcom');
+      } else if (aparecerCheckIn) {
+        Get.toNamed('/checkin');
+      } else if (aparecerCheckOut) {
+        Get.toNamed('/checkout');
+      } else if (!naoAparecerMapa) {
+        Get.toNamed('/mapa');
+      } else if (aparecerRecepcao) {
+        Get.toNamed('/recepcao');
+      } else if (aparecerNote) {
+        Get.toNamed('/notes');
+      } 
+      // expedicao cliente
+      else if(aparecerExpedicaoCliente){
+        Get.toNamed('/painel_cliente');
+      }
+      // KDS
+      else if(aparecerKDS){
+        Get.toNamed('/painel_cozinha');
+      }
+      // expedicao motoboy
+      else if(aparecerExpedicaoMotoboy){
+        Get.toNamed('/expedicao_motoboy');
+      }
+      else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Selecione uma rota!',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+    /* if (aparecerGarcom) {
       Get.toNamed('/garcom');
     } else if (aparecerCheckIn) {
       Navigator.push(
@@ -228,6 +314,47 @@ class InicialPageState extends State<InicialPage> {
       );
     } else {
       Get.toNamed('/garcom');
+    } */
+  }
+
+  // Carregar/Salvar garçom
+  Future<void> _loadPaineis() async {
+    final prefs = await SharedPreferences.getInstance();
+    final painelJson = prefs.getString('painel_padrao');
+
+    if (painelJson != null) {
+      final painelSalvos = Set<String>.from(jsonDecode(painelJson));
+
+      if (painelSalvos.contains("KDS")) {
+        // home
+        setState(() {
+          aparecerKDS = true;
+        });
+      } else if (painelSalvos.contains("Expedição cliente")) {
+        // painel cliente
+        setState(() {
+          aparecerExpedicaoCliente = true;
+          
+        });
+      } else if (painelSalvos.contains("Expedição motoboy")) {
+        // painel cliente
+        setState(() {
+          aparecerExpedicaoMotoboy = true;
+        });
+      }  else {
+        // home
+        setState(() {
+          aparecerExpedicaoCliente = false;
+          aparecerKDS = false;
+          aparecerExpedicaoMotoboy = false;
+        });
+      }
+    } else {  
+      setState(() {
+        aparecerExpedicaoCliente = false;
+        aparecerKDS = false;
+        aparecerExpedicaoMotoboy = false;
+      });
     }
   }
 

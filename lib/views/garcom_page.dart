@@ -5197,7 +5197,7 @@ class GarcomPageState extends State<GarcomPage>
     });
     if (!funcoesController.logicaPorMesa.value) {
       shownDialogTwoBottomKeyboard(
-        context: context,
+        context: context, 
         title: "Deseja vincular a uma mesa?",
         message: "",
         icon: Icons.table_bar,
@@ -5739,6 +5739,8 @@ class GarcomPageState extends State<GarcomPage>
                       title,
                       style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(255, 71, 71, 71),
+                        fontSize: 24,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -5789,23 +5791,25 @@ class GarcomPageState extends State<GarcomPage>
                       autofocus: focusNode == null
                           ? true
                           : false, // Autofoco padrão se não houver FocusNode
-                      textAlign:
-                          TextAlign.center, // Centraliza o texto e o ponteiro
+                      textAlign: TextAlign.center, // Centraliza o texto e o ponteiro
                       style: TextStyle(
-                        fontSize: 30,
+                        fontSize: 35,
                         fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(255, 71, 71, 71),
                       ),
                       decoration: InputDecoration(
                         hintText: 'Digite aqui...',
+                        hintStyle: TextStyle(
+                          color: const Color.fromARGB(255, 173, 173, 173),
+                          fontSize: 20,
+                        ),
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.all(20),
 
                         // Borda quando NÃO está focado
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(
-                            color: Theme.of(
-                              ctx,
-                            ).colorScheme.primary, // cor da borda
+                            color: Theme.of(ctx).colorScheme.primary, // cor da borda
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(8),
@@ -5814,9 +5818,7 @@ class GarcomPageState extends State<GarcomPage>
                         // Borda quando está focado
                         focusedBorder: OutlineInputBorder(
                           borderSide: BorderSide(
-                            color: Theme.of(
-                              ctx,
-                            ).colorScheme.primary, // cor ao focar
+                            color: Theme.of(ctx).colorScheme.primary, // cor ao focar
                             width: 2,
                           ),
                           borderRadius: BorderRadius.circular(8),
@@ -5832,50 +5834,54 @@ class GarcomPageState extends State<GarcomPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Botão Cancelar
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          if (onCancel != null) onCancel();
-                        },
-                        child: Text(
-                          cancelText.toUpperCase(),
-                          style: TextStyle(
-                            color: Theme.of(ctx).colorScheme.onPrimary,
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            if (onCancel != null) onCancel();
+                          },
+                          child: Text(
+                            cancelText.toUpperCase(),
+                            style: TextStyle(
+                              color: Theme.of(ctx).colorScheme.onPrimary,
+                            ),
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 26,
+                              vertical: 20,
+                            ),
+                            backgroundColor: Theme.of(ctx).colorScheme.error.withOpacity(0.7),
                           ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          backgroundColor: Theme.of(ctx).colorScheme.primary,
                         ),
                       ),
                       SizedBox(width: 10),
                       // Botão Confirmar
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          if (onConfirm != null) onConfirm();
-                        },
-                        child: Text(
-                          confirmText.toUpperCase(),
-                          style: TextStyle(
-                            color: Theme.of(ctx).colorScheme.onPrimary,
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            if (onConfirm != null) onConfirm();
+                          },
+                          child: Text(
+                            confirmText.toUpperCase(),
+                            style: TextStyle(
+                              color: Theme.of(ctx).colorScheme.onPrimary,
+                            ),
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 26,
+                              vertical: 20,
+                            ),
+                            backgroundColor: Theme.of(ctx).colorScheme.primary,
                           ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          backgroundColor: Theme.of(ctx).colorScheme.secondary,
                         ),
                       ),
                     ],
@@ -7899,9 +7905,15 @@ class GarcomPageState extends State<GarcomPage>
                                         mesaDialogController.text = numeroMesaEmUso;
                                       });
 
+                                      Future.delayed(Duration(milliseconds: 300), () {
+                                        if (mesaDialogFocus.canRequestFocus) {
+                                          mesaDialogFocus.requestFocus();
+                                        }
+                                      });
+
                                       shownDialogTwoBottomKeyboard(
                                         context: context,
-                                        title: "Modificar a mesa?",
+                                        title: mesaDialogController.text.isEmpty ? "Deseja vincular a uma mesa?" : "Modificar a mesa?",
                                         message: "",
                                         icon: Icons.table_bar,
                                         textController: mesaDialogController,
@@ -7920,12 +7932,9 @@ class GarcomPageState extends State<GarcomPage>
                                         },
                                         onCancel: () {
                                           // Navigator.pop(context);
-                                          mesaController.removeListener(
-                                            _onMesaChanged,
-                                          );
+                                          mesaController.removeListener(_onMesaChanged);
                                           if (mesaDialogController.text != "") {
-                                            mesaDialogController.text =
-                                                numeroMesaEmUso;
+                                            mesaDialogController.text = numeroMesaEmUso;
                                           }
                                           setState(() {
                                             aparecerCarrinho = true;
@@ -7933,8 +7942,7 @@ class GarcomPageState extends State<GarcomPage>
                                             aparecerCardapio = true;
 
                                             showKeyboardQuantidade = false;
-                                            mesaController.text =
-                                                numeroMesaEmUso;
+                                            mesaController.text = numeroMesaEmUso;
                                           });
                                         },
                                       );
@@ -9204,8 +9212,68 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                 },
                                 // Visual do card de produto
-                                child: 
-                                Container(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      // Nome ocupa todo o espaço restante
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Center(
+                                            child: Text(
+                                              produto['produto_nome'],
+                                              textAlign: TextAlign.center,
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Preço
+                                      Align(
+                                        alignment: Alignment.bottomRight,
+                                        child: Container(
+                                          margin: EdgeInsets.only(right: 4, bottom: 4),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: produto['produto_valor'] != "0.00"
+                                                ? colorScheme.primary
+                                                : colorScheme.scrim,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: produto['produto_valor'] != "0.00"
+                                              ? Text(
+                                                  "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
+                                                  style: TextStyle(
+                                                    color: colorScheme.onPrimary,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                )
+                                              : Icon(
+                                                  Icons.local_pizza,
+                                                  size: 20,
+                                                  color: colorScheme.onPrimary,
+                                                ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                /* Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.surface,
                                     borderRadius: BorderRadius.circular(12),
@@ -9238,7 +9306,7 @@ class GarcomPageState extends State<GarcomPage>
 
                                       // Nome
                                       Padding(
-                                        padding: EdgeInsets.fromLTRB(0, 0, 0, 45),
+                                        padding: EdgeInsets.fromLTRB(8, 8, 8, 42),
                                         child: Center(
                                           child: Text(
                                             produto['produto_nome'],
@@ -9313,7 +9381,7 @@ class GarcomPageState extends State<GarcomPage>
                                       ),
                                     ],
                                   ),
-                                ),
+                                ), */
                               );
                             },
                           );

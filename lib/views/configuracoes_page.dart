@@ -1003,6 +1003,38 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     final rotaJson = prefs.getString('rota_padrao');
 
     if (rotaJson != null) {
+      final rotasSalvas = Set<String>.from(jsonDecode(rotaJson));
+
+      setState(() {
+        rotasSelecionadas = Set<String>.from(rotasSalvas);
+      });
+
+      if (rotasSalvas.contains("Home") &&
+          !rotasSalvas.contains("Expedição cliente")) {
+        setState(() {
+          rotaHome = true;
+          rotaPainelCliente = false;
+        });
+      } else if (rotasSalvas.contains("Expedição cliente") &&
+          !rotasSalvas.contains("Home")) {
+        setState(() {
+          rotaHome = false;
+          rotaPainelCliente = true;
+        });
+      }
+    } else {
+      setState(() {
+        rotasSelecionadas = {"Home"};
+        rotaHome = true;
+        rotaPainelCliente = false;
+      });
+    }
+  }
+  /* Future<void> carregarRota() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rotaJson = prefs.getString('rota_padrao');
+
+    if (rotaJson != null) {
       final rotasSalvos = Set<String>.from(jsonDecode(rotaJson));
 
       if (rotasSalvos.contains("Home") &&
@@ -1033,7 +1065,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         rotaPainelCliente = false;
       });
     }
-  }
+  } */
 
   // Salvar Rota
   Future<void> salvarRota(Set<String> rotasSalvas) async {

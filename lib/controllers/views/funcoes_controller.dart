@@ -10,9 +10,8 @@ class FuncoesController extends GetxController {
   RxBool isEnviandoPedido = false.obs;
   String atendimentoAtual = "";
   String nomeTraidpoint = "";
-
-  // String versaoDoApp = "1.9.18";
-  String versaoDoApp = "1.9.19";
+  
+  String versaoDoApp = "1.9.20";
 
   // Controlar o aparecimento do botão pagar
   RxBool aparecerBotaoPagar = false.obs;
