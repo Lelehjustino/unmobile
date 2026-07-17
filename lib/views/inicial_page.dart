@@ -235,14 +235,7 @@ class InicialPageState extends State<InicialPage> {
         Get.toNamed('/expedicao_motoboy');
       }
       else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Selecione uma rota!',
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        Get.toNamed('/garcom');
       }
     }
     /* if (aparecerGarcom) {

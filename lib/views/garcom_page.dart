@@ -9255,19 +9255,19 @@ class GarcomPageState extends State<GarcomPage>
                                             borderRadius: BorderRadius.circular(20),
                                           ),
                                           child: produto['produto_valor'] != "0.00"
-                                              ? Text(
-                                                  "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
-                                                  style: TextStyle(
-                                                    color: colorScheme.onPrimary,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 13,
-                                                  ),
-                                                )
-                                              : Icon(
-                                                  Icons.local_pizza,
-                                                  size: 20,
-                                                  color: colorScheme.onPrimary,
-                                                ),
+                                        ? Text(
+                                            "R\$ ${(double.tryParse(produto['produto_valor'].toString()) ?? 0).toStringAsFixed(2)}",
+                                            style: TextStyle(
+                                              color: colorScheme.onPrimary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.local_pizza,
+                                            size: 20,
+                                            color: colorScheme.onPrimary,
+                                          ),
                                         ),
                                       ),
                                     ],
