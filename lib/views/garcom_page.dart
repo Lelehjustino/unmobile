@@ -376,7 +376,6 @@ class GarcomPageState extends State<GarcomPage>
       iniciaComCarrinho();
       carregarUltimaConfiguracao();
     } else {
-      // chamarFoco();
       chamarFocoInicial();
       carrinhoController.carrinho.clear();
     }
@@ -453,6 +452,21 @@ class GarcomPageState extends State<GarcomPage>
       produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
     });
   }  */
+
+  iniciarModoTouch(){
+    setState(() {
+      modoAnteriorTouch = false;
+      aparecerCarrinho = false;
+      aparecerConfiguracaoProduto = false;
+      aparecerVendaTouch = true;
+      cardapioController.clear();
+      cardapioController.text = "";
+    });
+
+    // _selecionarPrimeiroGrupo();
+    String modo = "Touch";
+    salvarUltimaConfiguracao(modo);
+  }
 
   entrarModoTouch(){
     FocusScope.of(context).unfocus();
@@ -2325,7 +2339,7 @@ class GarcomPageState extends State<GarcomPage>
               },
             );
             mesaController.clear();
-            chamarFoco();
+            // chamarFoco();
             setState(() {
               mesaComandaNaoTemConta = true;
             });
@@ -2507,11 +2521,18 @@ class GarcomPageState extends State<GarcomPage>
   }
 
   // Função para filtrar 
-  filtrarProdutos(String termo) {
+  filtrarProdutos(String termo) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ultimodo = prefs.getString('carregar_ultima_configuracao');
     setState(() {
       aparecerLista = true;
 
       if (termo.isEmpty) {
+        if(ultimodo == "Touch"){
+          aparecerVendaTouch = true;
+        } else {
+          aparecerVendaTouch = false;
+        }
         aparecerLista = false;
         aparecerCarrinho = true;
         listaProdutoFiltrada = [];
@@ -2519,6 +2540,7 @@ class GarcomPageState extends State<GarcomPage>
       }
 
       if (termo.isNotEmpty) {
+        aparecerVendaTouch = false;
         aparecerCarrinho = false;
         aparecerLista = true;
       }
@@ -2538,11 +2560,8 @@ class GarcomPageState extends State<GarcomPage>
 
         // ORDENA NUMERICAMENTE
         listaProdutoFiltrada.sort((a, b) {
-          final numeroA =
-              int.tryParse(a['produto_numero'].toString()) ?? 0;
-
-          final numeroB =
-              int.tryParse(b['produto_numero'].toString()) ?? 0;
+          final numeroA = int.tryParse(a['produto_numero'].toString()) ?? 0;
+          final numeroB = int.tryParse(b['produto_numero'].toString()) ?? 0;
 
           return numeroA.compareTo(numeroB);
         });
@@ -2551,29 +2570,20 @@ class GarcomPageState extends State<GarcomPage>
       }
 
       // FILTRO POR TEXTO
-      final termos = termoNormalizado
-          .split(' ')
-          .where((t) => t.isNotEmpty)
-          .toList();
+      final termos = termoNormalizado.split(' ').where((t) => t.isNotEmpty).toList();
 
       listaProdutoFiltrada = funcoesController.listaProduto.where((produto) {
-        final nome =
-            _normalizarTexto(produto['produto_nome'] ?? '');
+        final nome = _normalizarTexto(produto['produto_nome'] ?? '');
 
         return termos.every((t) {
-          return nome
-              .split(' ')
-              .any((palavra) => palavra.startsWith(t));
+          return nome.split(' ').any((palavra) => palavra.startsWith(t));
         });
       }).toList();
 
       // ORDENA ALFABETICAMENTE
       listaProdutoFiltrada.sort((a, b) {
-        final nomeA =
-            _normalizarTexto(a['produto_nome'] ?? '');
-
-        final nomeB =
-            _normalizarTexto(b['produto_nome'] ?? '');
+        final nomeA = _normalizarTexto(a['produto_nome'] ?? '');
+        final nomeB = _normalizarTexto(b['produto_nome'] ?? '');
 
         return nomeA.compareTo(nomeB);
       });
@@ -5163,18 +5173,15 @@ class GarcomPageState extends State<GarcomPage>
         aparecerCardapio = true;
         numeroMesaEmUso = mesaController.text;
         comandaValida = true;
-        showKeyboardAlfa = true;
-        showKeyboardQuantidade = false;
-        showKeyboardNumero = false;
         empurrarBotoes = false;
-        _campoAtivo = 'cardapioController';
-        Future.delayed(Duration(milliseconds: 300), () {
+        /* Future.delayed(Duration(milliseconds: 300), () {
           if (cardapioFocus.canRequestFocus) {
             cardapioFocus.requestFocus();
           }
-        });
-        carregarUltimaConfiguracao();
+        }); */
+        // carregarUltimaConfiguracao();
       });
+      entrarModoTouch();
       return;
     }
 
@@ -5190,17 +5197,14 @@ class GarcomPageState extends State<GarcomPage>
         aparecerFazerPedido = true;
         aparecerCardapio = true;
         numeroComandaEmUso = comandaController.text;
-        showKeyboardAlfa = true;
-        showKeyboardQuantidade = false;
-        showKeyboardNumero = false;
-        _campoAtivo = 'cardapioController';
-        Future.delayed(Duration(milliseconds: 300), () {
+        /* Future.delayed(Duration(milliseconds: 300), () {
           if (cardapioFocus.canRequestFocus) {
             cardapioFocus.requestFocus();
           }
-        });
-        carregarUltimaConfiguracao();
+        }); */
+        // carregarUltimaConfiguracao();
       });
+      entrarModoTouch();
       return;
     }
 
@@ -5230,6 +5234,7 @@ class GarcomPageState extends State<GarcomPage>
           if (mesaValida) {
             comandaController.text = numeroComandaEmUso;
             _irParaCardapio();
+            entrarModoTouch();
             await verificarSeTemConta(comandaController.text);
             setState(() {
               aparecerFazerPedido = true;
@@ -5241,6 +5246,7 @@ class GarcomPageState extends State<GarcomPage>
           mesaController.clear();
           comandaController.text = numeroComandaEmUso;
           _irParaCardapio();
+          entrarModoTouch();
           setState(() {
             aparecerFazerPedido = true;
           });
@@ -5248,6 +5254,7 @@ class GarcomPageState extends State<GarcomPage>
             mesaController.text = numeroMesaEmUso;
           }
         },
+
       );
     } else {
       mesaController.clear();
@@ -7856,12 +7863,9 @@ class GarcomPageState extends State<GarcomPage>
                                   onChanged: (text) {
                                     filtrarProdutos(text);
                                   },
-                                  cursorColor: Theme.of(
-                                    context,
-                                  ).colorScheme.primary,
+                                  cursorColor: Theme.of(context,).colorScheme.primary,
                                   keyboardType: TextInputType.text,
-                                  textCapitalization:
-                                      TextCapitalization.characters,
+                                  textCapitalization: TextCapitalization.characters,
                                   controller: cardapioController,
                                   focusNode: cardapioFocus,
                                   textAlign: TextAlign.center,

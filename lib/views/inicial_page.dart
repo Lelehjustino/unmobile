@@ -209,10 +209,10 @@ class InicialPageState extends State<InicialPage> {
     if (rotaPainelCliente) {
       Get.toNamed('/painel_cliente');
     } else {
-      if (aparecerGarcom) {
-        Get.toNamed('/garcom');
-      } else if (aparecerCheckIn) {
+      if (aparecerCheckIn) {
         Get.toNamed('/checkin');
+      } else if (aparecerGarcom) {
+        Get.toNamed('/garcom');
       } else if (aparecerCheckOut) {
         Get.toNamed('/checkout');
       } else if (!naoAparecerMapa) {

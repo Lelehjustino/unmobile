@@ -218,7 +218,42 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     if (rotaPainelCliente) {
       Get.toNamed('/painel_cliente');
     } else {
-      if (aparecerGarcom) {
+      if (aparecerCheckIn) {
+        Get.toNamed('/checkin');
+      } else if (aparecerGarcom) {
+        Get.toNamed('/garcom');
+      } else if (aparecerCheckOut) {
+        Get.toNamed('/checkout');
+      } else if (!naoAparecerMapa) {
+        Get.toNamed('/mapa');
+      } else if (aparecerRecepcao) {
+        Get.toNamed('/recepcao');
+      } else if (aparecerNote) {
+        Get.toNamed('/notes');
+      } 
+      // expedicao cliente
+      else if(aparecerExpedicaoCliente){
+        Get.toNamed('/painel_cliente');
+      }
+      // KDS
+      else if(aparecerKDS){
+        Get.toNamed('/painel_cozinha');
+      }
+      // expedicao motoboy
+      else if(aparecerExpedicaoMotoboy){
+        Get.toNamed('/expedicao_motoboy');
+      }
+      else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Selecione uma rota!',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      /* if (aparecerGarcom) {
         Get.toNamed('/garcom');
       } else if (aparecerCheckIn) {
         Get.toNamed('/checkin');
@@ -252,7 +287,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
-      }
+      } */
     }
   }
 
