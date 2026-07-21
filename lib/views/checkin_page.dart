@@ -1490,10 +1490,15 @@ class CheckinPageState extends State<CheckinPage>
                             const larguraMinimaCard = 100.0;
                             final crossAxisCount = (constraints.maxWidth / larguraMinimaCard).floor().clamp(1, 8);
 
+                            final listaObservacoes = listaCompleta.where((item) {
+                              return item['numeroobservacao'].toString() != "0" &&
+                                    item['nomeobservacao'].toString() != "0";
+                            }).toList();
+
                             return GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              itemCount: listaCompleta.length,
+                              itemCount: listaObservacoes.length,
                               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: crossAxisCount,
                                 crossAxisSpacing: 8,
@@ -1501,7 +1506,7 @@ class CheckinPageState extends State<CheckinPage>
                                 childAspectRatio: 1,
                               ),
                               itemBuilder: (context, index) {
-                                final item = listaCompleta[index];
+                                final item = listaObservacoes[index];
                                 final nomeObservacao = item['nomeobservacao'].toString();
                                 final numeroObservacao = item['numeroobservacao'].toString();
 

@@ -394,25 +394,25 @@ class ContaPageState extends State<ContaPage>
     if (checkJson != null) {
       final checksSalvos = Set<String>.from(jsonDecode(checkJson));
 
-      if (checksSalvos.contains("Ckeck-in") &&
+      if (checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
           aparecerCheckOut = false;
         });
       } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Ckeck-in")) {
+          !checksSalvos.contains("Check-in")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = true;
         });
-      } else if (!checksSalvos.contains("Ckeck-in") &&
+      } else if (!checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = false;
         });
-      } else if (checksSalvos.contains("Ckeck-in") &&
+      } else if (checksSalvos.contains("Check-in") &&
           checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
@@ -427,8 +427,8 @@ class ContaPageState extends State<ContaPage>
     } else {
       setState(() {
         // Se não tiver nada salvo, define padrão
-        aparecerCheckIn = true;
-        aparecerCheckOut = true;
+        aparecerCheckIn = false;
+        aparecerCheckOut = false;
       });
     }
   }
@@ -656,6 +656,7 @@ class ContaPageState extends State<ContaPage>
     }
   } */
   Future<void> buscarListaProdutos() async {
+    print("Numero do pedido <<<<<<<<<<<<<<<< $numeropedido");
     try {
       String dadosJson = await Connection().select(
         """
@@ -2004,20 +2005,16 @@ class ContaPageState extends State<ContaPage>
                 itemBuilder: (context, index) {
                   final produto = listaAgrupada[index];
                   final nomeDoProduto = produto['nome_produto'].toString();
-                  final quantidadeDoProduto = produto['total_quantidade']
-                      .toString();
+                  final quantidadeDoProduto = produto['total_quantidade'].toString();
                   final precoDoProduto = produto['valorunitario'].toString();
                   final totalDoProduto = produto['total_valor'].toString();
                   final id = produto['tipo_produto'].toString();
                   final saboresRaw = produto['sabores'] ?? '';
-                  final observacao = produto['observacao'] ?? '';
-                  final double quantidadeDoProdutoDouble =
-                      double.tryParse(quantidadeDoProduto) ?? 0;
-                  final int quantidadeDoProdutoInt =
-                      int.tryParse(quantidadeDoProduto) ?? 0;
+                  // final observacao = produto['observacao'] ?? '';
+                  final observacao = (produto['observacao'] ?? '').replaceFirst(RegExp(r'\|$'), '');
+                  final double quantidadeDoProdutoDouble = double.tryParse(quantidadeDoProduto) ?? 0;
+                  final int quantidadeDoProdutoInt = int.tryParse(quantidadeDoProduto) ?? 0;
                   final nomeDoGarcom = produto['nome_garcom'] ?? '';
-                
-
 
                   final List<Map<String, String>> sabores = saboresRaw
                       .toString()

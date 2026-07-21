@@ -103,6 +103,7 @@ class GarcomPageState extends State<GarcomPage>
   final TextEditingController quantidadeProdutoSelecionadoModalController = TextEditingController();
   final TextEditingController adicionalProdutoSelecionadoController = TextEditingController();
   final TextEditingController senhaController = TextEditingController();
+  final TextEditingController observacaoProdutoSelecionadoObsAddController = TextEditingController();
 
   final FocusNode comandaFocus = FocusNode();
   final FocusNode mesaFocus = FocusNode();
@@ -112,6 +113,7 @@ class GarcomPageState extends State<GarcomPage>
   final FocusNode quantidadeProdutoSelecionadoFocus = FocusNode();
   final FocusNode observacaoProdutoSelecionadoFocus = FocusNode();
   final FocusNode senhaFocus = FocusNode();
+  final FocusNode observacaoProdutoSelecionadoObsAddFocus = FocusNode();
 
   final CarrinhoController carrinhoController = Get.find<CarrinhoController>();
   final ComandaCarrinhoController comandaCarrinhoController = Get.find<ComandaCarrinhoController>();
@@ -311,6 +313,8 @@ class GarcomPageState extends State<GarcomPage>
   bool modoAnteriorTouch = false;
 
   bool arrastei = true;
+
+  bool aparecerCarrinhoForcado = false;
 
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
@@ -1276,7 +1280,7 @@ class GarcomPageState extends State<GarcomPage>
   }
 
   // Função para montar observação
-  String montarObservacoes(Produto produto, List<Produto> adicionais) {
+  /* String montarObservacoes(Produto produto, List<Produto> adicionais) {
     final List<String> obs = [];
 
     if (produto.observacaoEscrita.isNotEmpty) {
@@ -1288,7 +1292,7 @@ class GarcomPageState extends State<GarcomPage>
     }
 
     // Varrendo os adicionais para incluir o nome nas observações
-    if (adicionais.isNotEmpty) {
+    /* if (adicionais.isNotEmpty) {
       for (var adicional in adicionais) {
         if (adicional.quantidade > 1) {
           // obs.add("${adicional.quantidade}x ${adicional.nome}");
@@ -1297,18 +1301,44 @@ class GarcomPageState extends State<GarcomPage>
           obs.add(adicional.nome);
         }
       }
-    }
+    } */
 
     return obs.join('|');
+  } */
+
+  // Função para montar observação
+  String montarObservacoes(Produto produto, List<Produto> adicionais) {
+    final List<String> obs = [];
+
+    if (produto.observacaoEscrita.isNotEmpty) {
+      obs.add(produto.observacaoEscrita);
+    }
+
+    if (produto.observacoesTexto.isNotEmpty) {
+      obs.addAll(produto.observacoesTexto);
+    }
+
+    if (obs.isEmpty) return '';
+
+    return '${obs.join('|')}|';
   }
 
   // Função para montar adicionais produto tipo P
-  String montarAdicionais(Produto produto) {
+  /* String montarAdicionais(Produto produto) {
     if (produto.adicionais.isEmpty) return '';
-
     return produto.adicionais
         .expand((a) => List.filled(a.quantidade.toInt(), a.numero))
         .join('|');
+  } */
+
+ String montarAdicionais(Produto produto) {
+    if (produto.adicionais.isEmpty) return '';
+
+    final adicionais = produto.adicionais
+        .expand((a) => List.filled(a.quantidade.toInt(), a.numero))
+        .join('|');
+
+    return '$adicionais|';
   }
 
   // Função para completar com zeros os sabores de pizza
@@ -2158,8 +2188,8 @@ class GarcomPageState extends State<GarcomPage>
                 comandaValida = true;
                 mesaComandaNaoTemConta = true;
                 mostrarDentroComandaMesa = valorLiquido != 0.0;
-                _irParaCardapio();
               });
+              _irParaCardapio();
             } else if (funcoesController.logicaPorComandaNaMesa.value) {
               setState(() {
                 numeroComandaEmUso = numeroComanda;
@@ -2970,6 +3000,8 @@ class GarcomPageState extends State<GarcomPage>
       quantidadesObservacoes.putIfAbsent(id, () => 0);
     }
 
+    observacaoProdutoSelecionadoObsAddController.text = produtoObservacao;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -3010,28 +3042,77 @@ class GarcomPageState extends State<GarcomPage>
                       ),
                     ), */
 
+                    Align(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 0,
+                          ),
+                          child: Text(
+                            'Observações',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 8),
+                          child: TextField(
+                            controller: observacaoProdutoSelecionadoObsAddController,
+                            focusNode: observacaoProdutoSelecionadoObsAddFocus,
+                            onTap: () {
+                              Future.delayed(Duration(milliseconds: 300), () {
+                                if (observacaoProdutoSelecionadoObsAddFocus.canRequestFocus) {
+                                  observacaoProdutoSelecionadoObsAddFocus.requestFocus();
+                                }
+                              });
+                            },
+                            cursorColor: Theme.of(context).colorScheme.onSurface,
+                            keyboardType: TextInputType.text,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(
+                              hintText: 'Observação',
+                              filled: true,
+                              fillColor: Colors.grey.shade300,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
                     Expanded(
                       child: ListView(
                         children: [
                           // OBSERVAÇÕES
                           if (listaObservacaoesDoProduto.isNotEmpty)
-                            Align(
-                              child: Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 0,
-                                  ),
-                                  child: Text(
-                                    'Observações',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                                    ),
+                          /* Align(
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 0,
+                                ),
+                                child: Text(
+                                  'Observações',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                                   ),
                                 ),
                               ),
                             ),
+                          ), */
                           ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -3188,8 +3269,7 @@ class GarcomPageState extends State<GarcomPage>
                                                       onPressed: () {
                                                         if (quantidade > 0) {
                                                           setModalState(() {
-                                                            quantidadesAdicionais[numero] =
-                                                                quantidade - 1;
+                                                            quantidadesAdicionais[numero] = quantidade - 1;
                                                           });
                                                         }
                                                       },
@@ -3386,13 +3466,14 @@ class GarcomPageState extends State<GarcomPage>
                                       child: ElevatedButton(
                                         onPressed: () {
                                           arrastei = false;
+                                          quantidadesAdicionais.clear();
+                                          quantidadesObservacoes.clear();
                                           Navigator.pop(context);
                                           if(!modoAnteriorTouch){
                                             entrarModoTouch();
                                           }else{
                                             sairModoTouch();
                                           }
-                                          // quantidadeInicial = 1;
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Theme.of(context).colorScheme.error.withOpacity(0.55),
@@ -3428,28 +3509,6 @@ class GarcomPageState extends State<GarcomPage>
                                             ],
                                           ),
                                         ),
-                                        /* FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.close,
-                                                size: 24,
-                                                color: Theme.of(context).colorScheme.onPrimary,
-                                              ),
-                                              SizedBox(width: 8),
-                                              Text(
-                                                'Fechar',
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Theme.of(context).colorScheme.onPrimary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ), */
                                       ),
                                     ),
                                 
@@ -3504,7 +3563,7 @@ class GarcomPageState extends State<GarcomPage>
                                               produtoValor,
                                               produtoNumero,
                                               quantidadeInicial.toDouble(),
-                                              produtoObservacao,
+                                              observacaoProdutoSelecionadoObsAddController.text,
                                               idDoProdutoSelecionado,
                                               adicionais: listaAdicionaisSelecionados,
                                               observacoesTexto: observacoesSelecionadas,
@@ -3611,6 +3670,8 @@ class GarcomPageState extends State<GarcomPage>
     ).then((_) {
       // Executa após o usuário fechar o modal
       if(arrastei){
+        quantidadesAdicionais.clear();
+        quantidadesObservacoes.clear();
         if(!modoAnteriorTouch){
           entrarModoTouch();
         }else{
@@ -5128,7 +5189,7 @@ class GarcomPageState extends State<GarcomPage>
   // Função para lógica comanda na mesa
   Future<void> _fluxoComandaNaMesa() async {
     if (vinculandoMesa) {
-      _dialogVincularMesa();
+      _dialogVincularMesa(); 
       return;
     }
 
@@ -5182,6 +5243,7 @@ class GarcomPageState extends State<GarcomPage>
         // carregarUltimaConfiguracao();
       });
       entrarModoTouch();
+      _selecionarPrimeiroGrupo();
       return;
     }
 
@@ -5205,6 +5267,7 @@ class GarcomPageState extends State<GarcomPage>
         // carregarUltimaConfiguracao();
       });
       entrarModoTouch();
+      _selecionarPrimeiroGrupo();
       return;
     }
 
@@ -5235,6 +5298,7 @@ class GarcomPageState extends State<GarcomPage>
             comandaController.text = numeroComandaEmUso;
             _irParaCardapio();
             entrarModoTouch();
+            _selecionarPrimeiroGrupo();
             await verificarSeTemConta(comandaController.text);
             setState(() {
               aparecerFazerPedido = true;
@@ -5247,6 +5311,7 @@ class GarcomPageState extends State<GarcomPage>
           comandaController.text = numeroComandaEmUso;
           _irParaCardapio();
           entrarModoTouch();
+          _selecionarPrimeiroGrupo();
           setState(() {
             aparecerFazerPedido = true;
           });
@@ -5279,6 +5344,9 @@ class GarcomPageState extends State<GarcomPage>
         cardapioFocus.requestFocus();
       }
     });
+
+    entrarModoTouch();
+    _selecionarPrimeiroGrupo();
   }
 
   // Diálogo de error de mesa
@@ -6840,8 +6908,7 @@ class GarcomPageState extends State<GarcomPage>
                                           autoScroll: false,
 
                                           config: KeyboardActionsConfig(
-                                            keyboardActionsPlatform:
-                                                KeyboardActionsPlatform.IOS,
+                                            keyboardActionsPlatform: KeyboardActionsPlatform.IOS,
                                             nextFocus: false,
                                             actions: [
                                               KeyboardActionsItem(
@@ -6859,11 +6926,13 @@ class GarcomPageState extends State<GarcomPage>
                                                       child: Container(
                                                         padding: EdgeInsets.symmetric(
                                                           horizontal: 16,
+                                                          // vertical: 16
                                                         ),
                                                         child: Text(
                                                           "OK",
                                                           style: TextStyle(
                                                             fontWeight: FontWeight.bold,
+                                                            color: Theme.of(context).colorScheme.onSurface,
                                                           ),
                                                         ),
                                                       ),
@@ -6919,8 +6988,7 @@ class GarcomPageState extends State<GarcomPage>
                                                 color: colorScheme.onPrimary,
                                               ),
                                               filled: true,
-                                              fillColor: colorScheme.secondary
-                                                  .withOpacity(0.5),
+                                              fillColor: colorScheme.secondary.withOpacity(0.5),
                                               contentPadding: EdgeInsets.zero,
 
                                               enabledBorder: OutlineInputBorder(
@@ -7801,31 +7869,37 @@ class GarcomPageState extends State<GarcomPage>
                                   children: [
                                     IconButton(
                                       icon: Icon(
-                                        aparecerVendaTouch ? Icons.shopping_cart : Icons.fingerprint,
+                                        aparecerConfiguracaoProduto 
+                                          ? (!modoAnteriorTouch ? Icons.fingerprint : Icons.shopping_cart)
+                                          : (aparecerVendaTouch ? aparecerCarrinhoForcado ? Icons.shopping_cart : Icons.fingerprint : Icons.fingerprint),
                                         // Icons.fingerprint,
                                         // size: 30,
                                         color: Theme.of(context,).colorScheme.onTertiary,
                                       ),
                                       onPressed: () async {
-                                        if(aparecerVendaTouch){
-                                          aparecerCarrinho = true;
-                                          aparecerLista = false;
-                                          // abrirSelecaoGrupoProduto();
-                                          if(aparecerConfiguracaoProduto && !modoAnteriorTouch){
+                                        if (aparecerConfiguracaoProduto) {
+                                          if (!modoAnteriorTouch) {
                                             entrarModoTouch();
-                                          } else if(aparecerConfiguracaoProduto && modoAnteriorTouch){
-                                            sairModoTouch();
                                           } else {
                                             sairModoTouch();
                                           }
                                         } else {
-                                          // modo touch 
-                                          entrarModoTouch();
+                                          if(aparecerVendaTouch){
+                                            aparecerCarrinho = true;
+                                            aparecerLista = false;
+                                            aparecerCarrinhoForcado = (!aparecerCarrinho && aparecerVendaTouch) || (aparecerCarrinho);
+                                            sairModoTouch();
+                                          } else {
+                                            // modo touch 
+                                            entrarModoTouch();
+                                          }
                                         }
                                       },
                                       style: IconButton.styleFrom(
-                                        backgroundColor: aparecerVendaTouch ? Theme.of(context,).colorScheme.scrim : Theme.of(context,).colorScheme.shadow,
-                                       // backgroundColor: Theme.of(context,).colorScheme.shadow,
+                                        backgroundColor: aparecerConfiguracaoProduto
+                                            ? (!modoAnteriorTouch ? Theme.of(context,).colorScheme.shadow : Theme.of(context,).colorScheme.scrim)
+                                            : (aparecerVendaTouch ? aparecerCarrinhoForcado ? Theme.of(context,).colorScheme.scrim : Theme.of(context,).colorScheme.shadow : Theme.of(context,).colorScheme.shadow),
+                                        // backgroundColor: aparecerVendaTouch ? Theme.of(context,).colorScheme.scrim : Theme.of(context,).colorScheme.shadow,
                                         padding: EdgeInsets.all(10),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(10,),
@@ -7833,10 +7907,14 @@ class GarcomPageState extends State<GarcomPage>
                                       ),
                                     ),
                                     Text(
-                                      aparecerVendaTouch ? 'Carrinho' : 'Touch',
+                                      aparecerConfiguracaoProduto
+                                          ? (!modoAnteriorTouch ? 'Touch' : 'Carrinho')
+                                          : (aparecerVendaTouch ? aparecerCarrinhoForcado ? 'Carrinho' : 'Touch' : 'Touch'),
                                       // 'Touch',
                                       style: TextStyle(
-                                        color: aparecerVendaTouch ? colorScheme.scrim : colorScheme.shadow,
+                                        color: aparecerConfiguracaoProduto
+                                            ? (!modoAnteriorTouch ? colorScheme.shadow : colorScheme.scrim)
+                                            : (aparecerVendaTouch ? aparecerCarrinhoForcado ? colorScheme.scrim : colorScheme.shadow : colorScheme.shadow),
                                         // color: colorScheme.shadow,
                                         fontWeight: FontWeight.bold,
                                       ),

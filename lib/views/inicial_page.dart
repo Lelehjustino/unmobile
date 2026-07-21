@@ -109,6 +109,8 @@ class InicialPageState extends State<InicialPage> {
 
   bool isloadingSenha = true;
   bool erroBool = false;
+  int _tentativaLogin = 0;
+  void Function()? _resetDialogSenha;
 
   // Proteção Global contra múltiplos diálogos abertos
   bool _dialogAtivo = false;
@@ -121,6 +123,8 @@ class InicialPageState extends State<InicialPage> {
   bool aparecerKDS = false;
   bool aparecerExpedicaoCliente = false;
   bool aparecerExpedicaoMotoboy = false;
+
+  Timer? _timerSenha;
 
   void _atualizarHora() {
     if (mounted) {
@@ -612,25 +616,25 @@ class InicialPageState extends State<InicialPage> {
     if (checkJson != null) {
       final checksSalvos = Set<String>.from(jsonDecode(checkJson));
 
-      if (checksSalvos.contains("Ckeck-in") &&
+      if (checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
           aparecerCheckOut = false;
         });
       } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Ckeck-in")) {
+          !checksSalvos.contains("Check-in")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = true;
         });
-      } else if (!checksSalvos.contains("Ckeck-in") &&
+      } else if (!checksSalvos.contains("Check-in") &&
           !checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = false;
           aparecerCheckOut = false;
         });
-      } else if (checksSalvos.contains("Ckeck-in") &&
+      } else if (checksSalvos.contains("Check-in") &&
           checksSalvos.contains("Check-out")) {
         setState(() {
           aparecerCheckIn = true;
@@ -1230,6 +1234,58 @@ class InicialPageState extends State<InicialPage> {
     }
   }
 
+  void iniciarContador() {
+    int segundos = 0;
+
+    // Cancela contador anterior, se existir
+    _timerSenha?.cancel();
+
+    _timerSenha = Timer.periodic(
+      const Duration(seconds: 1),
+      (timer) {
+        segundos++;
+
+        if (segundos >= 20) {
+          timer.cancel();
+          _timerSenha = null;
+
+          if (!mounted) return;
+
+          setState(() {
+            isloadingSenha = true;
+          });
+
+          cancelarEntrarSistema();
+        }
+      },
+    );
+  }
+
+  void cancelarEntrarSistema() {
+    _tentativaLogin++;
+    senhaController.clear();
+    erroBool = false;
+
+    if (_resetDialogSenha != null) {
+      _resetDialogSenha!();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Falha ao entrar no sistema!',
+        ),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (senhaFocusNode.canRequestFocus) {
+        senhaFocusNode.requestFocus();
+      }
+    });
+  }
+  
   // Função que retorna informações garçom
   Future<void> informacoesGarcom() async {
     try {
@@ -1397,6 +1453,11 @@ class InicialPageState extends State<InicialPage> {
 
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
+            _resetDialogSenha = () {
+              setDialogState(() {
+                 isloadingSenha = true;
+              });
+            };
             return Dialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1516,18 +1577,33 @@ class InicialPageState extends State<InicialPage> {
                           setDialogState(() {
                             isloadingSenha = false;
                           });
-                          await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
-                          await Get.find<ZerarAtendimentoController>().zerarAtendimento();
-                          await funcoesController.carregarTudo();
-                          await _saveGarcom(nomeDoGarcomFuncao); 
-                          await _saveNumeroGarcom(numeroDoGarcomFuncao);
-                          await funcoesController.carregarTudo();
-                          await navegacao_inteligente();
-                          funcoesController.controlarAparecimentoBotaoPagar(pagamentoDoGarcomFuncao);
-                          print("Senha correta");
-                          setDialogState(() {
-                            isloadingSenha = true;
-                          });
+                          _tentativaLogin++;
+                          final int minhaTentativa = _tentativaLogin;
+                          iniciarContador();
+
+                          try {
+                            await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
+                            if (minhaTentativa != _tentativaLogin) return;
+                            await Get.find<ZerarAtendimentoController>().zerarAtendimento();
+                            if (minhaTentativa != _tentativaLogin) return;
+                            await funcoesController.carregarTudo();
+                            if (minhaTentativa != _tentativaLogin) return;
+                            await _saveGarcom(nomeDoGarcomFuncao); 
+                            await _saveNumeroGarcom(numeroDoGarcomFuncao);
+                            await funcoesController.carregarTudo();
+                            if (minhaTentativa != _tentativaLogin) return;
+                            await navegacao_inteligente();
+                            if (minhaTentativa != _tentativaLogin) return;
+                            funcoesController.controlarAparecimentoBotaoPagar(pagamentoDoGarcomFuncao);
+                            print("Senha correta");
+                          } finally {
+                            if (minhaTentativa == _tentativaLogin) {
+                              _timerSenha?.cancel();
+                              setDialogState(() {
+                                isloadingSenha = true;
+                              });
+                            }
+                          }
                         }
                       },
                     ),
@@ -1582,20 +1658,35 @@ class InicialPageState extends State<InicialPage> {
                               print("Senha incorreta");
                             } else {
                               setDialogState(() {
-                                isloadingSenha = true;
-                              });
-                              await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
-                              await Get.find<ZerarAtendimentoController>().zerarAtendimento();
-                              await funcoesController.carregarTudo();
-                              await _saveGarcom(nomeDoGarcomFuncao);
-                              nomeGarcom = nomeDoGarcomFuncao;
-                              await _saveNumeroGarcom(numeroDoGarcomFuncao,);
-                              await navegacao_inteligente();
-                              funcoesController.controlarAparecimentoBotaoPagar(pagamentoDoGarcomFuncao);
-                              setDialogState(() {
                                 isloadingSenha = false;
                               });
-                              print("Senha correta");
+                              _tentativaLogin++;
+                              final int minhaTentativa = _tentativaLogin;
+                              iniciarContador();
+                              
+                              try {
+                                await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
+                                if (minhaTentativa != _tentativaLogin) return;
+                                await Get.find<ZerarAtendimentoController>().zerarAtendimento();
+                                if (minhaTentativa != _tentativaLogin) return;
+                                await funcoesController.carregarTudo();
+                                if (minhaTentativa != _tentativaLogin) return;
+                                await _saveGarcom(nomeDoGarcomFuncao);
+                                nomeGarcom = nomeDoGarcomFuncao;
+                                await _saveNumeroGarcom(numeroDoGarcomFuncao,);
+                                if (minhaTentativa != _tentativaLogin) return;
+                                await navegacao_inteligente();
+                                if (minhaTentativa != _tentativaLogin) return;
+                                funcoesController.controlarAparecimentoBotaoPagar(pagamentoDoGarcomFuncao);
+                                print("Senha correta");
+                              } finally {
+                                if (minhaTentativa == _tentativaLogin) {
+                                  _timerSenha?.cancel();
+                                  setDialogState(() {
+                                    isloadingSenha = true;
+                                  });
+                                }
+                              }
                             }
                             // Navigator.pop(ctx);  
                           },
@@ -1621,53 +1712,43 @@ class InicialPageState extends State<InicialPage> {
                   ],
                 ) 
                 : SizedBox(
-                      width: 280,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                  width: 280,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
 
-                          Container(
-                            padding: EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Theme.of(ctx)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.08),
-                            ),
-                            child: SizedBox(
-                              width: 45,
-                              height: 45,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(height: 20),
-
-                          Text(
-                            "Validando usuário",
-                            style: Theme.of(ctx)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-
-                          SizedBox(height: 8),
-
-                          Text(
-                            "Aguarde alguns instantes...",
-                            textAlign: TextAlign.center,
-                            style: Theme.of(ctx).textTheme.bodySmall,
-                          ),
-
-                          SizedBox(height: 10),
-                        ],
+                      Container(
+                        padding: EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Theme.of(ctx).colorScheme.primary.withOpacity(0.08),
+                        ),
+                        child: SizedBox(
+                          width: 45,
+                          height: 45,
+                          child: CircularProgressIndicator(strokeWidth: 3),
+                        ),
                       ),
-                    ),
+
+                      SizedBox(height: 20),
+
+                      Text(
+                        "Validando usuário",
+                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+
+                      SizedBox(height: 8),
+
+                      Text(
+                        "Aguarde alguns instantes...",
+                        textAlign: TextAlign.center,
+                        style: Theme.of(ctx).textTheme.bodySmall,
+                      ),
+
+                      SizedBox(height: 10),
+                    ],
+                  ),
+                ),
               ),
             );
           },

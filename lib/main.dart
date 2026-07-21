@@ -127,15 +127,15 @@ class _AppState extends State<App> {
         ),
         GetPage(
           name: '/',
-          page: () => OrientationRestrictedPage(child: CheckinPage()),
+          page: () => CheckinPage(),
         ),
         GetPage(
           name: '/checkin',
-          page: () => OrientationRestrictedPage(child: CheckinPage()),
+          page: () => CheckinPage(),
         ),
         GetPage(
           name: '/configuracoes',
-          page: () => OrientationRestrictedPage(child: ConfiguracoesPage()),
+          page: () => ConfiguracoesPage(),
         ),
         GetPage(name: '/inicial', page: () => InicialPage()),
         GetPage(
@@ -148,12 +148,9 @@ class _AppState extends State<App> {
         ),
         GetPage(
           name: '/carrinho_comandas',
-          page: () => OrientationRestrictedPage(child: CarrinhoComandasPage()),
+          page: () => CarrinhoComandasPage(),
         ),
-        GetPage(
-          name: '/mapa',
-          page: () => MapaPage(),
-        ),
+        GetPage(name: '/mapa', page: () => MapaPage()),
         GetPage(name: '/splash', page: () => SplashPage()),
         GetPage(name: '/recepcao', page: () => RecepcaoPage()),
         GetPage(name: '/notes', page: () => NotesPage()),
