@@ -79,6 +79,31 @@ class CarrinhoController extends GetxController {
     }
   }
 
+  void editarProdutoAoCarrinho(
+    int index,
+    String produtoNome,
+    String produtoValor,
+    String produtoNumero,
+    double produtoQuantidade,
+    String observacaoEscrita,
+    String id, {
+    List<Produto> adicionais = const [],
+    List<String> observacoesTexto = const [],
+  }) {
+    if (index >= 0 && index < carrinho.length) {
+      carrinho[index] = Produto(
+        nome: produtoNome,
+        preco: produtoValor,
+        numero: produtoNumero,
+        quantidade: produtoQuantidade,
+        observacaoEscrita: observacaoEscrita,
+        id: id,
+        adicionais: List<Produto>.from(adicionais),
+        observacoesTexto: List<String>.from(observacoesTexto),
+      );
+    }
+  }
+
   void limparCarrinho() {
     carrinho.clear();
     update(); // Notifica ouvintes se houver GetBuilder

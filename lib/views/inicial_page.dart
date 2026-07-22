@@ -381,6 +381,8 @@ class InicialPageState extends State<InicialPage> {
         setState(() => servidorConectado = true);
       }
 
+      
+
       // ── ETAPA 2: descoberta UDP (fallback) ────────────────────────────────
       if (!servidorConectado) {
         _inicialCtrl.atualizar(
@@ -1586,11 +1588,8 @@ class InicialPageState extends State<InicialPage> {
                             if (minhaTentativa != _tentativaLogin) return;
                             await Get.find<ZerarAtendimentoController>().zerarAtendimento();
                             if (minhaTentativa != _tentativaLogin) return;
-                            await funcoesController.carregarTudo();
-                            if (minhaTentativa != _tentativaLogin) return;
                             await _saveGarcom(nomeDoGarcomFuncao); 
                             await _saveNumeroGarcom(numeroDoGarcomFuncao);
-                            await funcoesController.carregarTudo();
                             if (minhaTentativa != _tentativaLogin) return;
                             await navegacao_inteligente();
                             if (minhaTentativa != _tentativaLogin) return;

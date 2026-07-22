@@ -42,6 +42,8 @@ class SideNavState extends State<SideNav> {
 
   final FuncoesController funcoesController = Get.put(FuncoesController());
 
+  bool isloadingProdutos = false;
+
   @override
   void initState() {
     super.initState();
@@ -475,6 +477,58 @@ class SideNavState extends State<SideNav> {
                 funcoesController.zerarAtendimento();
               },
             ),
+            isloadingProdutos
+              ? CircularProgressIndicator(
+                color: colorScheme.scrim,
+              )
+              : Padding(
+                padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (isloadingProdutos) {
+                      return;
+                    }
+                    
+                    setState(() {
+                      isloadingProdutos = true;
+                    });
+                    
+                    try {
+                      await funcoesController.adicionaisObservacoesProdutos();
+                      await funcoesController.informacoesListaGarcom();
+                      await funcoesController.buscarGrupos();
+                      await funcoesController.buscarProdutos();
+                    } catch (e) {
+                      setState(() {
+                        isloadingProdutos = false;
+                      });
+                    } finally {
+                      setState(() {
+                        isloadingProdutos = false;
+                      });
+                    }
+                    },
+                    style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 20,
+                    ),
+                    backgroundColor: colorScheme.scrim,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(
+                        color: colorScheme.scrim,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    'Recarregar produtos',
+                    style: TextStyle(color: colorScheme.onPrimary),
+                  ),
+                ),
+            ),
+            // SizedBox(height: 4),
             ListTile(
               leading: Icon(
                 Icons.logout,

@@ -108,6 +108,7 @@ class _AppState extends State<App> {
               scrim: const Color.fromRGBO(243, 153, 48, 1),
               surfaceTint: const Color.fromARGB(193, 196, 191, 191),
               outline: const Color.fromARGB(255, 185, 93, 114),
+              outlineVariant: const Color.fromRGBO(55, 55, 55, 0.843),
             ),
       ),
       initialRoute: '/splash',

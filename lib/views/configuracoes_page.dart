@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:pinput/pinput.dart';
+import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/navegacao_inteligente.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
@@ -88,6 +89,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   bool clicado = false;
 
   final ScrollController _scrollController = ScrollController();
+  final CarrinhoController carrinhoController = Get.find<CarrinhoController>();
 
   bool aparecerCheckInOut = false;
   bool aparecerCheckIn = false;
@@ -157,6 +159,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   bool aparecerExpedicaoCliente = false;
   bool aparecerKDS = false;
   bool aparecerExpedicaoMotoboy = false;
+
+  bool isloadingProdutos = false;
 
   @override
   void initState() {
@@ -2492,6 +2496,55 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
+                        /* isloadingProdutos
+                            ? CircularProgressIndicator(
+                              color: colorScheme.scrim,
+                            )
+                            : ElevatedButton(
+                          onPressed: () async {
+                            if (isloadingProdutos) {
+                              return;
+                            }
+
+                            setState(() {
+                              isloadingProdutos = true;
+                            });
+                            
+                            try {
+                              await funcoesController.adicionaisObservacoesProdutos();
+                              await funcoesController.informacoesListaGarcom();
+                              await funcoesController.buscarGrupos();
+                              await funcoesController.buscarProdutos();
+                            } catch (e) {
+                              setState(() {
+                                isloadingProdutos = false;
+                              });
+                            } finally {
+                              setState(() {
+                                isloadingProdutos = false;
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 20,
+                            ),
+                            backgroundColor: colorScheme.scrim,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(
+                                color: colorScheme.scrim,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'Recarregar produtos',
+                            style: TextStyle(color: colorScheme.onPrimary),
+                          ),
+                        ),
+                        SizedBox(height: 10), */
                       Center(
                         child: Text(
                           'Configuração dos painéis:',
@@ -2591,6 +2644,28 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
+
+                        /* ElevatedButton(
+                          onPressed: () async {},
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 20,
+                            ),
+                            backgroundColor: colorScheme.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'Carregar produtos',
+                            style: TextStyle(color: colorScheme.onPrimary),
+                          ),
+                      ), */
                     ],
                   ),
                 ),
@@ -2759,6 +2834,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                 }
                                 // Servidor não mudou: navega com booleanos já atualizados
                                 await navegar();
+                                carrinhoController.carrinho.clear();
                               }
                             }
                           } catch (e, st) {
