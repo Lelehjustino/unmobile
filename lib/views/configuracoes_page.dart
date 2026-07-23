@@ -81,7 +81,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   Set<String> paineisSelecionados = {};
 
   // List<String> rotas = ['Home', 'Painel cliente'];
-  List<String> rotas = ['Home', 'Expedição cliente'];
+  List<String> rotas = ['Home', 'Expedição cliente', 'Expedição motoboy'];
   Set<String> rotasSelecionadas = {'Home'};
 
   bool servidorConectado = false;
@@ -151,6 +151,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   // Variaveis de Rota
   bool rotaHome = true;
   bool rotaPainelCliente = false;
+  bool rotaExpedicaoMotoboy = false;
 
   String rotaAntiga = "";
   String rotaNova = "";
@@ -221,6 +222,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   navegar() async {
     if (rotaPainelCliente) {
       Get.toNamed('/painel_cliente');
+    } else if (rotaExpedicaoMotoboy) {
+      Get.toNamed('/expedicao_motoboy');
     } else {
       if (aparecerCheckIn) {
         Get.toNamed('/checkin');
@@ -304,8 +307,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await carregarRota();
     if (rotaHome) {
       rotaAntiga = "Home";
-    } else {
+    } else if (rotaPainelCliente) {
       rotaAntiga = "Cliente";
+    } else if (rotaExpedicaoMotoboy) {
+      rotaAntiga = "Expedição motoboy";
     }
 
     // debugPrint("rotaAntiga: $rotaAntiga");
@@ -1048,25 +1053,31 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         rotasSelecionadas = Set<String>.from(rotasSalvas);
       });
 
-      if (rotasSalvas.contains("Home") &&
-          !rotasSalvas.contains("Expedição cliente")) {
+      if (rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Expedição motoboy")) {
         setState(() {
           rotaHome = true;
           rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = false;
         });
-      } else if (rotasSalvas.contains("Expedição cliente") &&
-          !rotasSalvas.contains("Home")) {
+      } else if (rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição motoboy")) {
         setState(() {
           rotaHome = false;
           rotaPainelCliente = true;
+          rotaExpedicaoMotoboy = false;
+        });
+      }else if (!rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && rotasSalvas.contains("Expedição motoboy")){
+        setState(() {
+          rotaHome = false;
+          rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = true;
+        });
+      } else {
+        setState(() {
+          rotasSelecionadas = {"Home"};
+          rotaHome = true;
+          rotaPainelCliente = false;
         });
       }
-    } else {
-      setState(() {
-        rotasSelecionadas = {"Home"};
-        rotaHome = true;
-        rotaPainelCliente = false;
-      });
     }
   }
   /* Future<void> carregarRota() async {
@@ -1118,13 +1129,17 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
   Future<void> identificarNovaRota() async {
     await carregarRota();
-    if (rotaHome && !rotaPainelCliente) {
+    if (rotaHome && !rotaPainelCliente && !rotaExpedicaoMotoboy) {
       setState(() {
         rotaNova = "Home";
       });
-    } else if (!rotaHome && rotaPainelCliente) {
+    } else if (!rotaHome && rotaPainelCliente && !rotaExpedicaoMotoboy) {
       setState(() {
         rotaNova = "Painel cliente";
+      });
+    } else if (!rotaHome && !rotaPainelCliente && rotaExpedicaoMotoboy) {
+      setState(() {
+        rotaNova = "Expedição motoboy";
       });
     }
     // debugPrint("rotaNova: $rotaNova");
@@ -2828,7 +2843,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                 await _saveServidor(servidorController.text);
                                 await funcoesLicenca();
                               } else {
-                                if (rotaNova == 'Home' && rotaAntiga == 'Cliente') {
+                                await identificarNovaRota();
+                                if (rotaNova == 'Home' && (rotaAntiga == 'Cliente' || rotaAntiga == 'Expedição motoboy')) {
                                   popupSelecionarGarcom();
                                   return;
                                 }

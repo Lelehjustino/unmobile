@@ -19,6 +19,7 @@ import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
 import 'package:un_recepcao/views/notes_page.dart';
 import 'package:un_recepcao/views/recepcao_page.dart';
+import 'package:uuid/uuid.dart';
 
 class InicialPage extends StatefulWidget {
   const InicialPage({super.key});
@@ -119,6 +120,7 @@ class InicialPageState extends State<InicialPage> {
 
   bool rotaHome = true;
   bool rotaPainelCliente = false;
+  bool rotaExpedicaoMotoboy = false;
 
   bool aparecerKDS = false;
   bool aparecerExpedicaoCliente = false;
@@ -169,7 +171,7 @@ class InicialPageState extends State<InicialPage> {
   }
 
   // Carregar rota
-  Future<void> carregarRota() async {
+  /* Future<void> carregarRota() async {
     final prefs = await SharedPreferences.getInstance();
     final rotaJson = prefs.getString('rota_padrao');
 
@@ -204,6 +206,40 @@ class InicialPageState extends State<InicialPage> {
         rotaPainelCliente = false;
       });
     }
+  } */
+ Future<void> carregarRota() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rotaJson = prefs.getString('rota_padrao');
+
+    if (rotaJson != null) {
+      final rotasSalvas = Set<String>.from(jsonDecode(rotaJson));
+
+      if (rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Expedição motoboy")) {
+        setState(() {
+          rotaHome = true;
+          rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = false;
+        });
+      } else if (rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição motoboy")) {
+        setState(() {
+          rotaHome = false;
+          rotaPainelCliente = true;
+          rotaExpedicaoMotoboy = false;
+        });
+      }else if (!rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && rotasSalvas.contains("Expedição motoboy")){
+        setState(() {
+          rotaHome = false;
+          rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = true;
+        });
+      } else {
+        setState(() {
+          rotaHome = true;
+          rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = false;
+        });
+      }
+    }
   }
 
   navegacao_inteligente() async {
@@ -212,6 +248,8 @@ class InicialPageState extends State<InicialPage> {
     await _saveLicenca(nomeDaLicencaSelecionada);
     if (rotaPainelCliente) {
       Get.toNamed('/painel_cliente');
+    } else if (rotaExpedicaoMotoboy) {
+      Get.toNamed('/expedicao_motoboy');
     } else {
       if (aparecerCheckIn) {
         Get.toNamed('/checkin');
@@ -461,7 +499,7 @@ class InicialPageState extends State<InicialPage> {
 
         // Sempre exige seleção de usuário ao entrar (sem restaurar sessão anterior)
         await carregarRota();
-        if (listaGarcom.isNotEmpty && !rotaPainelCliente) {
+        if (listaGarcom.isNotEmpty && !rotaPainelCliente && !rotaExpedicaoMotoboy) {
           await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
           await Get.find<ZerarAtendimentoController>().zerarAtendimento();
           popupSelecionarGarcom();
@@ -979,6 +1017,37 @@ class InicialPageState extends State<InicialPage> {
 
   // Função para pegar o id do aparelho
   Future<String> pegarMobileId() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Tenta recuperar o ID já existente
+    String? idSalvo = prefs.getString('mobile_id');
+
+    // Se já existe, retorna o mesmo ID
+    if (idSalvo != null && idSalvo.isNotEmpty) {
+      mobileId = idSalvo;
+
+      if (mounted) {
+        setState(() {});
+      }
+
+      return idSalvo;
+    }
+
+    // Se não existe, gera um UUID único
+    final novoId = const Uuid().v4();
+
+    // Salva permanentemente no aparelho
+    await prefs.setString('mobile_id', novoId);
+
+    mobileId = novoId;
+
+    if (mounted) {
+      setState(() {});
+    }
+
+    return novoId;
+  }
+  /* Future<String> pegarMobileId() async {
     final deviceInfo = DeviceInfoPlugin();
 
     if (Platform.isIOS) {
@@ -1032,7 +1101,7 @@ class InicialPageState extends State<InicialPage> {
     }
 
     return 'unknown_device';
-  }
+  } */
 
   // Função para verificar se o id do aparelho já esta com licença.
   // Valida se a licença salva no SharedPreferences pertence ao Mobile ID atual.
@@ -1823,7 +1892,7 @@ class InicialPageState extends State<InicialPage> {
                             await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
                             await Get.find<ZerarAtendimentoController>().zerarAtendimento();
                             await carregarRota();
-                            if (listaGarcom.isNotEmpty && !rotaPainelCliente) {
+                            if (listaGarcom.isNotEmpty && !rotaPainelCliente && !rotaExpedicaoMotoboy) {
                               popupSelecionarGarcom();
                             } else {
                               navegacao_inteligente();
@@ -2423,7 +2492,7 @@ class InicialPageState extends State<InicialPage> {
                                               popupSelecionarGarcom();
                                             } */
                                            await carregarRota();
-                                           if (listaGarcom.isNotEmpty && !rotaPainelCliente) {
+                                           if (listaGarcom.isNotEmpty && !rotaPainelCliente && !rotaExpedicaoMotoboy) {
                                               popupSelecionarGarcom();
                                             } else {
                                               navegacao_inteligente();

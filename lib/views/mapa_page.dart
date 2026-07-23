@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
@@ -105,11 +106,7 @@ class MapaPageState extends State<MapaPage> {
   void initState() {
     super.initState();
 
-    Future.delayed(Duration(milliseconds: 300), () {
-      if (_searchFocusNode.canRequestFocus) {
-        _searchFocusNode.requestFocus();
-      }
-    });
+    arrumarFoco();
 
     painelController.estaNoPainelCozinha.value = false;
 
@@ -129,6 +126,34 @@ class MapaPageState extends State<MapaPage> {
     buscarTipoPedido();
     _loadNomeEmpresa();
     _loadNumeroLicenca();
+  }
+
+  void arrumarFoco() {
+    if(Platform.isIOS){
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _searchFocusNode.unfocus();
+          FocusScope.of(context).unfocus();
+          FocusManager.instance.primaryFocus?.unfocus();
+          SystemChannels.textInput.invokeMethod('TextInput.hide');
+        }
+      });
+
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _searchFocusNode.unfocus();
+          FocusScope.of(context).unfocus();
+          FocusManager.instance.primaryFocus?.unfocus();
+          SystemChannels.textInput.invokeMethod('TextInput.hide');
+        }
+      });
+    } else {
+      Future.delayed(Duration(milliseconds: 300), () {
+        if (_searchFocusNode.canRequestFocus) {
+          _searchFocusNode.requestFocus();
+        }
+      });
+    }
   }
 
   // Load nomeEmpresa
@@ -2021,14 +2046,19 @@ class MapaPageState extends State<MapaPage> {
                 ),
               ),
               SizedBox(height: 8),
-              Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.06,
-                        child: KeyboardActions(
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  FocusScope.of(context).unfocus();
+                },
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.06,
+                          child: KeyboardActions(
                           disableScroll: true,
                           autoScroll: false,
                           config: KeyboardActionsConfig(
@@ -2044,6 +2074,24 @@ class MapaPageState extends State<MapaPage> {
                                         node.unfocus();
                                       },
                                       child: Container(
+                                        margin: EdgeInsets.only(right: 8),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'OK',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                     /*  Container(
                                         padding: EdgeInsets.symmetric(
                                           horizontal: 16,
                                         ),
@@ -2053,7 +2101,7 @@ class MapaPageState extends State<MapaPage> {
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                      ),
+                                      ), */
                                     );
                                   }
                                 ],
@@ -2205,6 +2253,7 @@ class MapaPageState extends State<MapaPage> {
                   ],
                 ),
               ),
+            ),
               // AQUI passamos as listas JÁ FILTRADAS para os widgets
               if (mostrarMesas)
                 _buildGridMesas(itensParaMostrar, true)

@@ -9400,44 +9400,6 @@ class GarcomPageState extends State<GarcomPage>
                                   ),
                                 ),
                               );
-
-                              /* return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    grupoSelecionadoNoTouch = grupo['numero'].toString();
-                                    produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
-                                    // ultimoGrupoSelecionadoNoTouch = grupoSelecionadoNoTouch;
-                                  });
-                                },
-                                child: Container(
-                                  margin: EdgeInsets.only(
-                                    top: 6,
-                                    bottom: 0,
-                                    left: 6,
-                                    right: 6,
-                                  ),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: selecionado ? colorScheme.primary : colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      grupo['nome'],
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      style: TextStyle(
-                                        color: selecionado ? colorScheme.onPrimary : colorScheme.onSurface,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ); */
                             },
                           ),
                         ),
