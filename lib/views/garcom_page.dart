@@ -361,7 +361,6 @@ class GarcomPageState extends State<GarcomPage>
     _focusNode.addListener(() {
       if (!mounted) return;
       final focus = _focusNode.hasFocus;
-      debugPrint('[FOCO-GARCOM] _focusNode hasFocus=$focus');
       if (focus != _isFocused) {
         setState(() {
           _isFocused = focus;
@@ -387,6 +386,7 @@ class GarcomPageState extends State<GarcomPage>
     if (carrinhoController.carrinho.isNotEmpty || Get.arguments != null) {
       iniciaComCarrinho();
       carregarUltimaConfiguracao();
+      sairModoTouch();
     } else {
       chamarFocoInicial();
       carrinhoController.carrinho.clear();
@@ -394,9 +394,15 @@ class GarcomPageState extends State<GarcomPage>
 
     _carregarchecks();
 
+    carregarUltimoAdicionalObservacaoSelecionado();
+
     // Sincronizar showKeyboardAlfa com o foco nativo dos campos de texto
     cardapioFocus.addListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.addListener(_syncKeyboardAlfaFromFocus);
+
+    if (carrinhoController.carrinho.isNotEmpty) {
+      sairModoTouch();
+    }
   }
 
   void marcarObservacoes(List<String> observacoesTextoFuncao) {
@@ -486,8 +492,6 @@ class GarcomPageState extends State<GarcomPage>
 
     // Produto do tipo pizza
     else if (idFuncao == 'PZ') {
-      /* Navigator.pop(context);
-
       Get.offNamed(
         '/pizza',
         preventDuplicates: false,
@@ -495,6 +499,9 @@ class GarcomPageState extends State<GarcomPage>
           'tamanhoSelecionado': nomeFuncao,
           'comanda': comandaController.text,
           'mesa': mesaController.text,
+          'produtoSelecionado': produto,
+          'index': index,
+          'editar': true,
         },
       )?.then((_) {
         if (mounted) {
@@ -503,7 +510,7 @@ class GarcomPageState extends State<GarcomPage>
             aparecerConfiguracaoProduto = false;
           });
         }
-      }); */
+      });
     }
   }
 
@@ -1948,6 +1955,10 @@ class GarcomPageState extends State<GarcomPage>
 
   // Função para realizar a limpeza geral de estado e banco - FUNÇÃO AUXILIAR DE ZERARATENDIMENTO
   Future<void> _executarLimpezaGeral() async {
+    // tirar o foco
+    FocusManager.instance.primaryFocus?.unfocus();
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
     setState(() {
       isProcessingConfirmar = false;
     });
@@ -2924,6 +2935,9 @@ class GarcomPageState extends State<GarcomPage>
                                         'tamanhoSelecionado': produto['produto_nome'],
                                         'comanda': comandaController.text,
                                         'mesa': mesaController.text,
+                                        'produtoSelecionado': produto,
+                                        'index': index,
+                                        'editar': true,
                                       },
                                     )?.then((_) {
                                       if (mounted) {
@@ -4943,19 +4957,13 @@ class GarcomPageState extends State<GarcomPage>
 
   // Função para atualizar hora
   void _atualizarHora() {
+    if (!mounted) return;
     final agora = DateTime.now();
     final horaFormatada = DateFormat.Hm().format(agora);
     setState(() {
       _horaAtual = horaFormatada;
-      _loadComanda();
     });
-
-    // Ouvir mudanças de foco
-    _focusNode.addListener(() {
-      setState(() {
-        _isFocused = _focusNode.hasFocus;
-      });
-    });
+    _loadComanda();
   }
 
   // Sincroniza showKeyboardAlfa com o estado real do foco nativo
@@ -4974,32 +4982,28 @@ class GarcomPageState extends State<GarcomPage>
 
   @override
   void dispose() {
-    /* cardapioFocus.removeListener(_syncKeyboardAlfaFromFocus);
+    if (_timer.isActive) {
+      _timer.cancel();
+    }
+    cardapioFocus.removeListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.removeListener(_syncKeyboardAlfaFromFocus);
-    _timer.cancel();
-    _focoBloqueio.dispose(); // dispose do nó de bloqueio global de foco
-    _focusNode.dispose();
-    _focusNodeCardapio.dispose(); */
-/*     animationController.dispose();
-    comandaController.removeListener(_onComandaChanged);
-    comandaController.dispose();
-    mesaController.removeListener(_onMesaChanged);
-    mesaController.dispose();
-    comandaFocus.dispose();
-    mesaFocus.dispose();
-    cardapioFocus.dispose();
-    numeroProdutoSelecionadoFocus.dispose();
-    quantidadeProdutoSelecionadoFocus.dispose();
-    observacaoProdutoSelecionadoFocus.dispose();
-    senhaFocus.dispose();
-    servidorController.dispose();
-    cardapioController.dispose();
-    numeroProdutoSelecionadoController.dispose();
-    quantidadeProdutoSelecionadoController.dispose();
-    observacaoProdutoSelecionadoController.dispose();
-    adicionalProdutoSelecionadoController.dispose();
-    senhaController.dispose();
-    _scrollController.dispose(); */
+    
+    // Check if these objects are properly disposed.
+    // _focoBloqueio.dispose();
+    // _focusNode.dispose();
+    // _focusNodeCardapio.dispose();
+    // animationController.dispose();
+    // comandaController.dispose();
+    // mesaController.dispose();
+    // comandaFocus.dispose();
+    // mesaFocus.dispose();
+    // cardapioFocus.dispose();
+    // numeroProdutoSelecionadoFocus.dispose();
+    // quantidadeProdutoSelecionadoFocus.dispose();
+    // observacaoProdutoSelecionadoFocus.dispose();
+    // senhaFocus.dispose();
+    // _scrollController.dispose();
+    
     super.dispose();
   }
 
@@ -7164,6 +7168,39 @@ class GarcomPageState extends State<GarcomPage>
                                                 focusNode: comandaFocus,
                                                 toolbarButtons: [
                                                   (node) {
+                                                    return Expanded(
+                                                      child: GestureDetector(
+                                                        behavior: HitTestBehavior.opaque,
+                                                        onTap: () {
+                                                          if (comandaController.text.isNotEmpty) {
+                                                            _confirmar();
+                                                          }
+                                                          node.unfocus();
+                                                        },
+                                                        child: Container(
+                                                          height: 44,
+                                                          alignment: Alignment.center,
+                                                          child: Padding(
+                                                            padding: EdgeInsets.symmetric(
+                                                              horizontal: 16,
+                                                            ),
+                                                            child: Align(
+                                                              alignment: Alignment.centerRight,
+                                                              child: Text(
+                                                                'OK',
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ],
+                                                /* toolbarButtons: [
+                                                  (node) {
                                                     return GestureDetector(
                                                       onTap: () {
                                                         if (comandaController.text.isNotEmpty) {
@@ -7187,7 +7224,7 @@ class GarcomPageState extends State<GarcomPage>
                                                       ),
                                                     );
                                                   }
-                                                ],
+                                                ], */
                                               ),
                                             ],
                                           ),
@@ -7503,6 +7540,39 @@ class GarcomPageState extends State<GarcomPage>
                                                 focusNode: mesaFocus,
                                                 toolbarButtons: [
                                                   (node) {
+                                                    return Expanded(
+                                                      child: GestureDetector(
+                                                        behavior: HitTestBehavior.opaque,
+                                                        onTap: () {
+                                                          if (mesaController.text.isNotEmpty) {
+                                                            _confirmar();
+                                                          }
+                                                          node.unfocus();
+                                                        },
+                                                        child: Container(
+                                                          height: 44,
+                                                          alignment: Alignment.center,
+                                                          child: Padding(
+                                                            padding: EdgeInsets.symmetric(
+                                                              horizontal: 16,
+                                                            ),
+                                                            child: Align(
+                                                              alignment: Alignment.centerRight,
+                                                              child: Text(
+                                                                'OK',
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ],
+                                                /* toolbarButtons: [
+                                                  (node) {
                                                     return GestureDetector(
                                                       onTap: () {
                                                         if (mesaController.text.isNotEmpty) {
@@ -7521,7 +7591,7 @@ class GarcomPageState extends State<GarcomPage>
                                                       ),
                                                     );
                                                   }
-                                                ],
+                                                ], */
                                               ),
                                             ],
                                           ),
@@ -7703,6 +7773,40 @@ class GarcomPageState extends State<GarcomPage>
                                                 focusNode: comandaFocus,
                                                 toolbarButtons: [
                                                   (node) {
+                                                    return Expanded(
+                                                      child: GestureDetector(
+                                                        behavior: HitTestBehavior.opaque,
+                                                        onTap: () {
+                                                          if (comandaController.text.isNotEmpty) {
+                                                            _confirmar();
+                                                          }
+
+                                                          node.unfocus();
+                                                        },
+                                                        child: Container(
+                                                          height: 44,
+                                                          alignment: Alignment.center,
+                                                          child: Padding(
+                                                            padding: EdgeInsets.symmetric(
+                                                              horizontal: 16,
+                                                            ),
+                                                            child: Align(
+                                                              alignment: Alignment.centerRight,
+                                                              child: Text(
+                                                                'OK',
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ],
+                                                /* toolbarButtons: [
+                                                  (node) {
                                                     return GestureDetector(
                                                       onTap: () {
                                                         if (comandaController.text.isNotEmpty) {
@@ -7724,7 +7828,7 @@ class GarcomPageState extends State<GarcomPage>
                                                       ),
                                                     );
                                                   }
-                                                ],
+                                                ], */
                                               ),
                                             ],
                                           ),
@@ -7812,126 +7916,6 @@ class GarcomPageState extends State<GarcomPage>
                                       ),
                                     ),
                                   ),
-                                  /* Flexible(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(
-                                        left: 20,
-                                        /* right: 80, */
-                                        right: comandaValida ? 20 : 80,
-                                        top: 10,
-                                        bottom: 10,
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          // TextField da comanda
-                                          KeyboardActions(
-                                            config: KeyboardActionsConfig(
-                                              keyboardActionsPlatform: KeyboardActionsPlatform.IOS,
-                                              nextFocus: false,
-                                              actions: [
-                                                KeyboardActionsItem(
-                                                  focusNode: comandaFocus,
-                                                  toolbarButtons: [
-                                                    (node) {
-                                                      return GestureDetector(
-                                                        onTap: () {
-                                                          // executa exatamente o mesmo que onSubmitted
-                                                          _confirmar();
-                                                          node.unfocus();
-                                                        },
-                                                        child: Container(
-                                                          padding: EdgeInsets.symmetric(horizontal: 16),
-                                                          child: Text(
-                                                            "OK",
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      );
-                                                    }
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                            child: TextField(
-                                              onTap: () {
-                                                setState(() {
-                                                  showKeyboardNumero = true;
-                                                  showKeyboardAlfa = false;
-                                                  _campoAtivo ='comandaController';
-                                                  FocusScope.of(context,).requestFocus(comandaFocus);
-                                                });
-                                              },
-                                            
-                                              onChanged: (value) {
-                                                /* if (value.isNotEmpty) { */
-                                                if (comandaValida) {
-                                                  zerarAtendimento();
-                                                }
-                                                /*  } */
-                                              },
-                                            
-                                              // ENTER do teclado
-                                              onSubmitted: (value) {
-                                                if(value.isNotEmpty){
-                                                  _confirmar();
-                                                }
-                                              },
-                                            
-                                              // Cursor aparecer
-                                              readOnly: false,
-                                              showCursor: true,
-                                              keyboardType: TextInputType.number,
-                                              enableInteractiveSelection: false,
-                                              cursorColor: colorScheme.onPrimary,
-                                            
-                                              controller: comandaController,
-                                              focusNode: comandaFocus,
-                                              textAlign: TextAlign.center,
-                                              decoration: InputDecoration(
-                                                // hintText: "Insira o número da comanda:",
-                                                hintStyle: TextStyle(
-                                                  color: colorScheme.onPrimary,
-                                                ),
-                                                filled: true,
-                                                fillColor: colorScheme.secondary
-                                                    .withOpacity(0.5),
-                                                contentPadding:
-                                                    EdgeInsets.symmetric(
-                                                      vertical: 0,
-                                                    ),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  borderSide: BorderSide(
-                                                    color: colorScheme.primary,
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  borderSide: BorderSide(
-                                                    color: colorScheme.secondary,
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                              ),
-                                              style: TextStyle(
-                                                fontSize: 40,
-                                                color: colorScheme.onPrimary,
-                                                fontWeight: FontWeight.bold,
-                                                height: 1.0,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ), */
                                   // Botão de adicionar comanda
                                   if (comandaValida)
                                     GestureDetector(
@@ -8455,6 +8439,9 @@ class GarcomPageState extends State<GarcomPage>
                                           'tamanhoSelecionado': produto['produto_nome'],
                                           'comanda': comandaController.text,
                                           'mesa': mesaController.text,
+                                          'produtoSelecionado': produto,
+                                          'index': index,
+                                          'editar': false,
                                         },
                                       );
                                       setState(() {
@@ -8864,9 +8851,7 @@ class GarcomPageState extends State<GarcomPage>
                                               ),
                                             ),
 
-                                            if (produto
-                                                .observacaoEscrita
-                                                .isNotEmpty)
+                                            if (produto.observacaoEscrita.isNotEmpty)
                                               Padding(
                                                 padding: EdgeInsets.only(
                                                   top: 4,
@@ -8881,9 +8866,7 @@ class GarcomPageState extends State<GarcomPage>
                                                 ),
                                               ),
 
-                                            if (produto
-                                                .observacoesTexto
-                                                .isNotEmpty)
+                                            if (produto.observacoesTexto.isNotEmpty)
                                               Padding(
                                                 padding: const EdgeInsets.only(
                                                   top: 2,
@@ -8916,14 +8899,8 @@ class GarcomPageState extends State<GarcomPage>
                                                 child: Column(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
-                                                  children: adicionaisAgrupados
-                                                      .entries
-                                                      .map((entry) {
-                                                        //.entries = le
-                                                        //.map = traduz e quadra
+                                                  children: adicionaisAgrupados.entries.map((entry) {
                                                         return Text(
-                                                          // value = int
-                                                          // key = string
                                                           '${entry.value}x ${entry.key}',
                                                           style: TextStyle(
                                                             fontSize: 12,
@@ -8940,9 +8917,7 @@ class GarcomPageState extends State<GarcomPage>
 
                                       // CONTROLE DE QUANTIDADE
                                       Container(
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                            0.35,
+                                        width: MediaQuery.of(context).size.width * 0.35,
                                         decoration: BoxDecoration(
                                           color: ehKilo
                                               ? Colors.transparent
@@ -8952,26 +8927,17 @@ class GarcomPageState extends State<GarcomPage>
                                           ),
                                         ),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment
-                                              .center, // Centraliza os elementos
+                                          mainAxisAlignment: MainAxisAlignment.center, // Centraliza os elementos
                                           children: [
                                             if (!ehKilo)
                                               IconButton(
                                                 icon: Icon(
                                                   Icons.remove,
-                                                  color: ehKilo
-                                                      ? Colors.transparent
-                                                      : Colors.black,
+                                                  color: ehKilo ? Colors.transparent : Colors.black,
                                                 ),
-                                                onPressed: ehKilo
-                                                    ? null
-                                                    : () {
-                                                    if (produto.quantidade >
-                                                        1) {
-                                                      setState(
-                                                        () => produto
-                                                            .quantidade--,
-                                                      );
+                                                onPressed: ehKilo ? null : () {
+                                                    if (produto.quantidade > 1) {
+                                                      setState(() => produto.quantidade--);
                                                     } else {
                                                       shownDialogErrorTwoBottom(
                                                         context: context,
@@ -8986,9 +8952,7 @@ class GarcomPageState extends State<GarcomPage>
                                                           setState(() {});
                                                         },
                                                         onCancel: () {
-                                                          Navigator.of(
-                                                            context,
-                                                          ).pop();
+                                                          Navigator.of(context).pop();
                                                         },
                                                       );
                                                     }
@@ -9002,19 +8966,15 @@ class GarcomPageState extends State<GarcomPage>
                                                 ),
                                                 child: Text(
                                                   maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                  overflow: TextOverflow.ellipsis,
                                                   textAlign: TextAlign.center,
                                                   ehKilo
-                                                      ? produto.quantidade
-                                                            .toStringAsFixed(3)
-                                                      : produto.quantidade
-                                                            .toStringAsFixed(0),
+                                                      ? produto.quantidade.toStringAsFixed(3)
+                                                      : produto.quantidade.toStringAsFixed(0),
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.bold,
-                                                    color:
-                                                        colorScheme.onSurface,
+                                                    color: colorScheme.onSurface,
                                                   ),
                                                 ),
                                               ),
@@ -9024,22 +8984,16 @@ class GarcomPageState extends State<GarcomPage>
                                               IconButton(
                                                 icon: Icon(
                                                   Icons.add,
-                                                  color: ehKilo
-                                                      ? Colors.transparent
-                                                      : Colors.black,
+                                                  color: ehKilo ? Colors.transparent : Colors.black,
                                                 ),
-                                                onPressed: ehKilo
-                                                    ? null
-                                                    : () {
-                                                        setState(
-                                                          () => produto
-                                                              .quantidade++,
-                                                        );
-                                                      },
+                                                onPressed: ehKilo ? null : () {
+                                                  setState(() => produto.quantidade++);
+                                                },
                                               ),
                                           ],
                                         ),
                                       ),
+                                      // if(produto.id != "PZ")
                                       GestureDetector(
                                         onTap: () {
                                           FocusScope.of(context).unfocus();
@@ -9071,19 +9025,9 @@ class GarcomPageState extends State<GarcomPage>
                 //Parte para configurar o produto
                 if (aparecerConfiguracaoProduto)
                   Padding(
-                    padding: EdgeInsets.only(
-                      left: 8,
-                      right: 8,
-                      top: 0,
-                      bottom: 0,
-                    ),
+                    padding: EdgeInsets.only(left: 8, right: 8, top: 0, bottom: 0),
                     child: Container(
-                      padding: EdgeInsets.only(
-                        left: 8,
-                        right: 8,
-                        top: 0,
-                        bottom: 0,
-                      ),
+                      padding: EdgeInsets.only(left: 8, right: 8, top: 0, bottom: 0),
                       decoration: BoxDecoration(
                         color: colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
@@ -9535,6 +9479,9 @@ class GarcomPageState extends State<GarcomPage>
                                         'tamanhoSelecionado': produto['produto_nome'],
                                         'comanda': comandaController.text,
                                         'mesa': mesaController.text,
+                                        'produtoSelecionado': produto,
+                                        'index': index,
+                                        'editar': false,
                                       },
                                     )?.then((_) {
                                       if (mounted) {

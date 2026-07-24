@@ -95,7 +95,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
     );
   }
 
-  void popupInfoPedido(String descricaoPedido, String horaPedido, String itensPorPedido, List<dynamic> pedidos) {
+  void popupInfoPedido(String descricaoPedido, String horaPedido, String itensPorPedido, List<dynamic> pedidos, String numeroPedidoFuncao) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -179,17 +179,114 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                             ),
                           ),
                           Divider(),
+                          /* SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () {
+                              shownDialogTwoBottom(
+                                context: context,
+                                title: "Confirmar pedido como pronto?",
+                                icon: Icons.check,
+                                onConfirm: () async {
+                                  await confirmarPedido(numeroPedidoFuncao);
+                                  await painelController.buscarPedidosEmPreparo();
+                                },
+                                onCancel: () async {},
+                              );
+                            },
+                            child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Confirmar",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Theme.of(context).colorScheme.onPrimary,
+                                          fontSize: MediaQuery.of(context).size.width * 0.020,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ), */
                         ],
                       );
                     },
                   ),
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("Cancelar"),
+            Column(
+              children: [
+                SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () {
+                    shownDialogTwoBottom(
+                      context: context,
+                      title: "Confirmar pedido como pronto?",
+                      icon: Icons.check,
+                      onConfirm: () async {
+                        await confirmarPedido(numeroPedidoFuncao);
+                        await painelController.buscarPedidosEmPreparo();
+                        Navigator.of(context).pop();
+                      },
+                      onCancel: () async {},
+                    );
+                  },
+                  child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Confirmar",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                fontSize: MediaQuery.of(context).size.width * 0.020,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text("Cancelar"),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -705,6 +802,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                     final horaRaw = grupo.value.first['min(v.datahora)'] ?? '';
                     final pedidos = grupo.value;
                     final itensPorPedido = pedidos.length;
+                    final numeroPedido = pedidos[0]['numeropedido'].toString();
                     String horaPedido = "";
                     if (horaRaw != "") {
                       try {
@@ -723,7 +821,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                         onTap: () {
                           String itensPorPedidoString = itensPorPedido.toString();
                           // abrir dialogo informacoes do pedido
-                          popupInfoPedido(descricaoPedido, horaPedido, itensPorPedidoString, pedidos);
+                          popupInfoPedido(descricaoPedido, horaPedido, itensPorPedidoString, pedidos, numeroPedido);
                         },
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1097,6 +1195,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  //if (orientation == Orientation.landscape) 
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1106,11 +1205,11 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                           flex: 6,
                           child: _buildGrid(painelController.listaPedidosEmPreparo),
                         ),
-
                         Expanded(
                           flex: 1,
                           child: _buildProntosRow(),
                         ),
+                        
                       ],
                     ),
                   ),

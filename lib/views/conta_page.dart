@@ -2015,19 +2015,18 @@ class ContaPageState extends State<ContaPage>
                   final double quantidadeDoProdutoDouble = double.tryParse(quantidadeDoProduto) ?? 0;
                   final int quantidadeDoProdutoInt = int.tryParse(quantidadeDoProduto) ?? 0;
                   final nomeDoGarcom = produto['nome_garcom'] ?? '';
-
-                  final List<Map<String, String>> sabores = saboresRaw
-                      .toString()
-                      .split('||')
-                      .where((s) => s.isNotEmpty)
-                      .map((item) {
-                        final partes = item.split('::');
-                        return {
-                          'nome': partes[0],
-                          'fracao': partes.length > 1 ? partes[1] : '',
-                        };
-                      })
-                      .toList();
+                  
+                  final DateTime dataHora = DateTime.parse(produto['datahora'].toString());
+                  final String data = '${dataHora.day.toString().padLeft(2, '0')}/${dataHora.month.toString().padLeft(2, '0')}/${dataHora.year}';
+                  final String hora = '${dataHora.hour.toString().padLeft(2, '0')}:${dataHora.minute.toString().padLeft(2, '0')}:${dataHora.second.toString().padLeft(2, '0')}';
+                  
+                  final List<Map<String, String>> sabores = saboresRaw.toString().split('||').where((s) => s.isNotEmpty).map((item) {
+                  final partes = item.split('::');
+                    return {
+                      'nome': partes[0],
+                      'fracao': partes.length > 1 ? partes[1] : '',
+                    };
+                  }).toList();
 
                   return Card(
                     child: Padding(
@@ -2062,19 +2061,42 @@ class ContaPageState extends State<ContaPage>
                                         Text(
                                           'Aten: ',
                                           style: TextStyle(
-                                            fontSize: MediaQuery.textScalerOf(
-                                              context,
-                                            ).scale(12),
+                                            fontSize: MediaQuery.textScalerOf(context).scale(12),
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                         Text(
                                           '$nomeDoGarcom',
                                           style: TextStyle(
-                                            fontSize: MediaQuery.textScalerOf(
-                                              context,
-                                            ).scale(12),
+                                            fontSize: MediaQuery.textScalerOf(context).scale(12),
                                             /* fontWeight: FontWeight.bold, */
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            '$data',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.textScalerOf(context).scale(12),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+
+                                        Flexible(
+                                          child: Text(
+                                            ' - $hora',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.textScalerOf(context).scale(12),
+                                              /* fontWeight: FontWeight.bold, */
+                                            ),
                                           ),
                                         ),
                                       ],

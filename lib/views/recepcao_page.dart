@@ -3427,6 +3427,36 @@ class RecepcaoPageState extends State<RecepcaoPage> {
             focusNode: focusNode,
             toolbarButtons: [
               (node) {
+                return Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      node.unfocus();
+                    },
+                    child: Container(
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            'OK',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ],
+            /* toolbarButtons: [
+              (node) {
                 return GestureDetector(
                   onTap: () {
                     node.unfocus();
@@ -3440,7 +3470,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                   ),
                 );
               },
-            ],
+            ], */
           ),
         ],
       ),

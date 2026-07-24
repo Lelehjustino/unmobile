@@ -129,7 +129,7 @@ class MapaPageState extends State<MapaPage> {
   }
 
   void arrumarFoco() {
-    if(Platform.isIOS){
+    // if(Platform.isIOS){
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _searchFocusNode.unfocus();
@@ -147,13 +147,13 @@ class MapaPageState extends State<MapaPage> {
           SystemChannels.textInput.invokeMethod('TextInput.hide');
         }
       });
-    } else {
+    /* } else {
       Future.delayed(Duration(milliseconds: 300), () {
         if (_searchFocusNode.canRequestFocus) {
           _searchFocusNode.requestFocus();
         }
       });
-    }
+    } */
   }
 
   // Load nomeEmpresa
@@ -2058,7 +2058,8 @@ class MapaPageState extends State<MapaPage> {
                       Expanded(
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height * 0.06,
-                          child: KeyboardActions(
+                          child: 
+                          /* KeyboardActions(
                           disableScroll: true,
                           autoScroll: false,
                           config: KeyboardActionsConfig(
@@ -2107,7 +2108,75 @@ class MapaPageState extends State<MapaPage> {
                                 ],
                               ),
                             ],
-                          ),
+                          ), */
+                          KeyboardActions(
+                            disableScroll: true,
+                            autoScroll: false,
+                            config: KeyboardActionsConfig(
+                              keyboardActionsPlatform: KeyboardActionsPlatform.IOS,
+                              nextFocus: false,
+                              actions: [
+                                KeyboardActionsItem(
+                                  focusNode: _searchFocusNode,
+                                  toolbarButtons: [
+                                    (node) {
+                                      return Expanded(
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            node.unfocus();
+                                          },
+                                          child: Container(
+                                            height: 44,
+                                            alignment: Alignment.center,
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                              ),
+                                              child: Align(
+                                                alignment: Alignment.centerRight,
+                                                child: Text(
+                                                  'OK',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ],
+                                  /* toolbarButtons: [
+                                    (node) {
+                                      return Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () {
+                                            node.unfocus();
+                                          },
+                                          child: SizedBox(
+                                            // width: double.infinity,
+                                            height: 50,
+                                            child: Container(
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                'FECHAR TECLADO',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ], */
+                                ),
+                              ],
+                            ),
 
                           child: Container(
                             padding: EdgeInsets.symmetric(horizontal: 16),

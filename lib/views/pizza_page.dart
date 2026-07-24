@@ -31,6 +31,12 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   final String tamanhoSelecionado = Get.arguments['tamanhoSelecionado'];
   final String comandaDoPedido = Get.arguments['comanda'];
   final String mesaDoPedido = Get.arguments['mesa'];
+
+  // edição de pizza
+  final int index = Get.arguments['index'];
+  final Produto? produtoSelecionado = Get.arguments['produtoSelecionado'];
+  final bool editar = Get.arguments['editar'];
+
   String comandaDoPedidoParaInsert = "";
   String mesaDoPedidoParaInsert = "";
 
@@ -159,6 +165,8 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   final FuncoesController funcoesController = Get.put(FuncoesController());
   final PainelController painelController = Get.put(PainelController());
 
+  bool editarPizza = false;
+
   @override
   void initState() {
     super.initState();
@@ -183,9 +191,9 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
       _atualizarHora();
     });
     _focusNode.addListener(() {
+      if (!mounted) return;
       setState(() {
         _isFocused = _focusNode.hasFocus;
-        _isFocused = true;
       });
     });
     _carregarNote();
@@ -216,9 +224,50 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
         cardapioFocus.requestFocus();
       }
     });
-    showKeyboardAlfa = true;
-    showKeyboardNumero = false;
-    campoAtivo = 'cardapioController';
+    
+    Future.delayed(Duration(milliseconds: 300), () {
+      verificarEdicao();
+    });
+
+  }
+
+  void verificarEdicao() {
+    if (editar) {
+      editarPizza = true;
+      if(produtoSelecionado != null) {
+        preencherCampos(produtoSelecionado!);
+      }
+    } else {
+      editarPizza = false;
+    }
+  }
+
+  void preencherCampos(Produto produto) {
+    quantidadePizzaController.text = produto.quantidade.toString();
+    observacaoPizzaController.text = produto.observacaoEscrita;
+    
+    setState(() {
+      listaSaboresSelecionados.clear();
+      listaBordasSelecionadas.clear();
+      listaSaboresBordasSelecionados.clear();
+
+      for (var adicional in produto.adicionais) {
+        if (adicional.id == 'P') {
+          listaSaboresSelecionados.add(adicional);
+          listaSaboresBordasSelecionados.add(adicional);
+        } else if (adicional.id == 'B') {
+          listaBordasSelecionadas.add(adicional);
+          listaSaboresBordasSelecionados.add(adicional);
+        }
+      }
+
+      if (listaSaboresSelecionados.isNotEmpty || listaBordasSelecionadas.isNotEmpty) {
+        configurarPizza = true;
+        aparecerCardapio = true;
+        mostrarGrupos = false;
+        aparecerSaboresBordas = true;
+      }
+    });
   }
 
   void limparView() {
@@ -586,24 +635,21 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   }
 
   void _atualizarHora() {
+    if (!mounted) return;
     final agora = DateTime.now();
     final horaFormatada = DateFormat.Hm().format(agora);
     setState(() {
       _horaAtual = horaFormatada;
-      _loadComanda();
     });
-
-    // Ouvir mudanças de foco
-    _focusNode.addListener(() {
-      setState(() {
-        _isFocused = _focusNode.hasFocus;
-      });
-    });
+    _loadComanda();
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    if (_timer.isActive) {
+      _timer.cancel();
+    }
+    _timerApagar?.cancel();
     _focusNode.dispose();
     animationController.dispose();
     super.dispose();
@@ -2592,16 +2638,30 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                   final produtoObservacao = observacaoPizzaController.text;
                                   final adicionais = listaSaboresBordasSelecionados;
                                   double produtoValor = 0.0;
-      
-                                  carrinhoController.adicionarProdutoAoCarrinho(
-                                    produtoNome,
-                                    produtoValor.toString(),
-                                    produtoNumero,
-                                    quantidadeInicial,
-                                    produtoObservacao,
-                                    'PZ',
-                                    adicionais: adicionais,
-                                  );
+
+                                  if(editarPizza) {
+                                    carrinhoController.editarProdutoAoCarrinho(
+                                      index,
+                                      produtoNome,
+                                      produtoValor.toString(),
+                                      produtoNumero,
+                                      quantidadeInicial,
+                                      produtoObservacao,
+                                      'PZ',
+                                      adicionais: adicionais,
+                                      observacoesTexto: [],
+                                    );
+                                  } else {
+                                    carrinhoController.adicionarProdutoAoCarrinho(
+                                      produtoNome,
+                                      produtoValor.toString(),
+                                      produtoNumero,
+                                      quantidadeInicial,
+                                      produtoObservacao,
+                                      'PZ',
+                                      adicionais: adicionais,
+                                    );
+                                  }
                                 
                                   String comandaDoPedido = Get.arguments['comanda'] ?? '';
                                   String mesaDoPedido = Get.arguments['mesa'] ?? '';

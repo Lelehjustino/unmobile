@@ -478,10 +478,61 @@ class SideNavState extends State<SideNav> {
               },
             ),
             isloadingProdutos
-              ? CircularProgressIndicator(
-                color: colorScheme.scrim,
+              ? Padding(
+                padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: colorScheme.onSurface,
+                  ),
+                ),
               )
-              : Padding(
+              : 
+              ListTile(
+              leading: Icon(
+                Icons.refresh,
+                color: currentRoute == '/configuracoes'
+                    ? colorScheme.surface
+                    : colorScheme.onSurface,
+              ),
+              title: Text(
+                'Recarregar produtos',
+                style: TextStyle(
+                  color: currentRoute == '/configuracoes'
+                      ? colorScheme.surface
+                      : colorScheme.onSurface,
+                ),
+              ),
+              selected: currentRoute == '/configuracoes',
+              selectedTileColor: colorScheme.primary,
+              onTap: () async {
+                if (isloadingProdutos) {
+                  return;
+                }
+                
+                setState(() {
+                  isloadingProdutos = true;
+                });
+                
+                try {
+                  await funcoesController.adicionaisObservacoesProdutos();
+                  await funcoesController.informacoesListaGarcom();
+                  await funcoesController.buscarGrupos();
+                  await funcoesController.buscarProdutos();
+                  await funcoesController.buscarTamanhosPizza();
+                  await funcoesController.buscarSaboresBordasPizza();
+                  await funcoesController.buscarGruposPizza();
+                } catch (e) {
+                  setState(() {
+                    isloadingProdutos = false;
+                  });
+                } finally {
+                  setState(() {
+                    isloadingProdutos = false;
+                  });
+                }
+              },
+            ),
+              /* Padding(
                 padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
                 child: ElevatedButton(
                   onPressed: () async {
@@ -527,7 +578,7 @@ class SideNavState extends State<SideNav> {
                     style: TextStyle(color: colorScheme.onPrimary),
                   ),
                 ),
-            ),
+            ), */
             // SizedBox(height: 4),
             ListTile(
               leading: Icon(
