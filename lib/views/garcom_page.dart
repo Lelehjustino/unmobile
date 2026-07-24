@@ -324,6 +324,8 @@ class GarcomPageState extends State<GarcomPage>
   int indexClicado = 0;
   bool cliqueiEditarProduto = false;
 
+  int posicaoUltimoGrupo = 0;
+
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
     debugLabel: 'focoBloqueioDialogo',
@@ -385,8 +387,7 @@ class GarcomPageState extends State<GarcomPage>
     // Se já existem itens no carrinho OU foi passado algum argumento, restaura o estado ANTES de ligar os listeners
     if (carrinhoController.carrinho.isNotEmpty || Get.arguments != null) {
       iniciaComCarrinho();
-      // carregarUltimaConfiguracao();
-      sairModoTouch();
+      carregarUltimaConfiguracao();
     } else {
       chamarFocoInicial();
       carrinhoController.carrinho.clear();
@@ -399,7 +400,22 @@ class GarcomPageState extends State<GarcomPage>
     // Sincronizar showKeyboardAlfa com o foco nativo dos campos de texto
     cardapioFocus.addListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.addListener(_syncKeyboardAlfaFromFocus);
+
+    // limparCarrinho();
   }
+
+  /* void limparCarrinho(){
+    if(carrinhoController.carrinho.isNotEmpty){
+      if(!comandaValida && comandaController.text.isEmpty){
+        carrinhoController.carrinho.clear();
+        _executarLimpezaGeral();
+      }
+      if(!mesaValida && mesaController.text.isEmpty){
+        carrinhoController.carrinho.clear();
+        _executarLimpezaGeral();
+      }
+    }
+  } */
 
   void marcarObservacoes(List<String> observacoesTextoFuncao) {
     setState(() {
@@ -592,15 +608,19 @@ class GarcomPageState extends State<GarcomPage>
     });
   }
 
-  /* void _selecionarUltimoGrupo(posicao) {
+  void _selecionarUltimoGrupo() {
     if (funcoesController.listaGrupo.isEmpty) return;
 
-    final ultimo = funcoesController.listaGrupo[posicao];
+    final ultimo = funcoesController.listaGrupo[posicaoUltimoGrupo];
     setState(() {
       grupoSelecionadoNoTouch = ultimo['numero'].toString();
       produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);
     });
-  }  */
+  } 
+
+  void _guardarUltimoGrupoPosicao(int posicao){
+    posicaoUltimoGrupo = posicao;
+  }
 
   iniciarModoTouch(){
     setState(() {
@@ -638,6 +658,7 @@ class GarcomPageState extends State<GarcomPage>
     Future.delayed(const Duration(milliseconds: 300), () {
       cardapioFocus.unfocus();
     });
+    _selecionarUltimoGrupo();
   }
 
   sairModoTouch(){ //carrinho
@@ -830,10 +851,6 @@ class GarcomPageState extends State<GarcomPage>
         aparecerBotoes = false;
         comandaController.text = comandaDoPedido;
         mesaController.text = mesaDoPedido;
-
-        showKeyboardQuantidade = false;
-        showKeyboardNumero = false;
-        showKeyboardAlfa = true;
         aparecerFazerPedido = true;
 
         numeroComandaEmUso = comandaDoPedido;
@@ -847,6 +864,8 @@ class GarcomPageState extends State<GarcomPage>
           }
         });
       });
+
+      sairModoTouch();
     });
   }
 
@@ -7496,6 +7515,8 @@ class GarcomPageState extends State<GarcomPage>
                                             mesaFocus.requestFocus();
                                           }
                                         });
+
+                                        _selecionarPrimeiroGrupo();
                                       }
                                     },
                                     child: Padding(
@@ -7722,6 +7743,8 @@ class GarcomPageState extends State<GarcomPage>
                                           aparecerBotoes = true;
                                           empurrarBotoes = true;
                                         });
+
+                                        _selecionarPrimeiroGrupo();
                                         
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           if (!_bloqueandoFoco && mounted && comandaFocus.canRequestFocus) {
@@ -9300,6 +9323,7 @@ class GarcomPageState extends State<GarcomPage>
 
                               return GestureDetector(
                                 onTap: () {
+                                  _guardarUltimoGrupoPosicao(index);
                                   setState(() {
                                     grupoSelecionadoNoTouch = grupo['numero'].toString();
                                     produtosFiltrados = produtosPorGrupo(grupoSelecionadoNoTouch);

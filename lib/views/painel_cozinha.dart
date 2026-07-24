@@ -266,7 +266,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.onPrimary,
-                                fontSize: MediaQuery.of(context).size.width * 0.020,
+                                fontSize: MediaQuery.of(context).size.width * 0.040,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -740,6 +740,275 @@ class _PainelCozinhaState extends State<PainelCozinha> {
     );
   }
 
+  Widget _buildGridMobile(List<dynamic> items) {
+
+    // Agrupa pela descrição do pedido
+    Map<String, List<dynamic>> pedidosAgrupados = {};
+
+    for (var pedido in items) {
+      String chave = pedido["descricaopedido"].toString();
+
+      pedidosAgrupados.putIfAbsent(chave, () => []);
+
+      pedidosAgrupados[chave]!.add(pedido);
+    }
+
+    final grupos = pedidosAgrupados.entries.toList();
+    gruposQuantidade = pedidosAgrupados.entries.toList();
+
+    // manda lista da quantidade de pedidos
+    // numeroPedidos(gruposQuantidade);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double spacing = 10.0;
+        final double totalWidth = constraints.maxWidth;
+        final double totalHeight = constraints.maxHeight;
+        
+        // Calcula o Aspect Ratio para ocupar 3 colunas e 2 linhas perfeitamente
+        final double childWidth = (totalWidth - (spacing * 2)) / 3;
+        final double childHeight = (totalHeight - spacing) / 2;
+        final double aspectRatio = childWidth / childHeight;
+
+        return GridView.builder(
+            padding: EdgeInsets.zero,
+            physics: NeverScrollableScrollPhysics(), 
+            itemCount: 6, // Sempre 6 cards
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+              childAspectRatio: aspectRatio > 0 ? aspectRatio : 1.0,
+            ),
+            itemBuilder: (context, index) {
+              if (index >= grupos.length) {
+                // Slot vazio — ValueKey garante que o Flutter não confunda
+              // este widget com um card real durante rebuild
+              return  Card(
+                  key: ValueKey('slot_vazio_$index'),
+                  elevation: 0,
+                  color: Colors.transparent,
+                  child: const Center(
+                    child: Icon(Icons.hourglass_empty, color: Colors.transparent, size: 40),
+                  ),
+                );
+              }
+
+              final grupo = grupos[index];
+              final descricaoPedido = grupo.key;
+              final pedidos = grupo.value;
+              final horaPedido = pedidos.first['min(v.datahora)'] ?? "";
+              final dataHoraFormatada = DateFormat('HH:mm').format(DateTime.parse(horaPedido));
+              final numeroPedido = pedidos[0]['numeropedido'].toString();
+              
+              final itensPorPedido = pedidos.length;
+              String itensPorPedidoString = itensPorPedido.toString();
+
+              // 0 -> entrega // 1 -> balcao
+              final tipoPedido = pedidos[0]['entregapedido'].toString();
+              if (tipoPedido == "0") {
+                
+              } else if (tipoPedido == "1") {
+                
+              } else {
+
+              }
+
+              // ValueKey baseada no número real do pedido:
+              // → Flutter mantém o estado do card correto ao reorganizar
+              // → Evita o "salto" visual quando um pedido sai da fila
+              return GestureDetector(
+                onTap: () {
+                  popupInfoPedido(descricaoPedido, horaPedido, itensPorPedidoString, pedidos, numeroPedido);
+                },
+                child: Card(
+                    key: ValueKey('pedido_$numeroPedido'),
+                    elevation: 4,
+                  child: Container(
+                    padding: EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        if (tipoPedido == "0")
+                                          Image.asset(
+                                            'assets/retirada_balcao_icone.png',
+                                            width: MediaQuery.of(context).size.width * 0.020,
+                                            height: MediaQuery.of(context).size.width * 0.020,
+                                          )
+                                        else
+                                          Image.asset(
+                                            'assets/icone_moto_delivery.png',
+                                            width: MediaQuery.of(context).size.width * 0.025,
+                                            height: MediaQuery.of(context).size.width * 0.025,
+                                          ),
+                
+                                        SizedBox(width: 5),
+                
+                                        Expanded(
+                                          child: Text(
+                                            descricaoPedido,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context).size.width * 0.015,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      "Itens: $itensPorPedido",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    dataHoraFormatada,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: pedidos.length,
+                            itemBuilder: (context, pedidoIndex) {
+                              final pedido = pedidos[pedidoIndex];
+                              final nomeProduto = pedido['nome_produto'] ?? "";
+                              final tipoPedido = pedido['tipo_produto'] ?? "";
+                              final sabores = pedido['sabores'] ?? "";
+                              final observacaoVenda = pedido['observacaovenda'].toString() ?? "";
+                              List saboresLista = sabores.toString().split('|').where((e)=>e.trim().isNotEmpty).toList();
+                
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  /// TAMANHO
+                                  Text(
+                                    nomeProduto,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  /// SABORES
+                                  if(tipoPedido == "PZ")
+                                    ...saboresLista.map((item){
+                                  List partes =
+                                  item.split("::");
+                                      String sabor = partes[0];
+                                      String fracao = partes.length > 1 ? partes[1] : "";
+                
+                                      return Padding(
+                                        padding: EdgeInsets.only(bottom: 5),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              "$fracao $sabor",
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }), 
+                                  SizedBox(height: 10),
+                                  if(observacaoVenda != "" && observacaoVenda != "null")
+                                  Text(
+                                    observacaoVenda,
+                                    style: TextStyle(
+                                      fontStyle: FontStyle.italic,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Divider(),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                        Divider(),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () {
+                              shownDialogTwoBottom(
+                                context: context,
+                                title: "Confirmar pedido como pronto?",
+                                icon: Icons.check,
+                                onConfirm: () async {
+                                  await confirmarPedido(numeroPedido);
+                                  await painelController.buscarPedidosEmPreparo();
+                                },
+                                onCancel: () async {},
+                              );
+                            },
+                            child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Confirmar",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Theme.of(context).colorScheme.onPrimary,
+                                          fontSize: MediaQuery.of(context).size.width * 0.020,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ); // fecha AnimatedSwitcher
+            },
+        );
+      }
+    );
+  }
+
   Widget _buildProntosRow() {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
@@ -1092,7 +1361,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
+    final orientation = MediaQuery.of(context).orientation;
     return Scaffold(
       backgroundColor: colorScheme.surface,
       drawer: const SideNav(),
@@ -1195,7 +1464,8 @@ class _PainelCozinhaState extends State<PainelCozinha> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  //if (orientation == Orientation.landscape) 
+                  // horizontal
+                  if (orientation == Orientation.landscape) 
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1209,7 +1479,24 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                           flex: 1,
                           child: _buildProntosRow(),
                         ),
-                        
+                      ],
+                    ),
+                  ),
+                  // vertical 
+                  if (orientation == Orientation.portrait) 
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Coluna Principal - Pedidos em Preparo (4/5)
+                        Expanded(
+                          flex: 6,
+                          child: _buildGridMobile(painelController.listaPedidosEmPreparo),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: _buildProntosRow(),
+                        ),
                       ],
                     ),
                   ),
