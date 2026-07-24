@@ -385,7 +385,7 @@ class GarcomPageState extends State<GarcomPage>
     // Se já existem itens no carrinho OU foi passado algum argumento, restaura o estado ANTES de ligar os listeners
     if (carrinhoController.carrinho.isNotEmpty || Get.arguments != null) {
       iniciaComCarrinho();
-      carregarUltimaConfiguracao();
+      // carregarUltimaConfiguracao();
       sairModoTouch();
     } else {
       chamarFocoInicial();
@@ -399,10 +399,6 @@ class GarcomPageState extends State<GarcomPage>
     // Sincronizar showKeyboardAlfa com o foco nativo dos campos de texto
     cardapioFocus.addListener(_syncKeyboardAlfaFromFocus);
     observacaoProdutoSelecionadoFocus.addListener(_syncKeyboardAlfaFromFocus);
-
-    if (carrinhoController.carrinho.isNotEmpty) {
-      sairModoTouch();
-    }
   }
 
   void marcarObservacoes(List<String> observacoesTextoFuncao) {
@@ -2935,9 +2931,8 @@ class GarcomPageState extends State<GarcomPage>
                                         'tamanhoSelecionado': produto['produto_nome'],
                                         'comanda': comandaController.text,
                                         'mesa': mesaController.text,
-                                        'produtoSelecionado': produto,
                                         'index': index,
-                                        'editar': true,
+                                        'editar': false,
                                       },
                                     )?.then((_) {
                                       if (mounted) {
@@ -8439,7 +8434,6 @@ class GarcomPageState extends State<GarcomPage>
                                           'tamanhoSelecionado': produto['produto_nome'],
                                           'comanda': comandaController.text,
                                           'mesa': mesaController.text,
-                                          'produtoSelecionado': produto,
                                           'index': index,
                                           'editar': false,
                                         },
@@ -9479,7 +9473,6 @@ class GarcomPageState extends State<GarcomPage>
                                         'tamanhoSelecionado': produto['produto_nome'],
                                         'comanda': comandaController.text,
                                         'mesa': mesaController.text,
-                                        'produtoSelecionado': produto,
                                         'index': index,
                                         'editar': false,
                                       },
