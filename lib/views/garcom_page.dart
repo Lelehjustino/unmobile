@@ -864,7 +864,16 @@ class GarcomPageState extends State<GarcomPage>
       } else {
         String comandaDoPedido = carrinhoController.numeroComanda.value;
         String mesaDoPedido = carrinhoController.numeroMesa.value;
-        String numeropedido = carrinhoController.numeroPedido.value;
+        String numeropedido = "";
+        
+        if (funcoesController.logicaPorComanda.value ||
+            funcoesController.logicaPorComandaNaMesa.value) {
+          await buscarNumeroPedido(comandaDoPedido);
+          numeropedido = carrinhoController.numeroPedido.value;
+        } else {
+          await buscarNumeroPedido(mesaDoPedido);
+          numeropedido = carrinhoController.numeroPedido.value;
+        }
 
         if (mesaDoPedido == "0" || mesaDoPedido == '0') {
           mesaDoPedido = "";
@@ -1888,6 +1897,7 @@ class GarcomPageState extends State<GarcomPage>
 
     carrinhoController.numeroComanda.value = "";
     carrinhoController.numeroMesa.value = "";
+    carrinhoController.numeroPedido.value = "";
     
     // Reseta controllers e variáveis de controle
     comandaController.clear();
@@ -2217,6 +2227,7 @@ class GarcomPageState extends State<GarcomPage>
 
           setState(() {
             numeropedido_FK = valor;
+            carrinhoController.numeroPedido.value = valor;
           });
           print("Número do pedido: $numeropedido_FK");
         } else {
@@ -5468,6 +5479,10 @@ class GarcomPageState extends State<GarcomPage>
     }
 
     await validarComanda(comandaController.text);
+
+    if(comandaValida){
+      carrinhoController.numeroComanda.value = comandaController.text;
+    }
 
     if (!comandaValida) {
       _erroComanda();
