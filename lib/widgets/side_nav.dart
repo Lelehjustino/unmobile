@@ -39,6 +39,8 @@ class SideNavState extends State<SideNav> {
   bool aparecerExpedicaoMotoboy = false;
   bool rotaHome = true;
   bool rotaPainelCliente = false;
+  bool aparecerCupomAvulso = false;
+  bool rotaExpedicaoMotoboy = false;
 
   final FuncoesController funcoesController = Get.put(FuncoesController());
 
@@ -59,6 +61,30 @@ class SideNavState extends State<SideNav> {
     await _carregarNote();
     await _carregarPaineis();
     await carregarRota();
+    await _carregarCupomAvulso();
+  }
+
+  // Carregar cupom avulso
+  Future<void> _carregarCupomAvulso() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('cupom_avulso');
+
+    if (valor == null || valor.isEmpty) {
+      setState(() => aparecerCupomAvulso = false);
+      return;
+    }
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    setState(() {
+      aparecerCupomAvulso = setLocal.contains('Cupom Avulso');
+    });
   }
 
   // Carregar rota 
@@ -69,31 +95,36 @@ class SideNavState extends State<SideNav> {
     if (rotaJson != null) {
       final rotasSalvos = Set<String>.from(jsonDecode(rotaJson));
 
-      if (rotasSalvos.contains("Home") && !rotasSalvos.contains("Expedição cliente")) {
-        // home
+      if (rotasSalvos.contains("Home") && !rotasSalvos.contains("Expedição cliente") && !rotasSalvos.contains("Expedição motoboy")) {
         setState(() {
           rotaHome = true;
           rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = false;
         });
-      } else if (rotasSalvos.contains("Expedição cliente") && !rotasSalvos.contains("Home")) {
-        // painel cliente
+      } else if (rotasSalvos.contains("Expedição cliente") && !rotasSalvos.contains("Home") && !rotasSalvos.contains("Expedição motoboy")) {
         setState(() {
           rotaHome = false;
           rotaPainelCliente = true;
+          rotaExpedicaoMotoboy = false;
+        });
+      }else if (!rotasSalvos.contains("Expedição cliente") && !rotasSalvos.contains("Home") && rotasSalvos.contains("Expedição motoboy")){
+        setState(() {
+          rotaHome = false;
+          rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = true;
         });
       } else {
-        // home
         setState(() {
           rotaHome = true;
           rotaPainelCliente = false;
+          rotaExpedicaoMotoboy = false;
         });
       }
-
     } else {
-      // home
       setState(() {
         rotaHome = true;
         rotaPainelCliente = false;
+        rotaExpedicaoMotoboy = false;
       });
     }
   }
@@ -355,185 +386,280 @@ class SideNavState extends State<SideNav> {
       backgroundColor: colorScheme.surface,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            // Icons.assignment
-            if(rotaHome)
-            ListTile(
-              leading: Icon(
-                Icons.home,
-                color: currentRoute == '/'
-                    ? colorScheme.surface
-                    : colorScheme.onSurface,
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  // Icons.assignment
+                  if(rotaHome)
+                  ListTile(
+                    leading: Icon(
+                      Icons.home,
+                      color: currentRoute == '/'
+                          ? colorScheme.surface
+                          : colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      "Home",
+                      style: TextStyle(
+                        color: currentRoute == '/'
+                            ? colorScheme.surface
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: currentRoute == '/',
+                    selectedTileColor: colorScheme.primary,
+                    onTap: () {
+                      navegacao_inteligente();
+                      funcoesController.zerarAtendimento();
+                    },
+                  ),
+                  if((aparecerPedidos || rotaPainelCliente) && !rotaExpedicaoMotoboy)
+                  ListTile(
+                    leading: Icon(
+                      Icons.person,
+                      color: currentRoute == '/painel_cliente'
+                          ? colorScheme.surface
+                          : colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      "Expedição cliente",
+                      style: TextStyle(
+                        color: currentRoute == '/painel_cliente'
+                            ? colorScheme.surface
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: currentRoute == '/painel_cliente',
+                    selectedTileColor: colorScheme.primary,
+                    onTap: () async {
+                      Get.toNamed('/painel_cliente');
+                      funcoesController.zerarAtendimento();
+                      if (Platform.isWindows) {
+                        await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+                        await windowManager.setFullScreen(true);
+                      }
+                    },
+                  ),
+                  if(aparecerKDS && rotaHome)
+                  ListTile(
+                    leading: Icon(
+                      Icons.soup_kitchen,
+                      color: currentRoute == '/painel_cozinha'
+                          ? colorScheme.surface
+                          : colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      "KDS",
+                      style: TextStyle(
+                        color: currentRoute == '/painel_cozinha'
+                            ? colorScheme.surface
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: currentRoute == '/painel_cozinha',
+                    selectedTileColor: colorScheme.primary,
+                    onTap: () {
+                      Get.toNamed('/painel_cozinha');
+                      funcoesController.zerarAtendimento();
+                    },
+                  ),  
+                  if((aparecerExpedicaoMotoboy && rotaHome) || rotaExpedicaoMotoboy)
+                  ListTile(
+                    leading: Icon(
+                      Icons.motorcycle,
+                      color: currentRoute == '/expedicao_motoboy'
+                          ? colorScheme.surface
+                          : colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      "Expedição Motoboy",
+                      style: TextStyle(
+                        color: currentRoute == '/expedicao_motoboy'
+                            ? colorScheme.surface
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: currentRoute == '/expedicao_motoboy',
+                    selectedTileColor: colorScheme.primary,
+                    onTap: () {
+                      Get.toNamed('/expedicao_motoboy');
+                      funcoesController.zerarAtendimento();
+                    },
+                  ), 
+                  if(aparecerCupomAvulso && rotaHome)
+                  ListTile(
+                    leading: Icon(
+                      Icons.print,
+                      color: currentRoute == '/cupom_avulso'
+                          ? colorScheme.surface
+                          : colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      "Cupom Avulso",
+                      style: TextStyle(
+                        color: currentRoute == '/cupom_avulso'
+                            ? colorScheme.surface
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: currentRoute == '/cupom_avulso',
+                    selectedTileColor: colorScheme.primary,
+                    onTap: () {
+                      Get.toNamed('/cupom_avulso');
+                      funcoesController.zerarAtendimento();
+                    },
+                  ), 
+                  ListTile(
+                    leading: Icon(
+                      Icons.settings,
+                      color: currentRoute == '/configuracoes'
+                          ? colorScheme.surface
+                          : colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      "Configurações",
+                      style: TextStyle(
+                        color: currentRoute == '/configuracoes'
+                            ? colorScheme.surface
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: currentRoute == '/configuracoes',
+                    selectedTileColor: colorScheme.primary,
+                    onTap: () {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConfiguracoesPage()));
+                      funcoesController.zerarAtendimento();
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.logout,
+                      color: currentRoute == '/configuracoes'
+                          ? colorScheme.surface
+                          : colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      "Sair do aplicativo",
+                      style: TextStyle(
+                        color: currentRoute == '/configuracoes'
+                            ? colorScheme.surface
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    selected: currentRoute == '/configuracoes',
+                    selectedTileColor: colorScheme.primary,
+                    // onTap: () {  // Fecha a aplicação
+                    //   SystemNavigator.pop();
+                    // },
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text("Confirmar saída"),
+                            content: Text(
+                              "Você tem certeza que quer sair da aplicação?",
+                            ),
+                            actions: <Widget>[
+                              Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () {
+                                        funcoesController.zerarAtendimento();
+                                        SystemNavigator.pop(); // Fecha a aplicação
+                                      },
+                                      child: Text("Sim"),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(); // Fecha o diálogo
+                                      },
+                                      child: Text("Não"),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
-              title: Text(
-                "Home",
-                style: TextStyle(
-                  color: currentRoute == '/'
-                      ? colorScheme.surface
-                      : colorScheme.onSurface,
-                ),
-              ),
-              selected: currentRoute == '/',
-              selectedTileColor: colorScheme.primary,
-              onTap: () {
-                navegacao_inteligente();
-                funcoesController.zerarAtendimento();
-              },
             ),
-            if(aparecerPedidos || rotaPainelCliente)
-            ListTile(
-              leading: Icon(
-                Icons.person,
-                color: currentRoute == '/painel_cliente'
-                    ? colorScheme.surface
-                    : colorScheme.onSurface,
-              ),
-              title: Text(
-                "Expedição cliente",
-                style: TextStyle(
-                  color: currentRoute == '/painel_cliente'
-                      ? colorScheme.surface
-                      : colorScheme.onSurface,
+            Spacer(),
+              isloadingProdutos ? 
+              Padding(
+                  padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.scrim,
+                    ),
+                  ),
+                ) : 
+                Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 4.0,
+                  horizontal: 8.0,
                 ),
-              ),
-              selected: currentRoute == '/painel_cliente',
-              selectedTileColor: colorScheme.primary,
-              onTap: () async {
-                Get.toNamed('/painel_cliente');
-                funcoesController.zerarAtendimento();
-                if (Platform.isWindows) {
-                  await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-                  await windowManager.setFullScreen(true);
-                }
-              },
-            ),
-            if(aparecerKDS && rotaHome)
-            ListTile(
-              leading: Icon(
-                Icons.soup_kitchen,
-                color: currentRoute == '/painel_cozinha'
-                    ? colorScheme.surface
-                    : colorScheme.onSurface,
-              ),
-              title: Text(
-                "KDS",
-                style: TextStyle(
-                  color: currentRoute == '/painel_cozinha'
-                      ? colorScheme.surface
-                      : colorScheme.onSurface,
-                ),
-              ),
-              selected: currentRoute == '/painel_cozinha',
-              selectedTileColor: colorScheme.primary,
-              onTap: () {
-                Get.toNamed('/painel_cozinha');
-                funcoesController.zerarAtendimento();
-              },
-            ), 
-            if(aparecerExpedicaoMotoboy && rotaHome)
-            ListTile(
-              leading: Icon(
-                Icons.motorcycle,
-                color: currentRoute == '/expedicao_motoboy'
-                    ? colorScheme.surface
-                    : colorScheme.onSurface,
-              ),
-              title: Text(
-                "Expedição Motoboy",
-                style: TextStyle(
-                  color: currentRoute == '/expedicao_motoboy'
-                      ? colorScheme.surface
-                      : colorScheme.onSurface,
-                ),
-              ),
-              selected: currentRoute == '/expedicao_motoboy',
-              selectedTileColor: colorScheme.primary,
-              onTap: () {
-                Get.toNamed('/expedicao_motoboy');
-                funcoesController.zerarAtendimento();
-              },
-            ), 
-            ListTile(
-              leading: Icon(
-                Icons.settings,
-                color: currentRoute == '/configuracoes'
-                    ? colorScheme.surface
-                    : colorScheme.onSurface,
-              ),
-              title: Text(
-                "Configurações",
-                style: TextStyle(
-                  color: currentRoute == '/configuracoes'
-                      ? colorScheme.surface
-                      : colorScheme.onSurface,
-                ),
-              ),
-              selected: currentRoute == '/configuracoes',
-              selectedTileColor: colorScheme.primary,
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConfiguracoesPage()));
-                funcoesController.zerarAtendimento();
-              },
-            ),
-            isloadingProdutos
-              ? Padding(
-                padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: colorScheme.onSurface,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (isloadingProdutos) {
+                        return;
+                      }
+
+                      setState(() {
+                        isloadingProdutos = true;
+                      });
+
+                      try {
+                        await funcoesController.adicionaisObservacoesProdutos();
+                        await funcoesController.informacoesListaGarcom();
+                        await funcoesController.buscarGrupos();
+                        await funcoesController.buscarProdutos();
+
+                        await funcoesController.buscarTamanhosPizza();
+                        await funcoesController.buscarSaboresBordasPizza();
+                        await funcoesController.buscarGruposPizza();
+                      } catch (e) {
+                        setState(() {
+                          isloadingProdutos = false;
+                        });
+                      } finally {
+                        setState(() {
+                          isloadingProdutos = false;
+                        });
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
+                      backgroundColor: colorScheme.scrim,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      'Recarregar produtos',
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                      ),
+                    ),
                   ),
                 ),
               )
-              : 
-              ListTile(
-              leading: Icon(
-                Icons.refresh,
-                color: currentRoute == '/configuracoes'
-                    ? colorScheme.surface
-                    : colorScheme.onSurface,
-              ),
-              title: Text(
-                'Recarregar produtos',
-                style: TextStyle(
-                  color: currentRoute == '/configuracoes'
-                      ? colorScheme.surface
-                      : colorScheme.onSurface,
-                ),
-              ),
-              selected: currentRoute == '/configuracoes',
-              selectedTileColor: colorScheme.primary,
-              onTap: () async {
-                if (isloadingProdutos) {
-                  return;
-                }
-                
-                setState(() {
-                  isloadingProdutos = true;
-                });
-                
-                try {
-                  await funcoesController.adicionaisObservacoesProdutos();
-                  await funcoesController.informacoesListaGarcom();
-                  await funcoesController.buscarGrupos();
-                  await funcoesController.buscarProdutos();
-                  await funcoesController.buscarTamanhosPizza();
-                  await funcoesController.buscarSaboresBordasPizza();
-                  await funcoesController.buscarGruposPizza();
-                } catch (e) {
-                  setState(() {
-                    isloadingProdutos = false;
-                  });
-                } finally {
-                  setState(() {
-                    isloadingProdutos = false;
-                  });
-                }
-              },
-            ),
               /* Padding(
-                padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
+                padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 2),
                 child: ElevatedButton(
                   onPressed: () async {
                     if (isloadingProdutos) {
@@ -578,64 +704,7 @@ class SideNavState extends State<SideNav> {
                     style: TextStyle(color: colorScheme.onPrimary),
                   ),
                 ),
-            ), */
-            // SizedBox(height: 4),
-            ListTile(
-              leading: Icon(
-                Icons.logout,
-                color: currentRoute == '/configuracoes'
-                    ? colorScheme.surface
-                    : colorScheme.onSurface,
-              ),
-              title: Text(
-                "Sair do aplicativo",
-                style: TextStyle(
-                  color: currentRoute == '/configuracoes'
-                      ? colorScheme.surface
-                      : colorScheme.onSurface,
-                ),
-              ),
-              selected: currentRoute == '/configuracoes',
-              selectedTileColor: colorScheme.primary,
-              // onTap: () {  // Fecha a aplicação
-              //   SystemNavigator.pop();
-              // },
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text("Confirmar saída"),
-                      content: Text(
-                        "Você tem certeza que quer sair da aplicação?",
-                      ),
-                      actions: <Widget>[
-                        Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TextButton(
-                                onPressed: () {
-                                  funcoesController.zerarAtendimento();
-                                  SystemNavigator.pop(); // Fecha a aplicação
-                                },
-                                child: Text("Sim"),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop(); // Fecha o diálogo
-                                },
-                                child: Text("Não"),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
+              ), */
           ],
         ),
       ),

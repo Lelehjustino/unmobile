@@ -1,5 +1,6 @@
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:get/get_state_manager/src/simple/get_controllers.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
@@ -11,6 +12,9 @@ import 'package:un_recepcao/views/garcom_page.dart';
 class CarrinhoController extends GetxController {
   final List<Produto> carrinho = <Produto>[];
   /* final comandaCarrinhoController = Get.put(ComandaCarrinhoController()); */
+  RxString numeroComanda = "".obs;
+  RxString numeroMesa = "".obs;
+  RxString numeroPedido = "".obs;
 
   void adicionarProdutoAoCarrinho(
     String produtoNome,

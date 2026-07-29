@@ -614,49 +614,7 @@ class ContaPageState extends State<ContaPage>
   }
 
   // Função para buscar lista de produtos
-  /* Future<void> buscarListaProdutos() async {
-    try {
-      String dadosJson = await Connection().select(
-        """
-        SELECT
-          v.numeroproduto_FK,
-          v.valorunitario,
-
-          SUM(
-            CASE
-              WHEN v.numerounidade_FK = '1' AND p.id IN ('E', 'P')
-              THEN v.quantidade
-              ELSE 0
-            END
-          ) AS total_quantidade,
-
-          SUM(v.valorliquido) AS total_valor,
-          v.datahora
-        FROM vendas v
-        INNER JOIN produtos p ON p.numero = v.numeroproduto_FK
-        WHERE v.numeropedido_FK = '$numeropedido'
-          AND v.cancelado = '0'
-        GROUP BY
-          v.numeroproduto_FK,
-          v.valorunitario,
-          v.datahora
-        """
-      );
-
-      List<dynamic> lista = jsonDecode(dadosJson);
-
-      setState(() {
-        listaProdutos = lista;
-      });
-    } catch (e) {
-      print("Erro ao carregar listaProdutos: $e");
-      setState(() {
-        listaProdutos = [];
-      });
-    }
-  } */
   Future<void> buscarListaProdutos() async {
-    print("Numero do pedido <<<<<<<<<<<<<<<< $numeropedido");
     try {
       String dadosJson = await Connection().select(
         """
@@ -2074,7 +2032,7 @@ class ContaPageState extends State<ContaPage>
                                         ),
                                       ],
                                     ),
-                                    Row(
+                                    /* Row(
                                       children: [
                                         Flexible(
                                           child: Text(
@@ -2100,7 +2058,7 @@ class ContaPageState extends State<ContaPage>
                                           ),
                                         ),
                                       ],
-                                    ),
+                                    ), */
                                     if (id == 'PZ')
                                       Column(
                                         crossAxisAlignment:
@@ -2146,50 +2104,63 @@ class ContaPageState extends State<ContaPage>
                                   ],
                                 ),
                               ),
-                              /* Expanded(flex: 2, child: 
-                            Text((
-                              double.tryParse(quantidadeDoProduto) ?? 0).toInt().toString(), 
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: MediaQuery.textScalerOf(context).scale(12),
-                              ),
-                            )), */
                               Expanded(
                                 flex: 2,
-                                child: Text(
-                                  quantidadeDoProdutoDouble % 1 == 0
-                                      ? '${quantidadeDoProdutoDouble.toInt()} x R\$ $precoDoProduto'
-                                      : '${quantidadeDoProdutoDouble} x R\$ $precoDoProduto',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: MediaQuery.textScalerOf(
-                                      context,
-                                    ).scale(12), 
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    // Data e hora
+                                    Text(
+                                      '$data $hora',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.end,
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.textScalerOf(context).scale(10),
+                                        color: Colors.transparent,
+                                      ),
+                                    ),
+
+                                    // Valor total
+                                    Text(
+                                      quantidadeDoProdutoDouble % 1 == 0
+                                          ? '${quantidadeDoProdutoDouble.toInt()} x R\$ $precoDoProduto'
+                                          : '${quantidadeDoProdutoDouble} x R\$ $precoDoProduto',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.textScalerOf(context).scale(12), 
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                /* child: Text(
-                                  produtoKilo ?
-                                  '${quantidadeDoProdutoDouble.toStringAsFixed(3)} x R\$ $precoDoProduto' : '${quantidadeDoProdutoDouble.toStringAsFixed(0)} x R\$ $precoDoProduto',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: MediaQuery.textScalerOf(
-                                      context,
-                                    ).scale(12),
-                                    /* fontWeight: FontWeight.bold, */
-                                  ),
-                                ), */
                               ),
                               Expanded(
                                 flex: 2,
-                                child: Text(
-                                  'R\$ $totalDoProduto',
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                    fontSize: MediaQuery.textScalerOf(
-                                      context,
-                                    ).scale(12),
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    // Data e hora
+                                    Text(
+                                      '$data $hora',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.end,
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.textScalerOf(context).scale(10),
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+
+                                    // Valor total
+                                    Text(
+                                      'R\$ $totalDoProduto',
+                                      textAlign: TextAlign.end,
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.textScalerOf(context).scale(12),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

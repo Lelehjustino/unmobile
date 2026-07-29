@@ -84,6 +84,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> rotas = ['Home', 'Expedição cliente', 'Expedição motoboy'];
   Set<String> rotasSelecionadas = {'Home'};
 
+  List<String> cupomAvulso = ['Cupom Avulso'];
+  Set<String> cupomAvulsoSelecionados = {};
+
   bool servidorConectado = false;
 
   bool clicado = false;
@@ -163,6 +166,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
   bool isloadingProdutos = false;
 
+  bool aparecerCupomAvulso = false;
+
   @override
   void initState() {
     super.initState();
@@ -195,6 +200,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadServidorAntigo();
     _loadPainelSalvo();
     carregarRota();
+    _loadCupomAvulsoSalvo();
+    carregarCupomAvulso();
 
     _carregarModos();
     _carregarNote();
@@ -249,41 +256,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       // expedicao motoboy
       else if(aparecerExpedicaoMotoboy){
         Get.toNamed('/expedicao_motoboy');
-      }
-      else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Selecione uma rota!',
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-      /* if (aparecerGarcom) {
-        Get.toNamed('/garcom');
-      } else if (aparecerCheckIn) {
-        Get.toNamed('/checkin');
-      } else if (aparecerCheckOut) {
-        Get.toNamed('/checkout');
-      } else if (!naoAparecerMapa) {
-        Get.toNamed('/mapa');
-      } else if (aparecerRecepcao) {
-        Get.toNamed('/recepcao');
-      } else if (aparecerNote) {
-        Get.toNamed('/notes');
       } 
-      // expedicao cliente
-      else if(aparecerExpedicaoCliente){
-        Get.toNamed('/painel_cliente');
-      }
-      // KDS
-      else if(aparecerKDS){
-        Get.toNamed('/painel_cozinha');
-      }
-      // expedicao motoboy
-      else if(aparecerExpedicaoMotoboy){
-        Get.toNamed('/expedicao_motoboy');
+      else if(aparecerCupomAvulso){
+        Get.toNamed('/cupom_avulso');
       }
       else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -294,8 +269,104 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
-      } */
+      }
     }
+  }
+
+  // Preenche o cupom avulso salvo
+  Future<void> _loadCupomAvulsoSalvo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('cupom_avulso');
+
+    if (valor == null || valor.isEmpty) return;
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      // Novo formato (JSON)
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      // Formato antigo
+      setLocal = {valor};
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      cupomAvulsoSelecionados = setLocal;
+    });
+  }
+  /* _loadCupomAvulsoSalvo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedCupomAvulso = prefs.getString('cupom_avulso');
+      if (savedCupomAvulso != null) {
+        final setLocal = Set<String>.from(jsonDecode(savedCupomAvulso));
+        if (!mounted) return;
+        setState(() {
+          cupomAvulsoSelecionados = setLocal;
+        });
+      }
+    } catch (e, st) {
+      // debugPrint("Erro _loadCupomAvulsoSalvo(): $e\n$st");
+    }
+  } */
+
+  // Carrega o cupom avulso - bool para rota
+  Future<void> carregarCupomAvulso() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('cupom_avulso');
+
+    if (valor == null || valor.isEmpty) {
+      setState(() => aparecerCupomAvulso = false);
+      return;
+    }
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    setState(() {
+      aparecerCupomAvulso = setLocal.contains('Cupom Avulso');
+    });
+  }
+  /* carregarCupomAvulso() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cupomAvulsoJson = prefs.getString('cupom_avulso');
+
+    if (cupomAvulsoJson != null) {
+      final cupomAvulsoSalvos = Set<String>.from(jsonDecode(cupomAvulsoJson));
+
+      if (cupomAvulsoSalvos.contains('Cupom Avulso')) {
+        // se note selecionado
+        setState(() {
+          aparecerCupomAvulso = true;
+        });
+      } else {
+        // se note nao selecionado
+        setState(() {
+          aparecerCupomAvulso = false;
+        });
+      }
+    } else {
+      // configuração padrao
+      setState(() {
+        aparecerCupomAvulso = false;
+      });
+    }
+  } */
+
+  // Salva o cupom avulso
+  _saveCupomAvulso(Set<String> cupomAvulsoSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'cupom_avulso',
+      jsonEncode(cupomAvulsoSelecionados.toList()),
+    );
   }
 
   void pegarServidorAntigo() async {
@@ -773,31 +844,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       });
     }
   }
-  /* Future<void> _carregarNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final noteJson = prefs.getString('note_padrao');
-
-    if (noteJson != null) {
-      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
-
-      if (notesSalvos.contains('Notes')) {
-        // se note selecionado
-        setState(() {
-          aparecerNote = true;
-        });
-      } else {
-        // se note nao selecionado
-        setState(() {
-          aparecerNote = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerNote = false;
-      });
-    }
-  } */
 
   // Carregar recepcao
   Future<void> _carregarRecepcao() async {
@@ -1080,42 +1126,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       }
     }
   }
-  /* Future<void> carregarRota() async {
-    final prefs = await SharedPreferences.getInstance();
-    final rotaJson = prefs.getString('rota_padrao');
-
-    if (rotaJson != null) {
-      final rotasSalvos = Set<String>.from(jsonDecode(rotaJson));
-
-      if (rotasSalvos.contains("Home") &&
-          !rotasSalvos.contains("Expedição cliente")) {
-        // home
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-        });
-      } else if (rotasSalvos.contains("Expedição cliente") &&
-          !rotasSalvos.contains("Home")) {
-        // painel cliente
-        setState(() {
-          rotaHome = false;
-          rotaPainelCliente = true;
-        });
-      } else {
-        // home
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-        });
-      }
-    } else {
-      // home
-      setState(() {
-        rotaHome = true;
-        rotaPainelCliente = false;
-      });
-    }
-  } */
 
   // Salvar Rota
   Future<void> salvarRota(Set<String> rotasSalvas) async {
@@ -1214,6 +1224,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await salvarGarcomSalvo(garcomSelecionados);
     await salvarPainelSalvo(paineisSelecionados);
     await salvarRota(rotasSelecionadas);
+    await _saveCupomAvulso(cupomAvulsoSelecionados);
   }
 
   // Deriva as variáveis booleanas de navegação diretamente dos Sets em memória.
@@ -1232,54 +1243,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await _loadPaineis();
     // Rota
     await carregarRota();
+    // Cupom avulso
+    await _loadCupomAvulsoSalvo();
+    await carregarCupomAvulso();
   }
-
-  /* void _aplicarConfiguracoesDaMemoria() {
-
-    // --- Modos (Mesa / Comanda) → mapa e check-in/out ---
-    final temMesa = modosSelecionados.contains('Mesa');
-    final temComanda = modosSelecionados.contains('Comanda');
-    naoAparecerMapa = !(temMesa || temComanda);
-    if (temMesa && !temComanda) {
-      aparecerCheckInOut = false;
-    } else if (temComanda) {
-      aparecerCheckInOut = true;
-    } else {
-      aparecerCheckInOut = false;
-    }
-
-    // --- Check-in / Check-out ---
-    aparecerCheckIn = checkSelecionados.contains('Ckeck-in');
-    aparecerCheckOut = checkSelecionados.contains('Check-out');
-
-    // --- Garçom ---
-    // A chave usada na UI é 'Modo Garçom'.
-    // Se está no set → garçom ativo; se não está → garçom inativo.
-    aparecerGarcom = garcomSelecionados.contains('Modo Garçom');
-
-    // --- Notes ---
-    aparecerNote = notesSelecionados.contains('Notes');
-
-    // --- Recepção ---
-    aparecerRecepcao = recepcaoSelecionados.contains('Recepção');
-
-    // --- Rota ---
-    final temPainelCliente = rotasSelecionadas.contains('Expedição cliente');
-    rotaPainelCliente = temPainelCliente;
-    rotaHome = !temPainelCliente;
-
-    // --- Atualiza rotaNova para comparação com rotaAntiga ---
-    rotaNova = rotaPainelCliente ? 'Painel cliente' : 'Home';
-
-    // --- Expedição cliente ---
-    aparecerExpedicaoCliente = paineisSelecionados.contains('Expedição cliente');
-
-    // --- KDS ---
-    aparecerKDS = paineisSelecionados.contains('KDS');
-
-    // --- Expedição motoboy ---
-    aparecerExpedicaoMotoboy = paineisSelecionados.contains('Expedição motoboy');
-  } */
 
   Future<void> salvarGarcomSalvo(Set<String> garcomSalvos) async {
     try {
@@ -1761,90 +1728,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       },
     );
   }
-
-  // Função com o popup para selecionar garçom
-  /*   void popupSelecionarGarcom() {
-    if (!servidorConectado) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Sem conexão com o servidor."),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
-
-    if (nomeDaLicenca == "") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Selecione uma licença primeiro."),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Align(
-            alignment: Alignment.center,
-            child: Text(
-              "Selecione um usuário",
-              style: TextStyle(
-                fontSize: 20, // ou qualquer outro estilo que desejar
-              ),
-            ),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: funcoesController.listaGarcom.isEmpty
-                ? Center(child: Text("Nenhum usuário encontrado"))
-                : ListView.builder(
-                    itemCount: funcoesController.listaGarcom.length,
-                    itemBuilder: (context, index) {
-                      final garcom = funcoesController.listaGarcom[index];
-
-                      return Card(
-                        child: ListTile(
-                          title: Text(garcom['nome']),
-                          // subtitle: Text("Número: ${garcom['numero']}"),
-                          onTap: () async {
-                            setState(() {
-                              garcomSelecionadoFuncao = true;
-                              numeroDoGarcom = garcom['numero'].toString();
-                              nomeDoGarcom = garcom['nome'];
-                             });
-                            await _saveGarcom(garcom['nome']);
-                            await _saveNumeroGarcom(garcom['numero']);
-                            navegar();
-                            servidorAntigo = servidorController.text;
-                            _saveServidorAntigo(servidorAntigo);
-                          },
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  aparecerConectar = true;
-                  carregamento = false;
-                });
-              },
-              child: Text("Cancelar"),
-            ),
-          ],
-        );
-      },
-    );
-  } */
 
   // Função com o popup para selecionar licenças diponiveis
   void popupSelecionarLicenca() {
@@ -2496,70 +2379,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                       garcomSelecionados.remove(modo);
                                     }
                                   });
-                                  /*  setState(() {
-                               if (value == true) { // se for true, significa que o usuário marcou uma alternativa 
-                                  // Ao selecionar uma opção, desmarque as outras
-                                  garcomSelecionados.clear(); // limpa absolutamente tudo 
-                                  garcomSelecionados.add(modo); // adiciona apenas o checkbox marcado 
-                                } else {
-                                  // Se desmarcar, remove a opção da lista
-                                  garcomSelecionados.remove(modo); // se o usuario desmarcar o checkbox, remove
-                                }
-                            }); */
                                 },
                               );
                             },
                           ),
                         ),
-                        /* isloadingProdutos
-                            ? CircularProgressIndicator(
-                              color: colorScheme.scrim,
-                            )
-                            : ElevatedButton(
-                          onPressed: () async {
-                            if (isloadingProdutos) {
-                              return;
-                            }
-
-                            setState(() {
-                              isloadingProdutos = true;
-                            });
-                            
-                            try {
-                              await funcoesController.adicionaisObservacoesProdutos();
-                              await funcoesController.informacoesListaGarcom();
-                              await funcoesController.buscarGrupos();
-                              await funcoesController.buscarProdutos();
-                            } catch (e) {
-                              setState(() {
-                                isloadingProdutos = false;
-                              });
-                            } finally {
-                              setState(() {
-                                isloadingProdutos = false;
-                              });
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                            backgroundColor: colorScheme.scrim,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: BorderSide(
-                                color: colorScheme.scrim,
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                          child: Text(
-                            'Recarregar produtos',
-                            style: TextStyle(color: colorScheme.onPrimary),
-                          ),
-                        ),
-                        SizedBox(height: 10), */
                       Center(
                         child: Text(
                           'Configuração dos painéis:',
@@ -2603,6 +2427,55 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                         paineisSelecionados.add(modo);
                                     } else {
                                       paineisSelecionados.remove(modo);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+
+                      Center(
+                        child: Text(
+                          'Configuração cupom avulso:',
+                          style: TextStyle(
+                            color: colorScheme.onSecondary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      if (cupomAvulso.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else
+                        Padding(
+                          padding: EdgeInsets.only(right: 150),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: cupomAvulso.length,
+                            itemBuilder: (context, index) {
+                              String modo = cupomAvulso[index];
+                              bool isChecked = cupomAvulsoSelecionados.contains(modo);
+                              return CheckboxListTile(
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      if (cupomAvulsoSelecionados.length <= 3)
+                                        cupomAvulsoSelecionados.add(modo);
+                                    } else {
+                                      cupomAvulsoSelecionados.remove(modo);
                                     }
                                   });
                                 },
@@ -2659,140 +2532,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-
-                        /* ElevatedButton(
-                          onPressed: () async {},
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 20,
-                            ),
-                            backgroundColor: colorScheme.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: BorderSide(
-                                color: colorScheme.primary,
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                          child: Text(
-                            'Carregar produtos',
-                            style: TextStyle(color: colorScheme.onPrimary),
-                          ),
-                      ), */
                     ],
                   ),
                 ),
               ),
             ),
-            // Teclado numérico
-            /* Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final int crossAxisCount = 3;
-                  final int itemCount = 12;
-                  final double spacing = 8.0;
-                  final int rows = (itemCount / crossAxisCount).ceil();
-                  final double cellWidth =
-                      (constraints.maxWidth -
-                          (spacing * (crossAxisCount - 1))) /
-                      crossAxisCount;
-                  final double cellHeight =
-                      (constraints.maxHeight - (spacing * (rows - 1))) / rows;
-                  final double childAspectRatio = cellWidth / cellHeight;
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(12),
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: itemCount,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      mainAxisSpacing: spacing,
-                      crossAxisSpacing: spacing,
-                      childAspectRatio: childAspectRatio,
-                    ),
-                    itemBuilder: (context, index) {
-                      if (index == 9) {
-                        return ElevatedButton(
-                          onPressed: _apagarNumero,
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
-                            ),
-                            padding: EdgeInsets.zero,
-                            backgroundColor: colorScheme.onPrimary,
-                          ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Icon(
-                              Icons.backspace,
-                              size: 32,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                        );
-                      } else if (index == 10) {
-                        return ElevatedButton(
-                          onPressed: () => _adicionarNumero("0"),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: const Text(
-                              "0",
-                              style: TextStyle(fontSize: 28),
-                            ),
-                          ),
-                        );
-                      } else if (index == 11) {
-                        return ElevatedButton(
-                          onPressed: () => _adicionarNumero("."),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
-                            ),
-                            backgroundColor: colorScheme.primary,
-                            padding: EdgeInsets.zero,
-                          ),
-                          child: Center(
-                            child: Text(
-                              ".",
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: colorScheme.onPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        );
-                      } else {
-                        final numero = (index + 1).toString();
-                        return ElevatedButton(
-                          onPressed: () => _adicionarNumero(numero),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              numero,
-                              style: const TextStyle(fontSize: 28),
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  );
-                },
-              ),
-            ), */
             SizedBox(height: 5),
             // Botão salvar
             AbsorbPointer(

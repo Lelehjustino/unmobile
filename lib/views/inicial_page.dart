@@ -125,6 +125,7 @@ class InicialPageState extends State<InicialPage> {
   bool aparecerKDS = false;
   bool aparecerExpedicaoCliente = false;
   bool aparecerExpedicaoMotoboy = false;
+  bool aparecerCupomAvulso = false;
 
   Timer? _timerSenha;
 
@@ -161,6 +162,7 @@ class InicialPageState extends State<InicialPage> {
     _carregargarcom();
     carregarRota();
     _loadPaineis();
+    _carregarCupomAvulso();
   }
 
   @override
@@ -168,6 +170,28 @@ class InicialPageState extends State<InicialPage> {
     _timer.cancel();
     Get.delete<InicialController>();
     super.dispose();
+  }
+
+  Future<void> _carregarCupomAvulso() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('cupom_avulso');
+
+    if (valor == null || valor.isEmpty) {
+      setState(() => aparecerCupomAvulso = false);
+      return;
+    }
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    setState(() {
+      aparecerCupomAvulso = setLocal.contains('Cupom Avulso');
+    });
   }
 
   // Carregar rota
@@ -275,6 +299,10 @@ class InicialPageState extends State<InicialPage> {
       // expedicao motoboy
       else if(aparecerExpedicaoMotoboy){
         Get.toNamed('/expedicao_motoboy');
+      } 
+      // cupom avulso
+      else if(aparecerCupomAvulso){
+        Get.toNamed('/cupom_avulso');
       }
       else {
         Get.toNamed('/garcom');

@@ -386,8 +386,10 @@ class GarcomPageState extends State<GarcomPage>
 
     // Se já existem itens no carrinho OU foi passado algum argumento, restaura o estado ANTES de ligar os listeners
     if (carrinhoController.carrinho.isNotEmpty || Get.arguments != null) {
+      // iniciaComCarrinho() já chama sairModoTouch() internamente e salva "Carrinho".
+      // NÃO chamar carregarUltimaConfiguracao() aqui, pois ela leria "Touch" do
+      // SharedPreferences e reativaria o modo touch logo após sairModoTouch().
       iniciaComCarrinho();
-      carregarUltimaConfiguracao();
     } else {
       chamarFocoInicial();
       carrinhoController.carrinho.clear();
@@ -403,19 +405,6 @@ class GarcomPageState extends State<GarcomPage>
 
     // limparCarrinho();
   }
-
-  /* void limparCarrinho(){
-    if(carrinhoController.carrinho.isNotEmpty){
-      if(!comandaValida && comandaController.text.isEmpty){
-        carrinhoController.carrinho.clear();
-        _executarLimpezaGeral();
-      }
-      if(!mesaValida && mesaController.text.isEmpty){
-        carrinhoController.carrinho.clear();
-        _executarLimpezaGeral();
-      }
-    }
-  } */
 
   void marcarObservacoes(List<String> observacoesTextoFuncao) {
     setState(() {
@@ -517,10 +506,8 @@ class GarcomPageState extends State<GarcomPage>
         },
       )?.then((_) {
         if (mounted) {
-          setState(() {
-            aparecerCarrinho = true;
-            aparecerConfiguracaoProduto = false;
-          });
+          // Garante que o modo touch é desativado e o carrinho aparece ao retornar da PizzaPage.
+          sairModoTouch();
         }
       });
     }
@@ -801,7 +788,7 @@ class GarcomPageState extends State<GarcomPage>
   // Função para iniciar com carrinho
   void iniciaComCarrinho() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (Get.arguments == null) return;
+      if (Get.arguments != null) {
 
       String comandaDoPedido = Get.arguments['comanda'] ?? '';
       String mesaDoPedido = Get.arguments['mesa'] ?? '';
@@ -811,8 +798,16 @@ class GarcomPageState extends State<GarcomPage>
         mesaDoPedido = "";
       }
 
+      if(mesaDoPedido == ""){
+        mesaDoPedido = carrinhoController.numeroMesa.value;
+      }
+
       if (comandaDoPedido == "0" || comandaDoPedido == '0') {
         comandaDoPedido = "";
+      }
+
+      if(comandaDoPedido == ""){
+        comandaDoPedido = carrinhoController.numeroComanda.value;
       }
 
       // await buscarTipoPedido();
@@ -866,6 +861,79 @@ class GarcomPageState extends State<GarcomPage>
       });
 
       sairModoTouch();
+      } else {
+        String comandaDoPedido = carrinhoController.numeroComanda.value;
+        String mesaDoPedido = carrinhoController.numeroMesa.value;
+        String numeropedido = carrinhoController.numeroPedido.value;
+
+        if (mesaDoPedido == "0" || mesaDoPedido == '0') {
+          mesaDoPedido = "";
+        }
+
+        if(mesaDoPedido == ""){
+          mesaDoPedido = carrinhoController.numeroMesa.value;
+        }
+
+        if (comandaDoPedido == "0" || comandaDoPedido == '0') {
+          comandaDoPedido = "";
+        }
+
+        if(comandaDoPedido == ""){
+          comandaDoPedido = carrinhoController.numeroComanda.value;
+        }
+
+        // await buscarTipoPedido();
+
+        if (numeropedido == "0") {
+          if (funcoesController.logicaPorComanda.value ||
+              funcoesController.logicaPorComandaNaMesa.value) {
+            validarComanda(comandaDoPedido);
+          } else {
+            validarMesa(mesaDoPedido);
+          }
+        } else {
+          if (funcoesController.logicaPorComanda.value ||
+              funcoesController.logicaPorComandaNaMesa.value) {
+            verificarSeTemConta(comandaDoPedido);
+          } else {
+            verificarSeTemConta(mesaDoPedido);
+          }
+
+          if (funcoesController.logicaPorComanda.value ||
+              funcoesController.logicaPorComandaNaMesa.value) {
+            buscarNumeroPedido(comandaDoPedido);
+          } else {
+            buscarNumeroPedido(mesaDoPedido);
+          }
+        }
+
+        setState(() {
+          aparecerCarrinho = true;
+          aparecerCardapio = true;
+          showKeyboardAlfa = false;
+
+          showKeyboardQuantidade = false;
+          aparecerLista = false;
+          aparecerConfiguracaoProduto = false;
+          aparecerBotoes = false;
+          comandaController.text = comandaDoPedido;
+          mesaController.text = mesaDoPedido;
+          aparecerFazerPedido = true;
+
+          numeroComandaEmUso = comandaDoPedido;
+          numeroMesaEmUso = mesaDoPedido;
+
+          _campoAtivo = 'cardapioController';
+
+          Future.delayed(Duration(milliseconds: 300), () {
+            if (cardapioFocus.canRequestFocus) {
+              cardapioFocus.requestFocus();
+            }
+          });
+        });
+
+        sairModoTouch();
+      }
     });
   }
 
@@ -1817,6 +1885,9 @@ class GarcomPageState extends State<GarcomPage>
     limparInformacoesProduto();
     quantidadesAdicionais.clear();
     quantidadesObservacoes.clear();
+
+    carrinhoController.numeroComanda.value = "";
+    carrinhoController.numeroMesa.value = "";
     
     // Reseta controllers e variáveis de controle
     comandaController.clear();
@@ -2128,44 +2199,6 @@ class GarcomPageState extends State<GarcomPage>
       });
     }
   }
-
-  /* // Função para descobrir tipo do pedido
-  Future<void> buscarTipoPedido() async {
-    try {
-      String dadosJson = await Connection().select(
-        "SELECT resultado FROM configuracoes WHERE numero='23';",
-      );
-
-      List<dynamic> lista = jsonDecode(dadosJson);
-
-      if (lista.isNotEmpty) {
-        // pega apenas o campo resultado
-        String valor = lista[0]['resultado'].toString();
-
-        setState(() {
-          tipoDoPedido = valor;
-          if (tipoDoPedido == "100") {
-            logicaPorMesa = true;
-          } else if (tipoDoPedido == "010") {
-            logicaPorComanda = true;
-          } else if (tipoDoPedido == "011") {
-            logicaPorComandaNaMesa = true;
-          }
-        });
-        print("Tipo do pedido: $tipoDoPedido");
-      } else {
-        // se a lista vier vazia
-        setState(() {
-          tipoDoPedido = "Não foi possível buscar tipo do pedido";
-        });
-      }
-    } catch (e) {
-      print("Erro ao carregar configuracaoServico: $e");
-      setState(() {
-        tipoDoPedido = "0";
-      });
-    }
-  }  */
 
   // Buscar numero pedido
   Future<void> buscarNumeroPedido(String numero) async {
@@ -2955,10 +2988,8 @@ class GarcomPageState extends State<GarcomPage>
                                       },
                                     )?.then((_) {
                                       if (mounted) {
-                                        setState(() {
-                                          aparecerCarrinho = true;
-                                          aparecerConfiguracaoProduto = false;
-                                        });
+                                        // Garante que o modo touch é desativado e o carrinho aparece ao retornar da PizzaPage.
+                                        sairModoTouch();
                                       }
                                     });
                                   } else if (produto['produto_id'] == 'E') {
@@ -3862,12 +3893,6 @@ class GarcomPageState extends State<GarcomPage>
                                             });
                                         
                                             sairModoTouch();
-                                        
-                                            /* if(!modoAnteriorTouch){
-                                              entrarModoTouch();
-                                            }else{
-                                              sairModoTouch();
-                                            } */
                                           },
                                         
                                           style: ElevatedButton.styleFrom(
@@ -4884,29 +4909,6 @@ class GarcomPageState extends State<GarcomPage>
           aparecerGarcom = true;
         });
       }
-
-      /* if (garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else if (!garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if(garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")){
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-      else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } */
     } else {
       setState(() {
         // Se não tiver nada salvo, define padrão
@@ -5474,6 +5476,7 @@ class GarcomPageState extends State<GarcomPage>
 
     if (comandaValida && !mesaVinculada) {
       _dialogVincularMesa();
+      carrinhoController.numeroComanda.value = comandaController.text;
       setState(() {
         empurrarBotoes = false;
       });
@@ -5497,6 +5500,7 @@ class GarcomPageState extends State<GarcomPage>
 
     if (mesaValida) {
       setState(() {
+        carrinhoController.numeroMesa.value = mesaController.text;
         aparecerFazerPedido = true;
         aparecerCardapio = true;
         numeroMesaEmUso = mesaController.text;
@@ -5523,6 +5527,7 @@ class GarcomPageState extends State<GarcomPage>
 
     if (comandaValida) {
       setState(() {
+        carrinhoController.numeroComanda.value = comandaController.text;
         aparecerFazerPedido = true;
         aparecerCardapio = true;
         numeroComandaEmUso = comandaController.text;
@@ -5563,6 +5568,7 @@ class GarcomPageState extends State<GarcomPage>
           await confirmarQueroMesa(mesaController.text, comandaController.text);
           if (mesaValida) {
             comandaController.text = numeroComandaEmUso;
+            carrinhoController.numeroMesa.value = mesaController.text;
             _irParaCardapio();
             entrarModoTouch();
             _selecionarPrimeiroGrupo();
@@ -8460,10 +8466,11 @@ class GarcomPageState extends State<GarcomPage>
                                           'index': index,
                                           'editar': false,
                                         },
-                                      );
-                                      setState(() {
-                                        aparecerCarrinho = true;
-                                        aparecerConfiguracaoProduto = false;
+                                      )?.then((_) {
+                                        if (mounted) {
+                                          // Garante que o modo touch é desativado e o carrinho aparece ao retornar da PizzaPage.
+                                          sairModoTouch();
+                                        }
                                       });
                                     } else if (produto['produto_id'] == 'E') {
                                       // Atualiza os controladores fora do setState para evitar loops de rebuild
@@ -9502,10 +9509,8 @@ class GarcomPageState extends State<GarcomPage>
                                       },
                                     )?.then((_) {
                                       if (mounted) {
-                                        setState(() {
-                                          aparecerCarrinho = true;
-                                          aparecerConfiguracaoProduto = false;
-                                        });
+                                        // Garante que o modo touch é desativado e o carrinho aparece ao retornar da PizzaPage.
+                                        sairModoTouch();
                                       }
                                     });
                                   } else if (produto['produto_id'] == 'E') {
@@ -9874,9 +9879,9 @@ class GarcomPageState extends State<GarcomPage>
                                 constraints: BoxConstraints(
                                   minHeight: 56,
                                   maxHeight: math.max(
-      56.0,
-      MediaQuery.of(context).size.height * 0.10,
-    ),
+                                    56.0,
+                                    MediaQuery.of(context).size.height * 0.10,
+                                  ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -9980,9 +9985,9 @@ class GarcomPageState extends State<GarcomPage>
                                 constraints: BoxConstraints(
                                   minHeight: 56,
                                   maxHeight: math.max(
-      56.0,
-      MediaQuery.of(context).size.height * 0.10,
-    ),
+                                    56.0,
+                                    MediaQuery.of(context).size.height * 0.10,
+                                  ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -10086,9 +10091,9 @@ class GarcomPageState extends State<GarcomPage>
                                 constraints: BoxConstraints(
                                   minHeight: 56,
                                   maxHeight: math.max(
-      56.0,
-      MediaQuery.of(context).size.height * 0.10,
-    ),
+                                    56.0,
+                                    MediaQuery.of(context).size.height * 0.10,
+                                  ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -10141,30 +10146,6 @@ class GarcomPageState extends State<GarcomPage>
                                     onConfirm: () async {
                                       _executarLimpezaGeral();
                                       Get.toNamed('/mapa');
-                                      /* Navigator.push(
-                                        context,
-                                        PageRouteBuilder(
-                                          transitionDuration:
-                                              Duration.zero, // sem duração
-                                          reverseTransitionDuration: Duration
-                                              .zero, // sem duração ao voltar
-                                          pageBuilder:
-                                              (
-                                                context,
-                                                animation,
-                                                secondaryAnimation,
-                                              ) => MapaPage(),
-                                          transitionsBuilder:
-                                              (
-                                                context,
-                                                animation,
-                                                secondaryAnimation,
-                                                child,
-                                              ) {
-                                                return child; // retorna direto, sem animação
-                                              },
-                                        ),
-                                      ); */
                                     },
                                     onCancel: () async {
                                       _isZerando = false;
@@ -10196,9 +10177,9 @@ class GarcomPageState extends State<GarcomPage>
                                 constraints: BoxConstraints(
                                   minHeight: 56,
                                   maxHeight: math.max(
-      56.0,
-      MediaQuery.of(context).size.height * 0.10,
-    ),
+                                    56.0,
+                                    MediaQuery.of(context).size.height * 0.10,
+                                  ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(
@@ -10247,9 +10228,9 @@ class GarcomPageState extends State<GarcomPage>
                                 constraints: BoxConstraints(
                                   minHeight: 56,
                                   maxHeight: math.max(
-      56.0,
-      MediaQuery.of(context).size.height * 0.10,
-    ),
+                                    56.0,
+                                    MediaQuery.of(context).size.height * 0.10,
+                                  ),
                                 ),
                                 child: Container(
                                 decoration: BoxDecoration(

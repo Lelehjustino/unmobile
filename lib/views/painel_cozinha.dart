@@ -430,7 +430,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                           horizontal: 16,
                           vertical: 12,
                         ),
-                        backgroundColor: Theme.of(ctx).colorScheme.primary,
+                        backgroundColor: Theme.of(ctx).colorScheme.error.withOpacity(0.8),
                       ),
                     ),
                     SizedBox(width: 10),

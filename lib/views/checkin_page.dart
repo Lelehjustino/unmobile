@@ -1491,8 +1491,7 @@ class CheckinPageState extends State<CheckinPage>
                             final crossAxisCount = (constraints.maxWidth / larguraMinimaCard).floor().clamp(1, 8);
 
                             final listaObservacoes = listaCompleta.where((item) {
-                              return item['numeroobservacao'].toString() != "0" &&
-                                    item['nomeobservacao'].toString() != "0";
+                              return item['numeroobservacao'].toString() != "0" && item['nomeobservacao'].toString() != "0";
                             }).toList();
 
                             return GridView.builder(

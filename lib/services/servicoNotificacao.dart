@@ -118,6 +118,10 @@ class ServicoNotificacao {
     }
   }
 
+  /// Toca o som de notificação diretamente, sem verificar `estaNoPainelCozinha`.
+  /// Usar quando a lógica de disparo já foi tratada externamente (ex.: PainelCliente).
+  static Future<void> tocarSom() => _tocarSom();
+
   /// Reseta os IDs notificados (usar ao trocar de terminal de produção).
   /// Ao resetar, a **próxima** consulta preencherá o Set sem tocar som —
   /// isso é feito automaticamente pelo [verificarENotificar] porque

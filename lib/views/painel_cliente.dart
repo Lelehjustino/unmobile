@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/models/monitor.dart';
+import 'package:un_recepcao/services/servicoNotificacao.dart';
 import 'package:un_recepcao/widgets/side_nav.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
@@ -34,6 +35,14 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
   /// Flag de controle: evita chamadas duplicadas ao window_manager.
   /// false = interface visível | true = fullscreen ativo
   bool _isFullScreen = false;
+
+  int? pedidoHoverIndexPreparo;
+  int? pedidoHoverIndexPronto;
+
+  /// IDs de pedidos já notificados por status.
+  /// Inicializados como null → na primeira chamada apenas preenche sem tocar som.
+  Set<String>? _idsNotificadosPreparo;
+  Set<String>? _idsNotificadosPronto;
 
   @override
   void initState() {
@@ -130,14 +139,14 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
   Future<void> moverParaOutroMonitor() async {
     if (!Platform.isWindows) return;
 
-    // ── 1. Obtém o HWND da janela principal ──────────────────────────────────
+    //  1. Obtém o HWND da janela principal 
     final hwnd = await windowManager.getId();
     if (hwnd == 0) {
       debugPrint('[Monitor] HWND inválido — operação cancelada.');
       return;
     }
 
-    // ── 2. Enumera os monitores sem callbacks ────────────────────────────────
+    //  2. Enumera os monitores sem callbacks 
     final monitores = enumerarMonitores();
     debugPrint('[Monitor] Total de monitores detectados: ${monitores.length}');
 
@@ -146,7 +155,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
       return;
     }
 
-    // ── 3. Descobre em qual monitor a janela está atualmente ─────────────────
+    //  3. Descobre em qual monitor a janela está atualmente ─
     //   MONITOR_DEFAULTTONEAREST: retorna o monitor mais próximo caso a janela
     //   esteja parcialmente fora de qualquer monitor.
     final hMonitorAtual = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
@@ -157,11 +166,11 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
       return;
     }
 
-    // ── 4. Calcula o índice do próximo monitor (circular) ────────────────────
+    //  4. Calcula o índice do próximo monitor (circular) 
     final indiceDestino = (indiceAtual + 1) % monitores.length;
     final destino = monitores[indiceDestino];
 
-    // ── 5. Sai do fullscreen antes de mover ─────────────────────────────────
+    //  5. Sai do fullscreen antes de mover ─
     //   É necessário sair do fullscreen para que o SetWindowPos possa
     //   reposicionar a janela corretamente no outro monitor.
     _isFullScreen = false; // reseta a flag antes de chamar window_manager
@@ -171,7 +180,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     // Aguarda o Windows processar a saída do fullscreen
     await Future.delayed(const Duration(milliseconds: 150));
 
-    // ── 6. Move e redimensiona a janela para cobrir o monitor destino ────────
+    //  6. Move e redimensiona a janela para cobrir o monitor destino 
     SetWindowPos(
       hwnd,
       HWND_TOP,
@@ -185,7 +194,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     // Aguarda o Windows processar o reposicionamento antes de reativar fullscreen
     await Future.delayed(const Duration(milliseconds: 250));
 
-    // ── 7. Reativa o fullscreen no novo monitor ──────────────────────────────
+    //  7. Reativa o fullscreen no novo monitor 
     await ocultarInterfaceWindows();
   }
 
@@ -210,6 +219,34 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
         }
       }
     });
+
+    // ── Notificação por ID ──────────────────────────────────────────
+    // Extrai IDs atuais de cada lista
+    final idsPreparoAgora = listaPedidosEmPreparo.map((p) => p['numeropedido']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
+
+    final idsProntoAgora = listaPedidosProntos.map((p) => p['numeropedido']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
+
+    if (_idsNotificadosPreparo == null) {
+      // Primeira execução: preenche sem tocar som
+      _idsNotificadosPreparo = Set.from(idsPreparoAgora);
+    } else {
+      final ineditos = idsPreparoAgora.difference(_idsNotificadosPreparo!);
+      if (ineditos.isNotEmpty) {
+        _idsNotificadosPreparo!.addAll(ineditos);
+        ServicoNotificacao.tocarSom();
+      }
+    }
+
+    if (_idsNotificadosPronto == null) {
+      // Primeira execução: preenche sem tocar som
+      _idsNotificadosPronto = Set.from(idsProntoAgora);
+    } else {
+      final ineditos = idsProntoAgora.difference(_idsNotificadosPronto!);
+      if (ineditos.isNotEmpty) {
+        _idsNotificadosPronto!.addAll(ineditos);
+        ServicoNotificacao.tocarSom();
+      }
+    }
   }
 
   Future<void> mudarStatusPedidoRetirado(String numeroPedido) async {
@@ -224,7 +261,21 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     _buscarEOrganizar();
   }
 
-  // ─── Diálogo padrão ─────────────────────────────────────────────────────────
+  ///responsavel por confirmar pedido para a cozinha
+  Future<void> confirmarPedidoPronto(String numeroFuncao) async {
+    // String numeroFormatado = formatarNumero(numeroFuncao);
+    try {
+      // 2 = pronto
+      await Connection().transaction([
+        "UPDATE delivery SET statuspainel = '2' WHERE numeropedido_FK = '$numeroFuncao'",
+        "UPDATE servidorproducao SET status = '2' WHERE numeropedido_FK = '$numeroFuncao'",
+      ]);
+    } catch (e) {
+    }
+    _buscarEOrganizar();
+  }
+
+  // ─ Diálogo padrão 
 
   Future<void> shownDialogTwoBottom({
     required BuildContext context,
@@ -248,7 +299,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
             borderRadius: BorderRadius.circular(12),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+            padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -257,53 +308,24 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                     shape: BoxShape.circle,
                     color: Theme.of(ctx).colorScheme.primary.withOpacity(0.08),
                   ),
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12),
                   child: Icon(
                     icon,
-                    size: 40,
+                    size: 80,
                     color: Theme.of(ctx).colorScheme.primary,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 if (title.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
+                    padding: EdgeInsets.only(bottom: 8.0),
                     child: Text(
                       title,
                       style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: 50,
                       ),
                       textAlign: TextAlign.center,
-                    ),
-                  ),
-                if (message != null && message.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10.0),
-                    child: Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 15,
-                        color: Theme.of(ctx).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                if (textController != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 15.0),
-                    child: TextField(
-                      keyboardType: TextInputType.number,
-                      controller: textController,
-                      focusNode: focusNode,
-                      onSubmitted: onSubmitted,
-                      autofocus: focusNode == null,
-                      textAlign: TextAlign.center,
-                      decoration: const InputDecoration(
-                        hintText: 'Digite aqui...',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.all(12),
-                      ),
                     ),
                   ),
                 Row(
@@ -318,20 +340,21 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
                         ),
-                        backgroundColor: Theme.of(ctx).colorScheme.error,
+                        backgroundColor: Theme.of(ctx).colorScheme.error.withOpacity(0.60),
                       ),
                       child: Text(
                         cancelText.toUpperCase(),
                         style: TextStyle(
                           color: Theme.of(ctx).colorScheme.onPrimary,
+                          fontSize: 25,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
@@ -341,17 +364,17 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
                         ),
-                        backgroundColor:
-                            Theme.of(ctx).colorScheme.primary.withOpacity(0.05),
+                        backgroundColor: Theme.of(ctx).colorScheme.primary,
                       ),
                       child: Text(
                         confirmText.toUpperCase(),
                         style: TextStyle(
                           color: Theme.of(ctx).colorScheme.onPrimary,
+                          fontSize: 25,
                         ),
                       ),
                     ),
@@ -365,7 +388,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     );
   }
 
-  // ─── Build ──────────────────────────────────────────────────────────────────
+  // ─ Build ─
 
   @override
   Widget build(BuildContext context) {
@@ -382,7 +405,9 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
             final maxH = constraints.maxHeight;
             final isWideScreen = maxW > 768;
 
-            // ── Escala dinâmica proporcional à resolução ──────────────────────
+            final orientation = MediaQuery.of(context).orientation;
+
+            //  Escala dinâmica proporcional à resolução 
 
             final double appBarHeight = (maxH * 0.08).clamp(50.0, 120.0);
             final double appBarFontSize = (maxW * 0.018).clamp(14.0, 42.0);
@@ -392,20 +417,20 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
             final double headerFontSize = (maxW * 0.022).clamp(16.0, 52.0);
             final double headerPaddingV = (maxH * 0.022).clamp(10.0, 40.0);
 
-            final double preparoNumeroFontSize = (maxW * 0.035).clamp(28.0, 80.0);
-            final double preparoNomeFontSize = (maxW * 0.022).clamp(16.0, 52.0);
-            final double preparoNumeroWidth = (maxW * 0.08).clamp(70.0, 200.0);
+            final double preparoNumeroFontSize = orientation == Orientation.landscape ? (maxW * 0.035).clamp(28.0, 80.0) * 1.5 : (maxW * 0.035).clamp(28.0, 80.0);
+            final double preparoNomeFontSize = orientation == Orientation.landscape ? (maxW * 0.022).clamp(16.0, 52.0) * 1.5 : (maxW * 0.022).clamp(16.0, 52.0);
+            final double preparoNumeroWidth = orientation == Orientation.landscape ? (maxW * 0.08).clamp(70.0, 200.0) * 1.5 : (maxW * 0.08).clamp(70.0, 200.0);
 
-            final double prontoNumeroFontSize = (maxW * 0.048).clamp(36.0, 110.0);
-            final double prontoNomeFontSize = (maxW * 0.032).clamp(22.0, 72.0);
-            final double prontoNumeroWidth = (maxW * 0.09).clamp(80.0, 240.0);
+            final double prontoNumeroFontSize = orientation == Orientation.landscape ? (maxW * 0.048).clamp(36.0, 110.0) * 1.5 : (maxW * 0.048).clamp(36.0, 110.0);
+            final double prontoNomeFontSize = orientation == Orientation.landscape ? (maxW * 0.032).clamp(22.0, 72.0) * 1.5 : (maxW * 0.032).clamp(22.0, 72.0);
+            final double prontoNumeroWidth = orientation == Orientation.landscape ? (maxW * 0.09).clamp(80.0, 240.0) * 1.5 : (maxW * 0.09).clamp(80.0, 240.0);
 
             final double itemSpacingH = (maxW * 0.012).clamp(8.0, 30.0);
             final double listPaddingH = (maxW * 0.018).clamp(10.0, 44.0);
             final double listPaddingV = (maxH * 0.018).clamp(10.0, 36.0);
             final double separatorPaddingV = (maxH * 0.005).clamp(2.0, 12.0);
 
-            // ── AppBar customizada ────────────────────────────────────────────
+            //  AppBar customizada 
             // GestureDetector.onDoubleTap → alterna para a outra janela
             final appBar = GestureDetector(
               onDoubleTap: Platform.isWindows
@@ -450,7 +475,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
               ),
             );
 
-            // ── Coluna EM PREPARO ─────────────────────────────────────────────
+            //  Coluna EM PREPARO 
             final colunaPreparo = Column(
               children: [
                 Container(
@@ -495,40 +520,119 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                       final pedido = listaPedidosEmPreparo[index];
                       final nomeCliente = pedido['nomecliente'].toString();
                       final numeroPedido = pedido['numerodelivery'].toString();
+                      final numeroPedidoFuncao = pedido['numeropedido'].toString();
+                      final bool selecionado = pedidoHoverIndexPreparo == index;
 
-                      return Padding(
-                        padding: EdgeInsets.symmetric(vertical: separatorPaddingV),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: preparoNumeroWidth,
-                              child: Text(
-                                numeroPedido,
-                                textAlign: TextAlign.start,
-                                style: GoogleFonts.montserrat(
-                                  fontSize: preparoNumeroFontSize,
-                                  fontWeight: FontWeight.w900,
-                                  color: colorScheme.scrim,
-                                  height: 1,
-                                ),
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) {
+                          setState(() {
+                            pedidoHoverIndexPreparo = index;
+                          });
+                        },
+                        onExit: (_) {
+                          setState(() {
+                            pedidoHoverIndexPreparo = null;
+                          });
+                        },
+                        child: GestureDetector(
+                          onTap: (){
+                            shownDialogTwoBottom(
+                              context: context,
+                              title: 'Pedido #$numeroPedido\npronto?',
+                              icon: Icons.check,
+                              onConfirm: () async {
+                                await confirmarPedidoPronto(numeroPedidoFuncao);
+                                _buscarEOrganizar();
+                              },
+                              onCancel: () {},
+                            );
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: separatorPaddingV),
+                            child: AnimatedContainer(
+                              duration: Duration(milliseconds: 150),
+                              padding: EdgeInsets.symmetric(
+                                vertical: separatorPaddingV,
+                                horizontal: 8,
                               ),
-                            ),
-                            SizedBox(width: itemSpacingH),
-                            Expanded(
-                              child: Text(
-                                nomeCliente.toUpperCase(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.montserrat(
-                                  fontSize: preparoNomeFontSize,
-                                  fontWeight: FontWeight.w700,
-                                  color: colorScheme.onSurface.withOpacity(0.82),
-                                  letterSpacing: 0.3,
+                              decoration: BoxDecoration(
+                                color: pedidoHoverIndexPreparo == index
+                                    ? colorScheme.primary.withOpacity(0.08)
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: pedidoHoverIndexPreparo == index
+                                      ? colorScheme.primary
+                                      : Colors.transparent,
+                                  width: pedidoHoverIndexPreparo == index ? 2 : 1,
                                 ),
+                                borderRadius: BorderRadius.circular(8),
                               ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: preparoNumeroWidth,
+                                    child: Text(
+                                      numeroPedido,
+                                      textAlign: TextAlign.start,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: preparoNumeroFontSize,
+                                        fontWeight: FontWeight.w900,
+                                        color: colorScheme.scrim,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  // SizedBox(width: itemSpacingH),
+                                  Flexible(
+                                    child: Text(
+                                      nomeCliente.toUpperCase(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: preparoNomeFontSize,
+                                        fontWeight: FontWeight.w700,
+                                        color: colorScheme.onSurface.withOpacity(0.82),
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              /* Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: preparoNumeroWidth,
+                                    child: Text(
+                                      numeroPedido,
+                                      textAlign: TextAlign.start,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: preparoNumeroFontSize,
+                                        fontWeight: FontWeight.w900,
+                                        color: colorScheme.scrim,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: itemSpacingH),
+                                  Text(
+                                    nomeCliente.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: preparoNomeFontSize,
+                                      fontWeight: FontWeight.w700,
+                                      color: colorScheme.onSurface.withOpacity(0.82),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ), */
                             ),
-                          ],
+                          ),
                         ),
                       );
                     },
@@ -537,7 +641,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
               ],
             );
 
-            // ── Coluna PRONTO ─────────────────────────────────────────────────
+            //  Coluna PRONTO 
             final colunaPronto = Column(
               children: [
                 // Cabeçalho também responde ao duplo clique para alternar janelas
@@ -590,52 +694,120 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                       final numeroPedido = pedido['numerodelivery'].toString();
                       final numeroPedidoReal = pedido['numeropedido'].toString();
 
-                      return Padding(
-                        padding: EdgeInsets.symmetric(vertical: separatorPaddingV),
-                        child: GestureDetector(
-                          onTap: () {
-                            shownDialogTwoBottom(
-                              context: context,
-                              title: 'Pedido $numeroPedido retirado?',
-                              icon: Icons.check,
-                              onConfirm: () async {
-                                await mudarStatusPedidoRetirado(numeroPedidoReal);
-                                _buscarEOrganizar();
+                      final bool selecionadoFuncao = pedidoHoverIndexPronto == index;
+
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) {
+                          setState(() {
+                            pedidoHoverIndexPronto = index;
+                          });
+                        },
+                        onExit: (_) {
+                          setState(() {
+                            pedidoHoverIndexPronto = null;
+                          });
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: separatorPaddingV),
+                          child: AnimatedContainer(
+                            duration: Duration(milliseconds: 150),
+                            padding: EdgeInsets.symmetric(
+                              vertical: separatorPaddingV,
+                              horizontal: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selecionadoFuncao
+                                  ? colorScheme.primary.withOpacity(0.08)
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: selecionadoFuncao
+                                    ? colorScheme.primary
+                                    : Colors.transparent,
+                                width: selecionadoFuncao ? 2 : 1,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: GestureDetector(
+                              onTap: () {
+                                shownDialogTwoBottom(
+                                  context: context,
+                                  title: 'Pedido #$numeroPedido#\nretirado?',
+                                  icon: Icons.check,
+                                  onConfirm: () async {
+                                    await mudarStatusPedidoRetirado(numeroPedidoReal);
+                                    _buscarEOrganizar();
+                                  },
+                                  onCancel: () {},
+                                );
                               },
-                              onCancel: () {},
-                            );
-                          },
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: prontoNumeroWidth,
-                                child: Text(
-                                  numeroPedido,
-                                  textAlign: TextAlign.start,
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: prontoNumeroFontSize,
-                                    fontWeight: FontWeight.w900,
-                                    color: colorScheme.shadow,
-                                    height: 1,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: prontoNumeroWidth,
+                                    child: Text(
+                                      numeroPedido,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: prontoNumeroFontSize,
+                                        fontWeight: FontWeight.w900,
+                                        color: colorScheme.shadow,
+                                        height: 1,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              SizedBox(width: itemSpacingH),
-                              Expanded(
-                                child: Text(
-                                  nomeCliente.toUpperCase(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: prontoNomeFontSize,
-                                    fontWeight: FontWeight.w700,
-                                    color: colorScheme.onSurface.withOpacity(0.82),
-                                    letterSpacing: 0.3,
+                                  SizedBox(width: itemSpacingH),
+                                  Flexible(
+                                    child: Text(
+                                      nomeCliente.toUpperCase(),
+                                      maxLines: 2,
+                                      textAlign: TextAlign.center,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: prontoNomeFontSize,
+                                        fontWeight: FontWeight.w700,
+                                        color: colorScheme.onSurface.withOpacity(0.82),
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                              /* Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: prontoNumeroWidth,
+                                    child: Text(
+                                      numeroPedido,
+                                      textAlign: TextAlign.start,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: prontoNumeroFontSize,
+                                        fontWeight: FontWeight.w900,
+                                        color: colorScheme.shadow,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: itemSpacingH),
+                                  Expanded(
+                                    child: Text(
+                                      nomeCliente.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: prontoNomeFontSize,
+                                        fontWeight: FontWeight.w700,
+                                        color: colorScheme.onSurface.withOpacity(0.82),
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ), */
+                            ),
                           ),
                         ),
                       );
@@ -645,7 +817,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
               ],
             );
 
-            // ── Layout final ──────────────────────────────────────────────────
+            //  Layout final ─
             if (isWideScreen) {
               return Column(
                 children: [
@@ -684,7 +856,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
       ),
     );
 
-    // ── MouseRegion (somente Windows) ─────────────────────────────────────────
+    //  MouseRegion (somente Windows) ─
     // Envolve TODO o Scaffold. A cada movimento do mouse:
     //   1. Sai do fullscreen (mostra barra de título + taskbar)
     //   2. Reinicia o timer de 5 s de inatividade

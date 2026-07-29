@@ -14,6 +14,7 @@ import 'package:un_recepcao/views/carrinho_comandas_page.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/configuracoes_page.dart';
+import 'package:un_recepcao/views/cupom_avulso_page.dart';
 import 'package:un_recepcao/views/expedicao_motoboy_page.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/inicial_page.dart';
@@ -25,6 +26,7 @@ import 'package:un_recepcao/views/pizza_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:un_recepcao/views/recepcao_page.dart';
 import 'package:un_recepcao/views/splash_page.dart';
+import 'package:un_recepcao/views/visualizar_comandas_mesa_page.dart';
 
 // projeto versao com app Apple
 
@@ -156,6 +158,8 @@ class _AppState extends State<App> {
         GetPage(name: '/recepcao', page: () => RecepcaoPage()),
         GetPage(name: '/notes', page: () => NotesPage()),
         GetPage(name: '/checkout', page: () => CheckoutPage()),
+        GetPage(name: '/cupom_avulso', page: () => CupomAvulsoPage()),
+        GetPage(name: '/visualizar_comandas_mesa', page: () => VisualizarComandasMesaPage()),
       ],
     );
   }
