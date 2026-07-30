@@ -9451,6 +9451,13 @@ class GarcomPageState extends State<GarcomPage>
                                     produto['produto_numero'],
                                     funcoesController.listaAdicionaisObservacoes,
                                   );
+
+                                  /* if(produto['produto_meia_porcao'] != '0'){
+                                    meiaPorcaoProduto = true;
+                                  }else{
+                                    meiaPorcaoProduto = false;
+                                  } */
+
                                   // Se o produto for do tipo produto
                                   if (produto['produto_id'] == 'P') {
                                     if (produto['produto_un'] == "Kg") {

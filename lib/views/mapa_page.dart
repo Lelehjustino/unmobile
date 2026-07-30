@@ -779,12 +779,13 @@ class MapaPageState extends State<MapaPage> {
     }
   }
 
-  Future<void> _selecionarPrimeiroGrupo(List<dynamic> mesas, List<dynamic> comandas) async {
+  Future<void> _selecionarPrimeiroGrupo(List<dynamic> mesas) async {
     if(logicaPorComandaNaMesa){
       final primeiro = mesas.first;
+      indexMesa = 0;
       setState(() {
         mesaSelecionada = primeiro['numero'].toString();
-        indexMesa = 0;
+        indexMesa = indexMesa;
       });
     }
   }
@@ -860,6 +861,7 @@ class MapaPageState extends State<MapaPage> {
                                     final aberta = mesa['comandavinculada'].toString() != '0' || mesa['numeropedido_FK'].toString() != '0';
                                     final status = int.tryParse(mesa['statuspedido'] ?? '0') ?? 0;
                                     final temConta = mesa['numeropedido_FK'].toString() != '0' && status == 2;
+                                    final List<dynamic> comandasDaMesaItem = itemsComanda.where((c) => c['numeromesa'].toString() == numeroMesa).toList();
 
                                     // Cor base da mesa (mesmo padrão do _buildGridMesas)
                                     Color corBase;
@@ -924,7 +926,7 @@ class MapaPageState extends State<MapaPage> {
                                                   ),
                                                 ),
                                                 Text(
-                                                  "Qtd: ${comandasDaMesa.length}",
+                                                  "Qtd: ${comandasDaMesaItem.length}",
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
                                                   style: TextStyle(
@@ -987,13 +989,8 @@ class MapaPageState extends State<MapaPage> {
                                     final temConta = aberto && status == 2;
                                     final nomeCliente = item['nomecliente']?.toString() ?? '';
                                     final valorContaRaw = item['valorliquidopedido'];
-                                    final valorConta = (valorContaRaw != null &&
-                                            valorContaRaw.toString() != 'null' &&
-                                            valorContaRaw.toString() != '0' &&
-                                            valorContaRaw.toString() != '0.00')
-                                        ? valorContaRaw.toString()
-                                        : null;
-    
+                                    final valorConta = (valorContaRaw != null && valorContaRaw.toString() != 'null' && valorContaRaw.toString() != '0' && valorContaRaw.toString() != '0.00') ? valorContaRaw.toString() : null;
+                                    var mesa = item['numeromesa'].toString();
                                     Color corComanda;
                                     if (temConta) {
                                       corComanda = Theme.of(context).colorScheme.error;
@@ -1050,6 +1047,28 @@ class MapaPageState extends State<MapaPage> {
                                                     fontSize: cons.maxWidth * 0.11,
                                                     color: textColor,
                                                   ),
+                                                ),
+                                                if(mesa != "0" && mesa != "null")
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      "Mesa: $mesa",
+                                                      maxLines: 1, // limita a 1 linha
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        // fontWeight: FontWeight.bold,
+                                                        fontSize: cons.maxWidth * 0.11,
+                                                        color: aberto ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onTertiary,
+                                                      ),
+                                                    ),
+                                                    Icon(
+                                                      Icons.table_bar,
+                                                      size:cons.maxWidth * 0.12,
+                                                      color: aberto ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onTertiary,
+                                                    ),
+                                                  ],
                                                 ),
                                                 if (valorConta != null)
                                                   Text(
@@ -1125,6 +1144,7 @@ class MapaPageState extends State<MapaPage> {
                                                 valorContaRaw.toString() != '0.00')
                                             ? valorContaRaw.toString()
                                             : null;
+                                        var mesa = item['numeromesa'].toString();
         
                                         Color corComanda;
                                         if (temConta) {
@@ -1182,6 +1202,27 @@ class MapaPageState extends State<MapaPage> {
                                                         fontSize: cons.maxWidth * 0.11,
                                                         color: textColor,
                                                       ),
+                                                    ),
+                                                    Row(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                                      children: [
+                                                        Text(
+                                                          "Mesa: $mesa",
+                                                          maxLines: 1, // limita a 1 linha
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: TextStyle(
+                                                            // fontWeight: FontWeight.bold,
+                                                            fontSize: cons.maxWidth * 0.11,
+                                                            color: aberto ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onTertiary,
+                                                          ),
+                                                        ),
+                                                        Icon(
+                                                          Icons.table_bar,
+                                                          size:cons.maxWidth * 0.12,
+                                                          color: aberto ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onTertiary,
+                                                        ),
+                                                      ],
                                                     ),
                                                     if (valorConta != null)
                                                       Text(
@@ -1971,30 +2012,15 @@ class MapaPageState extends State<MapaPage> {
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
                                                   // fontWeight: FontWeight.bold,
-                                                  fontSize:
-                                                      constraints.maxWidth *
-                                                      0.12,
-                                                  color: aberto
-                                                      ? Theme.of(
-                                                          context,
-                                                        ).colorScheme.onPrimary
-                                                      : Theme.of(context)
-                                                            .colorScheme
-                                                            .onTertiary,
+                                                  fontSize:constraints.maxWidth * 0.12,
+                                                  color: aberto ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onTertiary,
                                                 ),
                                               ),
                                               SizedBox(height: 2),
                                               Icon(
                                                 Icons.table_bar,
-                                                size:
-                                                    constraints.maxWidth * 0.12,
-                                                color: aberto
-                                                    ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.onPrimary
-                                                    : Theme.of(
-                                                        context,
-                                                      ).colorScheme.onTertiary,
+                                                size:constraints.maxWidth * 0.12,
+                                                color: aberto ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onTertiary,
                                               ),
                                             ],
                                           ),
@@ -2647,7 +2673,7 @@ class MapaPageState extends State<MapaPage> {
                                     modoCarrossel = false;
                                   });
                                 }else{
-                                  _selecionarPrimeiroGrupo(itensParaMostrarMesa, itensParaMostrarComanda);
+                                  _selecionarPrimeiroGrupo(mapaController.abertasMesas.toList());
                                   setState(() {
                                     modoCarrossel = true;
                                   });

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
@@ -44,6 +45,8 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
   Set<String>? _idsNotificadosPreparo;
   Set<String>? _idsNotificadosPronto;
 
+  bool mudo = false;
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +76,8 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     if (Platform.isWindows) {
       _initWindowsFullScreen();
     }
+
+    carregarConfiguracaoSom();
   }
 
   @override
@@ -91,7 +96,22 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     super.didChangeAppLifecycleState(state);
   }
 
-  // Fullscreen kiosk
+  Future<void> carregarConfiguracaoSom() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String valorSalvo = prefs.getString('configuracao_mudo') ?? '';
+
+    if(valorSalvo.contains('mudo')){
+      mudo = true;
+    }else{
+      mudo = false;
+    }
+  }
+
+  Future<void> salvarConfiguracaoMudo(String valor) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString('configuracao_mudo', valor);
+  }
 
   // Inicializa a janela em fullscreen kiosk ao abrir a tela.
   Future<void> _initWindowsFullScreen() async {
@@ -226,14 +246,23 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
     final idsProntoAgora = listaPedidosProntos.map((p) => p['numeropedido']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
 
+    // Verifica se o usuário está atualmente nesta página.
+    // ModalRoute.of(context)?.isCurrent retorna false quando outra rota
+    // está exibida por cima (ex.: o usuário navegou para outra tela).
+    final bool estaNaTela = mounted && (ModalRoute.of(context)?.isCurrent ?? false);
+
     if (_idsNotificadosPreparo == null) {
       // Primeira execução: preenche sem tocar som
       _idsNotificadosPreparo = Set.from(idsPreparoAgora);
     } else {
       final ineditos = idsPreparoAgora.difference(_idsNotificadosPreparo!);
+      // Sempre atualiza os IDs conhecidos, independente de tocar som
       if (ineditos.isNotEmpty) {
         _idsNotificadosPreparo!.addAll(ineditos);
-        ServicoNotificacao.tocarSom();
+        // Toca o som apenas se não estiver mudo E estiver nesta página
+        if (!mudo && estaNaTela) {
+          ServicoNotificacao.tocarSom();
+        }
       }
     }
 
@@ -242,9 +271,13 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
       _idsNotificadosPronto = Set.from(idsProntoAgora);
     } else {
       final ineditos = idsProntoAgora.difference(_idsNotificadosPronto!);
+      // Sempre atualiza os IDs conhecidos, independente de tocar som
       if (ineditos.isNotEmpty) {
         _idsNotificadosPronto!.addAll(ineditos);
-        ServicoNotificacao.tocarSom();
+        // Toca o som apenas se não estiver mudo E estiver nesta página
+        if (!mudo && estaNaTela) {
+          ServicoNotificacao.tocarSom();
+        }
       }
     }
   }
@@ -668,6 +701,279 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     );
   }
 
+  Future<void> shownDialogTwoBottomHorizontal({
+    required BuildContext context,
+    String title = 'Confirmação',
+    String? message,
+    IconData icon = Icons.home,
+    String cancelText = 'Não',
+    String confirmText = 'Sim',
+    VoidCallback? onConfirm,
+    VoidCallback? onCancel,
+    TextEditingController? textController,
+    FocusNode? focusNode,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final colorScheme = theme.colorScheme;
+
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                final screenHeight = MediaQuery.of(context).size.height;
+
+                // Ocupa no máximo 90% da largura da tela
+                // e nunca ultrapassa 700px em telas grandes.
+                final dialogWidth = (screenWidth * 0.90).clamp(
+                  280.0,
+                  700.0,
+                ) * 1.5;
+
+                // Tamanho responsivo do ícone
+                final iconSize = (screenWidth * 0.10).clamp(
+                  45.0,
+                  100.0,
+                )* 1.5;
+
+                final iconPadding = (screenWidth * 0.015).clamp(
+                  8.0,
+                  16.0,
+                )* 1.5;
+
+                // Título responsivo
+                final titleFontSize = (screenWidth * 0.045).clamp(
+                  20.0,
+                  48.0,
+                )* 1.5;
+
+                // Texto da mensagem responsivo
+                final messageFontSize = (screenWidth * 0.032).clamp(
+                  16.0,
+                  32.0,
+                )* 1.5;
+
+                // Texto dos botões responsivo
+                final buttonFontSize = (screenWidth * 0.028).clamp(
+                  15.0,
+                  28.0,
+                )* 1.5;
+
+                // Padding interno responsivo
+                final horizontalPadding = (screenWidth * 0.035).clamp(
+                  16.0,
+                  32.0,
+                )* 1.5;
+
+                final verticalPadding = (screenHeight * 0.025).clamp(
+                  16.0,
+                  32.0,
+                )* 1.5;
+
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: dialogWidth,
+                    maxHeight: screenHeight * 0.90,
+                  ),
+                  child: SizedBox(
+                    width: dialogWidth,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: verticalPadding,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // ÍCONE
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colorScheme.primary.withOpacity(0.08),
+                            ),
+                            padding: EdgeInsets.all(iconPadding),
+                            child: Icon(
+                              icon,
+                              size: iconSize,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+
+                          SizedBox(
+                            height: (screenHeight * 0.015).clamp(
+                              8.0,
+                              20.0,
+                            ),
+                          ),
+
+                          // TÍTULO
+                          if (title.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                bottom: (screenHeight * 0.015).clamp(
+                                  8.0,
+                                  20.0,
+                                ),
+                              ),
+                              child: Text(
+                                title,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: titleFontSize,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
+                          // MENSAGEM
+                          if (message != null && message.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                bottom: (screenHeight * 0.025).clamp(
+                                  12.0,
+                                  28.0,
+                                ),
+                              ),
+                              child: Text(
+                                message,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontSize: messageFontSize,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
+                          // CAMPO DE TEXTO OPCIONAL
+                          if (textController != null)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                bottom: (screenHeight * 0.025).clamp(
+                                  12.0,
+                                  28.0,
+                                ),
+                              ),
+                              child: TextField(
+                                controller: textController,
+                                focusNode: focusNode,
+                                onSubmitted: onSubmitted,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: messageFontSize,
+                                ),
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // BOTÕES
+                          Row(
+                            children: [
+                              Expanded(
+                                child: SizedBox(
+                                  height: (screenHeight * 0.075).clamp(48.0, 80.0) * 1.5,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+
+                                      if (onCancel != null) {
+                                        onCancel();
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      backgroundColor:
+                                          colorScheme.error.withOpacity(0.60),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                    ),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        cancelText.toUpperCase(),
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                          color: colorScheme.onPrimary,
+                                          fontSize: buttonFontSize * 1.5,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(
+                                width: (screenWidth * 0.02).clamp(
+                                  8.0,
+                                  20.0,
+                                ),
+                              ),
+
+                              Expanded(
+                                child: SizedBox(
+                                  height: (screenHeight * 0.075).clamp(48.0, 80.0) * 1.5,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+
+                                      if (onConfirm != null) {
+                                        onConfirm();
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      backgroundColor: colorScheme.primary,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                    ),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        confirmText.toUpperCase(),
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                          color: colorScheme.onPrimary,
+                                          fontSize: buttonFontSize * 1.5,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // ─ Build ─
 
   @override
@@ -745,10 +1051,30 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                         ),
                       ),
                     ),
-                    Container(
-                      width: iconSize + 16,
-                      height: iconSize + 16,
-                      color: Colors.transparent,
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if(mudo){
+                            mudo = false;
+                            salvarConfiguracaoMudo("som");
+                            carregarConfiguracaoSom();
+                          }else{
+                            mudo = true;
+                            salvarConfiguracaoMudo("mudo");
+                            carregarConfiguracaoSom();
+                          }
+                        });
+                      },
+                      child: Container(
+                        width: iconSize + 16,
+                        height: iconSize + 16,
+                        color: Colors.transparent,
+                        child: Icon(
+                          mudo ? Icons.volume_off : Icons.volume_up,
+                          color: colorScheme.primary,
+                          size: iconSize,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -804,7 +1130,9 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                       final bool selecionado = pedidoHoverIndexPreparo == index;
 
                       return MouseRegion(
-                        cursor: SystemMouseCursors.click,
+                        cursor: pedidoHoverIndexPreparo == index
+                          ? SystemMouseCursors.click
+                          : SystemMouseCursors.basic,
                         onEnter: (_) {
                           setState(() {
                             pedidoHoverIndexPreparo = index;
@@ -817,16 +1145,29 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                         },
                         child: GestureDetector(
                           onTap: (){
-                            shownDialogTwoBottom(
-                              context: context,
-                              title: 'Pedido #$numeroPedido#\npronto?',
-                              icon: Icons.check,
-                              onConfirm: () async {
-                                await confirmarPedidoPronto(numeroPedidoFuncao);
-                                _buscarEOrganizar();
-                              },
-                              onCancel: () {},
-                            );
+                            if (orientation == Orientation.landscape){
+                              shownDialogTwoBottomHorizontal(
+                                context: context,
+                                title: '#$numeroPedido# PRONTO?',
+                                icon: Icons.check,
+                                onConfirm: () async {
+                                  await confirmarPedidoPronto(numeroPedidoFuncao);
+                                  _buscarEOrganizar();
+                                },
+                                onCancel: () {},
+                              );
+                            } else {
+                              shownDialogTwoBottom(
+                                context: context,
+                                title: '#$numeroPedido# PRONTO?',
+                                icon: Icons.check,
+                                onConfirm: () async {
+                                  await confirmarPedidoPronto(numeroPedidoFuncao);
+                                  _buscarEOrganizar();
+                                },
+                                onCancel: () {},
+                              );
+                            }
                           },
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: separatorPaddingV),
@@ -977,7 +1318,9 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                       final bool selecionadoFuncao = pedidoHoverIndexPronto == index;
 
                       return MouseRegion(
-                        cursor: SystemMouseCursors.click,
+                        cursor: pedidoHoverIndexPronto == index
+                          ? SystemMouseCursors.click
+                          : SystemMouseCursors.basic,
                         onEnter: (_) {
                           setState(() {
                             pedidoHoverIndexPronto = index;
@@ -1010,16 +1353,29 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                             ),
                             child: GestureDetector(
                               onTap: () {
-                                shownDialogTwoBottom(
-                                  context: context,
-                                  title: 'Pedido #$numeroPedido#\nretirado?',
-                                  icon: Icons.check,
-                                  onConfirm: () async {
-                                    await mudarStatusPedidoRetirado(numeroPedidoReal);
-                                    _buscarEOrganizar();
-                                  },
-                                  onCancel: () {},
-                                );
+                                if (orientation == Orientation.landscape){
+                                  shownDialogTwoBottomHorizontal(
+                                    context: context,
+                                    title: '#$numeroPedido#\nFINALIZADO?',
+                                    icon: Icons.check,
+                                    onConfirm: () async {
+                                      await mudarStatusPedidoRetirado(numeroPedidoReal);
+                                      _buscarEOrganizar();
+                                    },
+                                    onCancel: () {},
+                                  );
+                                } else {
+                                  shownDialogTwoBottom(
+                                    context: context,
+                                    title: '#$numeroPedido#\nFINALIZADO?',
+                                    icon: Icons.check,
+                                    onConfirm: () async {
+                                      await mudarStatusPedidoRetirado(numeroPedidoReal);
+                                      _buscarEOrganizar();
+                                    },
+                                    onCancel: () {},
+                                  );
+                                }
                               },
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
