@@ -357,6 +357,25 @@ class FuncoesController extends GetxController {
   // Função que busca produtos
   Future<void> buscarProdutos() async {
     try {
+      /* String dadosJson = await Connection().select("""
+        SELECT 
+          g.numero AS grupo_numero,
+          g.nome   AS grupo_nome,
+          pr.numero AS produto_numero,
+          pr.nome   AS produto_nome,
+          pr.valor  AS produto_valor,
+          pr.id AS produto_id,
+          un.simbolo AS produto_un
+        FROM produtos AS pr
+        JOIN grupos AS g 
+          ON g.numero = pr.numerogrupocardapio_FK
+        JOIN unidades AS un
+          ON un.numero = pr.numerounidade_FK
+        
+        WHERE g.mobile = '1'
+          AND pr.ativo = '1'
+        ORDER BY pr.nome ASC;
+        """); */
       String dadosJson = await Connection().select("""
         SELECT 
           g.numero AS grupo_numero,
@@ -364,6 +383,7 @@ class FuncoesController extends GetxController {
           pr.numero AS produto_numero,
           pr.nome   AS produto_nome,
           pr.valor  AS produto_valor,
+          pr.meiaporcao AS produto_meia_porcao,
           pr.id AS produto_id,
           un.simbolo AS produto_un
         FROM produtos AS pr

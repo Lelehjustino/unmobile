@@ -395,6 +395,8 @@ class GarcomPageState extends State<GarcomPage>
       carrinhoController.carrinho.clear();
     }
 
+    carregarValoresMesaComanda();
+
     _carregarchecks();
 
     carregarUltimoAdicionalObservacaoSelecionado();
@@ -404,6 +406,20 @@ class GarcomPageState extends State<GarcomPage>
     observacaoProdutoSelecionadoFocus.addListener(_syncKeyboardAlfaFromFocus);
 
     // limparCarrinho();
+  }
+
+  // Carrega os valores da mesa e comanda - quando comanda aberta 
+  void carregarValoresMesaComanda() {
+
+    String numeroComanda = carrinhoController.numeroComanda.value;
+    String numeroMesa = carrinhoController.numeroMesa.value;
+
+    if(numeroMesa != "" || numeroComanda != ""){
+      iniciaComCarrinho();
+      entrarModoTouch();
+    } else {
+      chamarFocoInicial();
+    }
   }
 
   void marcarObservacoes(List<String> observacoesTextoFuncao) {
@@ -2073,6 +2089,10 @@ class GarcomPageState extends State<GarcomPage>
 
     if (mounted) {
       setState(() {
+        carrinhoController.numeroComanda.value = "";
+        carrinhoController.numeroMesa.value = "";
+        carrinhoController.numeroPedido.value = "";
+
         comandaValida = false;
         mesaValida = false;
 
@@ -5504,6 +5524,7 @@ class GarcomPageState extends State<GarcomPage>
     } */
 
     if (mesaVinculada) {
+      carrinhoController.numeroMesa.value = mesaController.text;
       _irParaCardapio();
       return;
     }
@@ -9422,6 +9443,7 @@ class GarcomPageState extends State<GarcomPage>
                               final nome = cardapioController.text;
                               final observacao = observacaoProdutoSelecionadoController.text;
                               final valor = produto['produto_valor'].toString();
+                              final meiaPorcao = produto['produto_meia_porcao'];
 
                               return GestureDetector(
                                 onTap: () {

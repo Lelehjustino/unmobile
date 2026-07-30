@@ -2489,138 +2489,192 @@ class MapaPageState extends State<MapaPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        AbsorbPointer(
-                          // quando absorve o toque,  os filhos não são mais clicaveis
-                          absorbing: isLoadingRefresh, // true = bloqueia cliques
-                          child: isLoadingRefresh
-                          ? CircularProgressIndicator(
-                            strokeWidth: 6,
-                              valueColor: AlwaysStoppedAnimation(
-                                colorScheme.primary,
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            AbsorbPointer(
+                              // quando absorve o toque,  os filhos não são mais clicaveis
+                              absorbing: isLoadingRefresh, // true = bloqueia cliques
+                              child: isLoadingRefresh
+                              ? CircularProgressIndicator(
+                                strokeWidth: 6,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    colorScheme.primary,
+                                  ),
+                                )
+                              : ElevatedButton(
+                                  onPressed: () async {
+                                    setState(() => isLoadingRefresh = true);
+                            
+                                    try {
+                                      mapaController.carregarTudo();
+                                    } finally {
+                                      if (mounted) {
+                                        setState(
+                                          () => isLoadingRefresh = false,
+                                        );
+                                      }
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    shape: CircleBorder(),
+                                    padding: EdgeInsets.all(20),
+                                    backgroundColor: colorScheme.shadow,
+                                    elevation: 8,
+                                    shadowColor: Colors.black,
+                                  ),
+                                  child: Icon(
+                                    Icons.refresh,
+                                    size: 25,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                              ),
+                            ),
+                            Text(
+                              'Atualizar', 
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colorScheme.shadow,
+                                fontWeight: FontWeight.bold,
                               ),
                             )
-                          : ElevatedButton(
-                              onPressed: () async {
-                                setState(() => isLoadingRefresh = true);
-
-                                try {
-                                  mapaController.carregarTudo();
-                                } finally {
-                                  if (mounted) {
-                                    setState(
-                                      () => isLoadingRefresh = false,
-                                    );
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                shape: CircleBorder(),
-                                padding: EdgeInsets.all(20),
-                                backgroundColor: colorScheme.shadow,
-                                elevation: 8,
-                                shadowColor: Colors.black,
-                              ),
-                              child: Icon(
-                                Icons.refresh,
-                                size: 25,
-                                color: colorScheme.onPrimary,
-                              ),
-                          ),
+                          ],
                         ),
                         if(!modoCarrossel)
                         SizedBox(width: 3),
                         // Botao tres funções - abertas - fechadas - todas
                         if(!modoCarrossel)
-                        ElevatedButton(
-                          onPressed: () async {
-                            // reveza os botoes 
-                            if (mostrarAbertas) {
-                              setState(() {
-                                mostrarAbertas = false;
-                                mostrarFechadas = true;
-                                mostrarTodas = false;
-                              });
-                            } else if (mostrarFechadas) {
-                              setState(() {
-                                mostrarAbertas = false;
-                                mostrarFechadas = false;
-                                mostrarTodas = true;
-                              });
-                            } else {
-                              setState(() {
-                                mostrarAbertas = true;
-                                mostrarFechadas = false;
-                                mostrarTodas = false;
-                              });
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: CircleBorder(),
-                            padding: EdgeInsets.all(20), // tamanho do círculo
-                            backgroundColor: colorScheme.scrim,
-                            elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
-                            shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
-                          ),
-                          child: Icon(
-                            mostrarAbertas ? Icons.lock_open : mostrarFechadas ? Icons.lock : Icons.list,
-                            size: 30,
-                            color: colorScheme.onPrimary,
-                          ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () async {
+                                // reveza os botoes 
+                                if (mostrarAbertas) {
+                                  setState(() {
+                                    mostrarAbertas = false;
+                                    mostrarFechadas = true;
+                                    mostrarTodas = false;
+                                  });
+                                } else if (mostrarFechadas) {
+                                  setState(() {
+                                    mostrarAbertas = false;
+                                    mostrarFechadas = false;
+                                    mostrarTodas = true;
+                                  });
+                                } else {
+                                  setState(() {
+                                    mostrarAbertas = true;
+                                    mostrarFechadas = false;
+                                    mostrarTodas = false;
+                                  });
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                shape: CircleBorder(),
+                                padding: EdgeInsets.all(20), // tamanho do círculo
+                                backgroundColor: colorScheme.scrim,
+                                elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
+                                shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
+                              ),
+                              child: Icon(
+                                mostrarAbertas ? Icons.lock_open : mostrarFechadas ? Icons.lock : Icons.list,
+                                size: 30,
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                            Text(
+                              mostrarAbertas ? 'Abertas' : mostrarFechadas ? 'Fechadas' : 'Todas',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colorScheme.scrim,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          ],
                         ),
                         SizedBox(width: 3),
                         if(logicaPorComandaNaMesa && !modoCarrossel)
-                        ElevatedButton(
-                          onPressed: () async {
-                            if(mostrarMesas){
-                              setState(() {
-                                mostrarMesas = false;
-                              });
-                            }else{
-                              setState(() {
-                                mostrarMesas = true;
-                              });
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: CircleBorder(),
-                            padding: EdgeInsets.all(20), // tamanho do círculo
-                            backgroundColor: mostrarMesas ? colorScheme.primary : colorScheme.tertiary,
-                            elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
-                            shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
-                          ),
-                          child: Icon(
-                            mostrarMesas ? Icons.description :  Icons.table_bar,
-                            size: 30,
-                            color: colorScheme.onPrimary,
-                          ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () async {
+                                if(mostrarMesas){
+                                  setState(() {
+                                    mostrarMesas = false;
+                                  });
+                                }else{
+                                  setState(() {
+                                    mostrarMesas = true;
+                                  });
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                shape: CircleBorder(),
+                                padding: EdgeInsets.all(20), // tamanho do círculo
+                                backgroundColor: mostrarMesas ? colorScheme.primary : colorScheme.tertiary,
+                                elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
+                                shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
+                              ),
+                              child: Icon(
+                                mostrarMesas ? Icons.description :  Icons.table_bar,
+                                size: 30,
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                            Text(
+                              mostrarMesas ? 'Comandas' : 'Mesas',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: mostrarMesas ? colorScheme.primary : colorScheme.tertiary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          ],
                         ),
                         SizedBox(width: 3),
                         if(logicaPorComandaNaMesa)
-                        ElevatedButton(
-                          onPressed: () async {
-                            if(modoCarrossel){
-                              setState(() {
-                                modoCarrossel = false;
-                              });
-                            }else{
-                              _selecionarPrimeiroGrupo(itensParaMostrarMesa, itensParaMostrarComanda);
-                              setState(() {
-                                modoCarrossel = true;
-                              });
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: CircleBorder(),
-                            padding: EdgeInsets.all(20), // tamanho do círculo
-                            backgroundColor: colorScheme.secondary,
-                            elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
-                            shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
-                          ),
-                          child: Icon(
-                            modoCarrossel ? Icons.list :  Icons.grid_view,
-                            size: 30,
-                            color: colorScheme.onPrimary,
-                          ),
+                        Column(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () async {
+                                if(modoCarrossel){
+                                  setState(() {
+                                    modoCarrossel = false;
+                                  });
+                                }else{
+                                  _selecionarPrimeiroGrupo(itensParaMostrarMesa, itensParaMostrarComanda);
+                                  setState(() {
+                                    modoCarrossel = true;
+                                  });
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                shape: CircleBorder(),
+                                padding: EdgeInsets.all(20), // tamanho do círculo
+                                backgroundColor: colorScheme.secondary,
+                                elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
+                                shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
+                              ),
+                              child: Icon(
+                                modoCarrossel ? Icons.list :  Icons.grid_view,
+                                size: 30,
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                            Text(
+                              modoCarrossel ? 'Lista' : 'Grade',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colorScheme.secondary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          ],
                         ),
                         SizedBox(width: 3),
                         // botão mesa
