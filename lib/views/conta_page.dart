@@ -620,6 +620,7 @@ class ContaPageState extends State<ContaPage>
         """
         SELECT
             p.nome AS nome_produto,
+            p.meiaporcao AS produto_meia_porcao,
             p.id   AS tipo_produto,
             un.simbolo AS produto_un,
 
@@ -1620,11 +1621,17 @@ class ContaPageState extends State<ContaPage>
 
     for (var item in listaProdutos) {
     bool produtoKilo = item['produto_un']?.toString().toUpperCase() == 'KG';
+    bool produtoMeiaPorcao = item['produto_meia_porcao'] != '0';
 
     String key = "${item['nome_produto']}_${item['valorunitario']}_${item['sabores']}_${item['observacao']}_${item['tipo_produto']}";
 
     // Produto por KG nunca agrupa
     if (produtoKilo) {
+      produtosAgrupados["${key}_${item['datahora']}_${item.hashCode}"] = Map<String, dynamic>.from(item);
+      continue;
+    }
+
+    if(produtoMeiaPorcao){
       produtosAgrupados["${key}_${item['datahora']}_${item.hashCode}"] = Map<String, dynamic>.from(item);
       continue;
     }

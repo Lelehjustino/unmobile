@@ -2270,38 +2270,11 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                           'bairroClienteSelecionado': bairroClienteSelecionado,
                         };
 
-                        try {
-                          // Verificar se o pedido já está selecionado
-                          int indexExistente = listaPedidosSelecionados.indexWhere(
-                            (p) => p['numerodelivery'] == novoPedido['numerodelivery']
-                          );
+                        listaPedidosSelecionados.add(novoPedido);
+                        listaIndexPedidosSelecionados.add(index);
 
-                          if (indexExistente != -1) {
-                            // Já está selecionado, remover (Toggle off)
-                            subtrairValores(valorLiquidoPedido, trocoPara);
-                            setState(() {
-                              listaPedidosSelecionados.removeAt(indexExistente);
-                              listaIndexPedidosSelecionados.remove(index);
-                            });
-                          } else {
-                            // Não está selecionado, adicionar (Toggle on)
-                            setState(() {
-                              listaPedidosSelecionados.add(novoPedido);
-                              listaIndexPedidosSelecionados.add(index);
+                        popupSelecionarMotoboy(listaPedidosSelecionados, enderecoClienteSelecionado, numeroEnderecoClienteSelecionado, bairroClienteSelecionado);
 
-                              // Ordenar lista por número de delivery
-                              listaPedidosSelecionados.sort((a, b) {
-                                int numA = int.tryParse(a['numerodelivery'].toString()) ?? 0;
-                                int numB = int.tryParse(b['numerodelivery'].toString()) ?? 0;
-                                return numA.compareTo(numB);
-                              });
-
-                              calcularValores(valorLiquidoPedido, trocoPara);
-                            });
-                          }
-                        } catch (e) {
-                          print('erro ao alternar seleção do pedido: $e');
-                        }
                       },
                       child: Container(
                         decoration: BoxDecoration(
@@ -2401,6 +2374,224 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
         ],
       ),
     );
+  }
+
+  void popupSelecionarMotoboy(List<dynamic> listaPedidosSelecionadosFuncao, enderecoClienteSelecionado, numeroEnderecoClienteSelecionado, bairroClienteSelecionado) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Align(
+            alignment: Alignment.center,
+            child: Text(
+              "Informações do pedido",
+              style: TextStyle(
+                fontSize: 20, // ou qualquer outro estilo que desejar
+              ),
+            ),
+          ),
+          content: Column(
+            children: [
+              // Informações 
+              Expanded(
+                child: RichText(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '$enderecoClienteSelecionado, ',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      TextSpan(
+                        text: numeroEnderecoClienteSelecionado,
+                      ),
+                      TextSpan(
+                        text: '\n$bairroClienteSelecionado',
+                        style: TextStyle(
+                          fontSize: 20 * 0.9,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Motoboys 
+              Column(
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      "Selecione um Motoboy",
+                      style: TextStyle(
+                        fontSize: 20, // ou qualquer outro estilo que desejar
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: double.maxFinite,
+                    height: 300,
+                    child: painelController.listaMotoboys.isEmpty
+                        ? Center(child: Text("Nenhum motoboy encontrado"))
+                        : ListView.builder(
+                            itemCount: painelController.listaMotoboys.length,
+                            itemBuilder: (context, index) {
+                              final motoboy = painelController.listaMotoboys[index];
+                              final nomeMotoboy = motoboy['nome'];
+                              final numeroMotoboy = motoboy['numero'];
+                              bool selecionado = numeroMotoboy == numeroMotoboySelecionado;
+                              return Card(
+                                color: selecionado ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
+                                child: ListTile(
+                                  title: Text(
+                                    "$numeroMotoboy - $nomeMotoboy",
+                                    style: TextStyle(
+                                      color: selecionado ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  onTap: () async {
+                                    motoboySelecionadoIndex = index;
+                                    nomeMotoboySelecionado = nomeMotoboy;
+                                    numeroMotoboySelecionado = numeroMotoboy;
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+              // Botoes
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Fechar 
+                  Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          // minimumSize: Size(double.infinity, screenWidth * 0.04),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () async {
+                          
+                        },
+                        child: Text(
+                          'Fechar',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Confirmar 
+                  Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          // minimumSize: Size(double.infinity, screenWidth * 0.04),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () async {
+                          setState(() {
+                            isLoadingConfirmar = true;
+                          });
+                          if(listaPedidosSelecionados.isNotEmpty && painelController.numeroMotoboySelecionado.value != "" && painelController.nomeMotoboySelecionado.value != "" ){
+                            try{
+                              bool conectado = await Connection.conectarBanconoSalvar();
+                              await _loadNumeroLicenca();
+                              if(conectado){
+                                // update
+                                for(var pedido in listaPedidosSelecionados){
+                                  await atualizarStatusEntrega(
+                                    numeroDelivery: pedido['numerodelivery'].toString()
+                                  );
+                      
+                                  await inserirLogEntrega(
+                                    numeroPedido: pedido['numero'],
+                                    numeroUsuario: painelController.numeroMotoboySelecionado.value,
+                                    numeroTradepoint: numeroTradepointSelecionada,
+                                    nomeMotoboy: painelController.nomeMotoboySelecionado.value,
+                                  );
+                                }
+                                await buscarPedidos();
+                                limparPage();
+                              } else {
+                                isLoadingConfirmar = false;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Sem conexão com a internet'),
+                                    backgroundColor: Theme.of(context).colorScheme.error,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Erro ao confirmar expedição'),
+                                  backgroundColor: Theme.of(context).colorScheme.error,
+                                ),
+                              );
+                            } finally {
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Selecione os pedidos e o motoboy'),
+                                backgroundColor: Theme.of(context).colorScheme.error,
+                              ),
+                            );
+                            setState(() {
+                              isLoadingConfirmar = false;
+                            });
+                          }
+                        },
+                        child: Text(
+                          'Confirmar',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("Cancelar"),
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+    });
   }
 
   @override
@@ -2514,12 +2705,12 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /* Expanded(
+                Expanded(
                   flex: 1,
                   child: _buildGridMotoboys(),
-                ), */
+                ),
                 // horizontal
-                if (orientation == Orientation.landscape) 
+                /* if (orientation == Orientation.landscape) 
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2555,7 +2746,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                       ),
                     ],
                   ),
-                ),
+                ), */
               ],
             ),
           ),

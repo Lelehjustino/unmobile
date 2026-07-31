@@ -49,6 +49,9 @@ class Produto {
   final String numero;
   double quantidade;
 
+  // Indica se o produto suporta meia porção (vem da base de dados)
+  bool temMeiaPorcao;
+
   // Observação digitada
   final String observacaoEscrita;
 
@@ -69,6 +72,7 @@ class Produto {
     required this.observacaoEscrita,
     /*   SEM GELO|SEM LIMAO 12|2|4 */
     required this.id, // string
+    this.temMeiaPorcao = false,
     List<String>? observacoesTexto,
     List<Produto>? adicionais,
   }) : observacoesTexto = observacoesTexto ?? [],
@@ -326,6 +330,9 @@ class GarcomPageState extends State<GarcomPage>
 
   int posicaoUltimoGrupo = 0;
 
+  bool meiaPorcaoProduto = false;
+  bool meiaPorcaoClicado = false;
+
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
     debugLabel: 'focoBloqueioDialogo',
@@ -464,9 +471,17 @@ class GarcomPageState extends State<GarcomPage>
     // Verifica se o produto é vendido por Kg
     final bool ehKilo = nomeFuncao.contains("(Kg)");
 
+    // meiaPorcaoFuncao = se o produto SUPORTA meia porção (vem da base de dados via produto.temMeiaPorcao)
+    // produto.quantidade pode ser 0.5 mesmo que não seja meia porção ativa
+    final bool estavaEmMeiaPorcao = produto.temMeiaPorcao && produto.quantidade == 0.5;
+
     final String quantidadeFormatada = ehKilo
       ? produto.quantidade.toString()
-      : produto.quantidade.toInt().toString();
+      : estavaEmMeiaPorcao ? produto.quantidade.toString() : produto.quantidade.toInt().toString();
+
+    meiaPorcaoProduto = produto.temMeiaPorcao;
+    // Inicializa meiaPorcaoClicado com base na quantidade salva, independente do valor numérico isolado
+    meiaPorcaoClicado = estavaEmMeiaPorcao;
 
     // Produto normal ou adicional
     if (idFuncao == 'P' || idFuncao == 'E') {
@@ -654,6 +669,9 @@ class GarcomPageState extends State<GarcomPage>
       cardapioController.clear();
       cardapioController.text = "";
     });
+
+    cliqueiEditarProduto = false;
+    meiaPorcaoProduto = false;
     
     // _selecionarPrimeiroGrupo();
     String modo = "Touch";
@@ -675,6 +693,8 @@ class GarcomPageState extends State<GarcomPage>
       cardapioController.clear();
       cardapioController.text = "";
     });
+    cliqueiEditarProduto = false;
+    meiaPorcaoProduto = false;
     /* Future.delayed(Duration(milliseconds: 300), () {
       if (cardapioFocus.canRequestFocus) {
         cardapioFocus.requestFocus();
@@ -3210,11 +3230,11 @@ class GarcomPageState extends State<GarcomPage>
 
     quantidadeProdutoSelecionadoController.text = produtoKilo
         ? quantidadeInicial.toString()
-        : quantidadeInicial.toInt().toString();
+        : meiaPorcaoProduto ? quantidadeInicial.toString() : quantidadeInicial.toInt().toString();
 
     quantidadeProdutoSelecionadoModalController.text = produtoKilo
         ? quantidadeInicial.toString()
-        : quantidadeInicial.toInt().toString();
+        : meiaPorcaoProduto ? quantidadeInicial.toString() : quantidadeInicial.toInt().toString();
     // Lista para adicionar as quantidades de cada adicional
     for (var item in listaAdicionaisDoProduto) {
       final numero = item['numeroadicional'].toString();
@@ -3309,19 +3329,6 @@ class GarcomPageState extends State<GarcomPage>
                         )
                       ],
                     ),
-                    /* Center(
-                      child: Text(
-                        produtoNome,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        // 'Adicionais e Observações',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.shadow,
-                        ),
-                      ),
-                    ), */
 
                     Center(
                       child: Padding(
@@ -3338,6 +3345,7 @@ class GarcomPageState extends State<GarcomPage>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               // Botão de menos
+                              if (!meiaPorcaoClicado)
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: ElevatedButton(
@@ -3413,6 +3421,7 @@ class GarcomPageState extends State<GarcomPage>
                                 ),
                               ),
                               // Botão de mais
+                              if (!meiaPorcaoClicado)
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: ElevatedButton(
@@ -3430,7 +3439,7 @@ class GarcomPageState extends State<GarcomPage>
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Color.fromRGBO(216, 216, 216, 0.843),
-                                    padding: const EdgeInsets.symmetric(
+                                    padding: EdgeInsets.symmetric(
                                       vertical: 15,
                                       horizontal: 15,
                                     ),
@@ -3442,6 +3451,48 @@ class GarcomPageState extends State<GarcomPage>
                                     Icons.add,
                                     color: Theme.of(context).colorScheme.onPrimary,
                                     size: 28,
+                                  ),
+                                ),
+                              ),
+
+                              // Botão de meia porção
+                              if(meiaPorcaoProduto)
+                              Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: SizedBox(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      if(meiaPorcaoClicado){
+                                        setModalState(() {
+                                          meiaPorcaoClicado = false;
+                                          quantidadeProdutoSelecionadoModalController.text = "1";
+                                          quantidadeInicial = 1;
+                                        });
+                                      } else {
+                                        setModalState(() {
+                                          meiaPorcaoClicado = true;
+                                          quantidadeProdutoSelecionadoModalController.text = "0.5";
+                                          quantidadeInicial = 0.5;
+                                        });
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: meiaPorcaoClicado ? Theme.of(context).colorScheme.scrim : Theme.of(context).colorScheme.surfaceDim,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 15,
+                                        horizontal: 15,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: 
+                                    Text(
+                                      '1/2',
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                      ),
+                                    )
                                   ),
                                 ),
                               ),
@@ -3777,6 +3828,7 @@ class GarcomPageState extends State<GarcomPage>
                                       child: ElevatedButton(
                                         onPressed: () {
                                           arrastei = false;
+                                          meiaPorcaoProduto = false;
                                           quantidadesAdicionais.clear();
                                           quantidadesObservacoes.clear();
                                           observacoesSelecionadasObs.clear();
@@ -3786,6 +3838,7 @@ class GarcomPageState extends State<GarcomPage>
                                           }else{
                                             sairModoTouch();
                                           }
+                                          meiaPorcaoClicado = false;
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Theme.of(context).colorScheme.error.withOpacity(0.55),
@@ -3832,6 +3885,7 @@ class GarcomPageState extends State<GarcomPage>
                                       child: ElevatedButton(
                                           onPressed: () {
                                             arrastei = false;
+                                            
                                             // Montando a lista de adicionais
                                             List<Produto> listaAdicionaisSelecionados = [];
                                             if (quantidadesAdicionais.isNotEmpty) {
@@ -3888,6 +3942,7 @@ class GarcomPageState extends State<GarcomPage>
                                                 quantidadeInicial.toDouble(),
                                                 observacaoProdutoSelecionadoObsAddController.text,
                                                 idDoProdutoSelecionado,
+                                                temMeiaPorcao: meiaPorcaoProduto,
                                                 adicionais: listaAdicionaisSelecionados,
                                                 observacoesTexto: observacoesSelecionadas,
                                               );
@@ -3899,6 +3954,7 @@ class GarcomPageState extends State<GarcomPage>
                                                 quantidadeInicial.toDouble(),
                                                 observacaoProdutoSelecionadoObsAddController.text,
                                                 idDoProdutoSelecionado,
+                                                temMeiaPorcao: meiaPorcaoProduto,
                                                 adicionais: listaAdicionaisSelecionados,
                                                 observacoesTexto: observacoesSelecionadas,
                                               );
@@ -3922,6 +3978,9 @@ class GarcomPageState extends State<GarcomPage>
                                               quantidadeInicial = 1;
                                               cliqueiEditarProduto = false;
                                             });
+
+                                            meiaPorcaoProduto = false;
+                                            meiaPorcaoClicado = false;
                                         
                                             sairModoTouch();
                                           },
@@ -4005,6 +4064,8 @@ class GarcomPageState extends State<GarcomPage>
         quantidadesAdicionais.clear();
         quantidadesObservacoes.clear();
         observacoesSelecionadasObs.clear();
+        meiaPorcaoProduto = false;
+        meiaPorcaoClicado = false;
         if(!modoAnteriorTouch){
           entrarModoTouch();
         }else{
@@ -4342,10 +4403,10 @@ class GarcomPageState extends State<GarcomPage>
                                                     TextOverflow.ellipsis,
                                                 textAlign: TextAlign.center,
                                                 ehKilo
-                                                    ? produto.quantidade
-                                                          .toStringAsFixed(3)
-                                                    : produto.quantidade
-                                                          .toStringAsFixed(0),
+                                                    ? produto.quantidade.toStringAsFixed(3)
+                                                    : produto.temMeiaPorcao
+                                                        ? produto.quantidade.toStringAsFixed(2)
+                                                        : produto.quantidade.toStringAsFixed(0),
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
@@ -8403,6 +8464,15 @@ class GarcomPageState extends State<GarcomPage>
                                     filtrarProdutos(
                                       '',
                                     ); // sempre zera primeiro para aparecer tudo
+
+                                    final meiaPorcao = produto['produto_meia_porcao'];
+
+                                    if(produto['produto_meia_porcao'] != '0'){
+                                      meiaPorcaoProduto = true;
+                                    }else{
+                                      meiaPorcaoProduto = false;
+                                    }
+
                                     if (produto['produto_id'] == 'P') {
                                       if (produto['produto_un'] == "Kg") {
                                         produtoKilo = true;
@@ -8792,9 +8862,7 @@ class GarcomPageState extends State<GarcomPage>
                         final Map<String, int> adicionaisAgrupados = {};
                         for (final adicional in produto.adicionais) {
                           final nome = adicional.nome;
-                          adicionaisAgrupados[nome] =
-                              (adicionaisAgrupados[nome] ?? 0) +
-                              adicional.quantidade.toInt();
+                          adicionaisAgrupados[nome] = (adicionaisAgrupados[nome] ?? 0) +  adicional.quantidade.toInt();
                         }
 
                         // Verifica se o produto é vendido por Kg
@@ -8803,6 +8871,11 @@ class GarcomPageState extends State<GarcomPage>
                         } else {
                           ehKilo = false;
                         }
+
+                        // Usa o campo dedicado para saber se o produto suporta meia porção,
+                        // sem depender exclusivamente do valor da quantidade.
+                        bool produtoMeiaPorcaoCarrinho = produto.temMeiaPorcao;
+                        bool formatarMeiaPorcao = produto.quantidade % 1 == 0;
 
                         final match = RegExp(r'\((.*?)\)').firstMatch(produto.nome);
 
@@ -8860,32 +8933,6 @@ class GarcomPageState extends State<GarcomPage>
                                           ),
                                         ),
                                       ),
-                                      /* GestureDetector(
-                                        onTap: () {
-                                          shownDialogErrorTwoBottom(
-                                            context: context,
-                                            title: "Deseja descartar este ${produto.nome}?",
-                                            icon: Icons.delete,
-                                            onConfirm: () {
-                                              removerProdutoDoCarrinhoPorNumeroIndex(
-                                                produto.numero,
-                                                index,
-                                              );
-                                              setState(() {});
-                                            },
-                                            onCancel: () {
-                                              Navigator.of(context).pop();
-                                            },
-                                          );
-                                        },
-                                        child: Icon(
-                                          Icons.delete,
-                                          size: 20,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.error,
-                                        ),
-                                      ), */
 
                                       SizedBox(width: 8),
 
@@ -9030,6 +9077,7 @@ class GarcomPageState extends State<GarcomPage>
                                                   textAlign: TextAlign.center,
                                                   ehKilo
                                                       ? produto.quantidade.toStringAsFixed(3)
+                                                      : produtoMeiaPorcaoCarrinho ? formatarMeiaPorcao ? produto.quantidade.toStringAsFixed(0) : produto.quantidade.toStringAsFixed(2) 
                                                       : produto.quantidade.toStringAsFixed(0),
                                                   style: TextStyle(
                                                     fontSize: 14,
@@ -9166,6 +9214,33 @@ class GarcomPageState extends State<GarcomPage>
                                           ),
                                         ),
                                       ),
+
+                                      if(meiaPorcaoProduto)
+                                      SizedBox(width: 8,),
+
+                                      if(meiaPorcaoProduto)
+                                      SizedBox(
+                                        height: 48,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            quantidadeProdutoSelecionadoController.text = "0.5";
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: colorScheme.scrim,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(
+                                                8,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '1/2',
+                                            style: TextStyle(
+                                              color: colorScheme.onPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     // ),
                                   ],
                                 ),
@@ -9175,6 +9250,34 @@ class GarcomPageState extends State<GarcomPage>
                                 // SEGUNDA LINHA
                                 Row(
                                   children: [
+                                    // Botão meia porcao
+                                    /* if(meiaPorcaoProduto)
+                                    SizedBox(
+                                      height: 48,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          quantidadeProdutoSelecionadoController.text = "0.5";
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: colorScheme.scrim,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '1/2',
+                                          style: TextStyle(
+                                            color: colorScheme.onPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    if(meiaPorcaoProduto)
+                                    SizedBox(width: 8,), */
+
                                     // Botão OBS
                                     SizedBox(
                                       height: 48,
@@ -9273,7 +9376,7 @@ class GarcomPageState extends State<GarcomPage>
                                   final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
                                   final quantidade = produtoKilo 
                                       ? (double.tryParse(qtdText) ?? 1.0)
-                                      : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
+                                      : meiaPorcaoProduto ? (double.tryParse(qtdText) ?? 1.0) : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
                                   final observacao = observacaoProdutoSelecionadoController.text;
                                   final valor = valorDoProdutoSelecionado.toString();
 
@@ -9287,6 +9390,7 @@ class GarcomPageState extends State<GarcomPage>
                                       quantidade,
                                       observacao,
                                       idDoProdutoSelecionado,
+                                      temMeiaPorcao: meiaPorcaoProduto,
                                       adicionais: carrinhoController.carrinho[indexClicado].adicionais,
                                       observacoesTexto: carrinhoController.carrinho[indexClicado].observacoesTexto,
                                     );
@@ -9298,6 +9402,7 @@ class GarcomPageState extends State<GarcomPage>
                                       quantidade,
                                       observacao,
                                       idDoProdutoSelecionado,
+                                      temMeiaPorcao: meiaPorcaoProduto,
                                       adicionais: adicionaisSelecionados,
                                     );
                                   }
@@ -9310,6 +9415,7 @@ class GarcomPageState extends State<GarcomPage>
                                     temAdicionalObservacao = false;
                                     quantidadeInicial = 1;
                                     cliqueiEditarProduto = false;
+                                    meiaPorcaoProduto = false;
                                   // });
                                   limparInformacoesProduto();
 
@@ -9452,11 +9558,11 @@ class GarcomPageState extends State<GarcomPage>
                                     funcoesController.listaAdicionaisObservacoes,
                                   );
 
-                                  /* if(produto['produto_meia_porcao'] != '0'){
+                                  if(produto['produto_meia_porcao'] != '0'){
                                     meiaPorcaoProduto = true;
                                   }else{
                                     meiaPorcaoProduto = false;
-                                  } */
+                                  }
 
                                   // Se o produto for do tipo produto
                                   if (produto['produto_id'] == 'P') {
@@ -10173,7 +10279,7 @@ class GarcomPageState extends State<GarcomPage>
                             ),
                           ),
                         ),
-                      // if (!naoAparecerMapa) SizedBox(width: 8),
+                      // if (!naoAparecerMapa) SizedBox(width: 8), 
                       if (!naoAparecerMapa)
                         // Botão Mapa de Mesas
                         Expanded(

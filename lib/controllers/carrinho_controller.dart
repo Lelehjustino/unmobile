@@ -23,6 +23,7 @@ class CarrinhoController extends GetxController {
     double produtoQuantidade,
     String observacaoEscrita,
     String id, {
+    bool temMeiaPorcao = false,
     List<Produto> adicionais = const [],
     List<String> observacoesTexto = const [],
   }) {
@@ -47,7 +48,7 @@ class CarrinhoController extends GetxController {
     }
 
     // -------- Verificação de produto existente --------
-    final int indexExistente = produtoNome.contains('Kg')
+    final int indexExistente = (produtoNome.contains('Kg') || temMeiaPorcao)
         ? -1
         : carrinho.indexWhere((produto) {
             return produto.numero == produtoNumero &&
@@ -69,6 +70,7 @@ class CarrinhoController extends GetxController {
           quantidade: produtoQuantidade,
           observacaoEscrita: observacaoEscrita,
           id: id,
+          temMeiaPorcao: temMeiaPorcao,
           adicionais: List<Produto>.from(adicionais),
           observacoesTexto: List<String>.from(observacoesTexto),
         ),
@@ -91,6 +93,7 @@ class CarrinhoController extends GetxController {
     double produtoQuantidade,
     String observacaoEscrita,
     String id, {
+    bool temMeiaPorcao = false,
     List<Produto> adicionais = const [],
     List<String> observacoesTexto = const [],
   }) {
@@ -102,6 +105,7 @@ class CarrinhoController extends GetxController {
         quantidade: produtoQuantidade,
         observacaoEscrita: observacaoEscrita,
         id: id,
+        temMeiaPorcao: temMeiaPorcao,
         adicionais: List<Produto>.from(adicionais),
         observacoesTexto: List<String>.from(observacoesTexto),
       );

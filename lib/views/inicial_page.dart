@@ -267,7 +267,6 @@ class InicialPageState extends State<InicialPage> {
   }
 
   navegacao_inteligente() async {
-    await funcoesController.carregarTudo();
     await _saveNumeroLicenca(numeroDaLicencaSelecionada);
     await _saveLicenca(nomeDaLicencaSelecionada);
     if (rotaPainelCliente) {
