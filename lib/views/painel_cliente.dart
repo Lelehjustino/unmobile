@@ -1190,11 +1190,11 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   SizedBox(
-                                    width: preparoNumeroWidth,
+                                    width: preparoNumeroWidth * 0.7,
                                     child: Text(
                                       numeroPedido,
                                       textAlign: TextAlign.start,
@@ -1206,11 +1206,10 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                                       ),
                                     ),
                                   ),
-                                  // SizedBox(width: itemSpacingH),
                                   Flexible(
                                     child: Text(
                                       nomeCliente.toUpperCase(),
-                                      maxLines: 2,
+                                      maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.montserrat(
                                         fontSize: preparoNomeFontSize,
@@ -1378,11 +1377,11 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                                 }
                               },
                               child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   SizedBox(
-                                    width: prontoNumeroWidth,
+                                    width: prontoNumeroWidth * 0.75,
                                     child: Text(
                                       numeroPedido,
                                       textAlign: TextAlign.center,
@@ -1398,7 +1397,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                                   Flexible(
                                     child: Text(
                                       nomeCliente.toUpperCase(),
-                                      maxLines: 2,
+                                      maxLines: 1,
                                       textAlign: TextAlign.center,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.montserrat(

@@ -2401,19 +2401,6 @@ class MapaPageState extends State<MapaPage> {
         children: [
           Column(
             children: [
-              /* Padding(
-                padding: EdgeInsets.only(top: 8.0),
-                child: Center(
-                  child: Text(
-                    mostrarMesas ? 'Mapa de mesas:' : 'Mapa de comandas:',
-                    style: TextStyle(
-                      color: colorScheme.onSecondary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),*/
               SizedBox(height: 8),
               GestureDetector(
                 behavior: HitTestBehavior.translucent,

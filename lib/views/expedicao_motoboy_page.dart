@@ -2191,6 +2191,218 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
     );
   }
 
+  Widget _buildGridMotoboys() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    
+    // Proporções para manter a responsividade
+    final double fontPadrao = (screenWidth.clamp(600, 1920) * 0.012);
+    final double fontTitulo = (screenWidth.clamp(600, 1920) * 0.014);
+    final double paddingPadrao = screenWidth * 0.008;
+    final double spacingPadrao = screenWidth * 0.005;
+    const double itemMinWidth = 100.0;
+    final int cols = (screenWidth / itemMinWidth).floor().clamp(1, 4);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: paddingPadrao, vertical: paddingPadrao),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // build de pedidos 
+          Expanded(
+            flex: 3,
+              child: Container(
+              child: Padding(
+                padding: EdgeInsets.all(paddingPadrao),
+                child: GridView.builder(
+                  padding: EdgeInsets.all(paddingPadrao),
+                  itemCount: listaPedidos.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols + 1,
+                    mainAxisSpacing: paddingPadrao,
+                    crossAxisSpacing: paddingPadrao,
+                    childAspectRatio: 1,
+                    // crossAxisSpacing: paddingPadrao,
+                  ),
+                  itemBuilder: (context, index) {
+                    final pedido = listaPedidos[index];
+                    final numeroDelivery = pedido['numerodelivery'].toString();
+                    final trocoPara = pedido['trocopara'].toString();
+                    final numeroPedido = pedido['numero'].toString();
+                    final valorLiquidoPedido = pedido['valorliquidopedido'].toString();
+                    final status = pedido['status'].toString();
+                    final entrega = pedido['entrega'].toString();
+                    final numerocliente_FK = pedido['numerocliente_FK'].toString();
+                    final numero = pedido['numero'].toString();
+                    final numeromotoboy_FK = pedido['numeromotoboy_FK'].toString();
+                    final nomeClienteSelecionado = pedido['nome'].toString();
+                    final telefoneClienteSelecionado = pedido['telefone'].toString();
+                    final enderecoClienteSelecionado = pedido['endereco'].toString();
+                    final numeroEnderecoClienteSelecionado = pedido['numeroendereco'].toString();
+                    final complementoClienteSelecionado = pedido['complemento'].toString();
+                    final bairroClienteSelecionado = pedido['bairro'].toString();
+
+                    final timediff = pedido['tempoAberto'].toString();
+                    final statusentrega = pedido['statusentrega'].toString();
+                    final atendimento = pedido['atendimento'].toString(); 
+
+                    // buscarInformacoesCliente(numeroPedido);
+
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        final novoPedido = {
+                          'indexOriginal': index,
+                          'numerodelivery': numeroDelivery,
+                          'valorliquidopedido': valorLiquidoPedido,
+                          'numeroPedido': numeroPedido,
+                          'status': status,
+                          'entrega': entrega,
+                          'numerocliente_FK': numerocliente_FK,
+                          'numero': numero,
+                          'numeromotoboy_FK': numeromotoboy_FK,
+                          'timediff': timediff,
+                          'statusentrega': statusentrega,
+                          'atendimento': atendimento,
+                          'trocopara': trocoPara,
+                          'nomeClienteSelecionado': nomeClienteSelecionado,
+                          'enderecoClienteSelecionado': enderecoClienteSelecionado,
+                          'numeroEnderecoClienteSelecionado': numeroEnderecoClienteSelecionado,
+                          'bairroClienteSelecionado': bairroClienteSelecionado,
+                        };
+
+                        try {
+                          // Verificar se o pedido já está selecionado
+                          int indexExistente = listaPedidosSelecionados.indexWhere(
+                            (p) => p['numerodelivery'] == novoPedido['numerodelivery']
+                          );
+
+                          if (indexExistente != -1) {
+                            // Já está selecionado, remover (Toggle off)
+                            subtrairValores(valorLiquidoPedido, trocoPara);
+                            setState(() {
+                              listaPedidosSelecionados.removeAt(indexExistente);
+                              listaIndexPedidosSelecionados.remove(index);
+                            });
+                          } else {
+                            // Não está selecionado, adicionar (Toggle on)
+                            setState(() {
+                              listaPedidosSelecionados.add(novoPedido);
+                              listaIndexPedidosSelecionados.add(index);
+
+                              // Ordenar lista por número de delivery
+                              listaPedidosSelecionados.sort((a, b) {
+                                int numA = int.tryParse(a['numerodelivery'].toString()) ?? 0;
+                                int numB = int.tryParse(b['numerodelivery'].toString()) ?? 0;
+                                return numA.compareTo(numB);
+                              });
+
+                              calcularValores(valorLiquidoPedido, trocoPara);
+                            });
+                          }
+                        } catch (e) {
+                          print('erro ao alternar seleção do pedido: $e');
+                        }
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(screenWidth * 0.008),
+                        ),
+                        padding: EdgeInsets.all(spacingPadrao / 2),
+
+                        child: Card(
+                          elevation: 2,
+                          margin: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(paddingPadrao),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Linha superior
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Tempo
+                                    Text(
+                                      '',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.transparent,
+                                      ),
+                                    ),
+
+                                    // Número do delivery
+                                    Text(
+                                      numeroDelivery,
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                SizedBox(
+                                  height: spacingPadrao,
+                                ),
+
+                                // Ícone da moto
+                                Center(
+                                  child: Icon(
+                                    Icons.motorcycle,
+                                    size: 55,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+
+                                SizedBox(
+                                  height: spacingPadrao,
+                                ),
+
+                                // Cliente
+                                Text(
+                                  nomeClienteSelecionado,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+
+                                // Valor
+                                Text(
+                                  'R\$ $valorLiquidoPedido',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -2302,7 +2514,11 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // horizontal
+                Expanded(
+                  flex: 1,
+                  child: _buildGridMotoboys(),
+                ),
+                /* // horizontal
                 if (orientation == Orientation.landscape) 
                 Expanded(
                   child: Column(
@@ -2339,7 +2555,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                       ),
                     ],
                   ),
-                ),
+                ), */
               ],
             ),
           ),
