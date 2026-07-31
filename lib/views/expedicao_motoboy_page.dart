@@ -2514,11 +2514,11 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
+                /* Expanded(
                   flex: 1,
                   child: _buildGridMotoboys(),
-                ),
-                /* // horizontal
+                ), */
+                // horizontal
                 if (orientation == Orientation.landscape) 
                 Expanded(
                   child: Column(
@@ -2555,7 +2555,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                       ),
                     ],
                   ),
-                ), */
+                ),
               ],
             ),
           ),
