@@ -35,8 +35,7 @@ class DateInputFormatter extends TextInputFormatter {
     if (text.length > 2 && text.length <= 4) {
       text = '${text.substring(0, 2)}/${text.substring(2)}';
     } else if (text.length > 4) {
-      text =
-          '${text.substring(0, 2)}/${text.substring(2, 4)}/${text.substring(4)}';
+      text = '${text.substring(0, 2)}/${text.substring(2, 4)}/${text.substring(4)}';
     }
 
     // Limita a 10 caracteres (dd/MM/yyyy)
@@ -210,6 +209,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   String nomeDoGarcomSelecionado = '';
   bool nomeDoGarcomDoLoad = false;
   bool garcomSelecionado = false;
+  String numeroDoGarcom = '';
 
   bool cliqueiRecepcao = false;
   bool isProcessing = false;
@@ -440,6 +440,33 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   // Função para pegar numero da base quando cliente não existir
   Future<void> encontrarNumeroClientePeloTelefone(String telefone) async {
     try {
+      String dadosJson = await Connection().select(
+        "SELECT numero FROM clientes WHERE telefone='$telefone'",
+      );
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+
+      if (lista.isNotEmpty) {
+        // pega apenas o campo resultado
+        String valor = lista[0]['numero'].toString();
+
+        setState(() {
+          numeroCliente = valor;
+          numeroClienteInt = int.parse(valor);
+        });
+        print("Número do cliente: $numeroCliente");
+      } else {
+        numeroCliente = '0';
+        numeroClienteInt = 0;
+      }
+    } catch (e) {
+      numeroCliente = '0';
+      numeroClienteInt = 0;
+    }
+  }
+  /* // Função para pegar numero da base quando cliente não existir
+  Future<void> encontrarNumeroClientePeloTelefone(String telefone) async {
+    try {
       String jsonResult = await Connection().select(
         "SELECT numero FROM clientes WHERE telefone='$telefone' LIMIT 1",
       );
@@ -468,35 +495,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
         numeroClienteInt = 0;
       });
     }
-  }
-  // encontrarNumeroClientePeloTelefone(String telefone) async {
-  //   try {
-  //     String jsonResult = await Connection().select(
-  //       "SELECT numero FROM clientes WHERE telefone='$telefone' LIMIT 1",
-  //     );
-
-  //     final List<dynamic> lista = jsonDecode(jsonResult);
-
-  //     if (lista.isNotEmpty) {
-  //       // pega apenas o campo resultado
-  //       String valor = lista[0]['numero'].toString();
-
-  //       setState(() {
-  //         numeroCliente = valor;
-  //         numeroClienteInt = int.tryParse(numeroCliente) ?? 0;
-  //       });
-  //     } else {
-  //       setState(() {
-  //         numeroCliente = '0';
-  //       });
-  //     }
-  //   } catch (e) {
-  //     print("Erro ao carregar configuracaoServico: $e");
-  //     setState(() {
-  //       numeroCliente = '0';
-  //     });
-  //   }
-  // }
+  } */
 
   // Função para pegar numero da base quando cliente não existir
   Future<void> encontrarNumeroClientePeloCpf(String cpf) async {
@@ -505,46 +504,25 @@ class RecepcaoPageState extends State<RecepcaoPage> {
         "SELECT numero FROM clientes WHERE cpf='$cpf' LIMIT 1",
       );
 
-      final resultadoProcessado = await Isolate.run(() {
-        final List<dynamic> lista = jsonDecode(jsonResult);
-        if (lista.isNotEmpty) {
-          String valor = lista[0]['numero'].toString();
+      List<dynamic> lista = jsonDecode(jsonResult);
 
-          return {'numero': valor};
-        } else {
-          return {'numero': 0};
-        }
-      });
-      setState(() {
-        numeroCliente = resultadoProcessado['numero'] as String;
-      });
-    } catch (e) {
-      print("Erro ao numero configuracaoServico: $e");
-      setState(() {
+      if (lista.isNotEmpty) {
+        // pega apenas o campo resultado
+        String valor = lista[0]['numero'].toString();
+
+        setState(() {
+          numeroCliente = valor;
+          numeroClienteInt = int.parse(valor);
+        });
+        print("Número do cliente: $numeroCliente");
+      } else {
         numeroCliente = '0';
-      });
+        numeroClienteInt = 0;
+      }
+    } catch (e) {
+      numeroCliente = '0';
+      numeroClienteInt = 0;
     }
-    //   final List<dynamic> lista = jsonDecode(jsonResult);
-
-    //   if (lista.isNotEmpty) {
-    //     // pega apenas o campo resultado
-    //     String valor = lista[0]['numero'].toString();
-
-    //     setState(() {
-    //       numeroCliente = valor;
-    //       numeroClienteInt = int.tryParse(numeroCliente) ?? 0;
-    //     });
-    //   } else {
-    //     setState(() {
-    //       numeroCliente = '0';
-    //     });
-    //   }
-    // } catch (e) {
-    //   print("Erro ao carregar configuracaoServico: $e");
-    //   setState(() {
-    //     numeroCliente = '0';
-    //   });
-    // }
   }
 
   // Função para buscar cliente por cpf
@@ -1608,12 +1586,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     super.initState();
     _atualizarHora();
 
-    Future.delayed(Duration(milliseconds: 300), () {
-      if (cpfnoCpfFocusNode.canRequestFocus) {
-        cpfnoCpfFocusNode.requestFocus();
-      }
-    });
-
     painelController.estaNoPainelCozinha.value = false;
 
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -1632,7 +1604,17 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     _carregargarcom();
     _loadNumeroLicenca();
     _loadGarcom();
+    _getNumeroGarcom();
     nomeFocusNode.addListener(_onNomeFocusChange);
+  }
+
+  Future<void> _getNumeroGarcom() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      numeroDoGarcom = prefs.getString('numeroGarcom') ?? '';
+    } catch (e, st) {
+      debugPrint("Erro _getNumeroGarcom(): $e\n$st");
+    }
   }
 
   // Buscar numero licença
@@ -1908,7 +1890,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
           telefoneCliente = numeroController.text;
 
           if (precisoCadastrarCliente) {
-            await abrirCliente(
+            numeroCliente = await abrirCliente(
               nomeCliente,
               cpfCliente,
               datanascimentoCliente,
@@ -1931,14 +1913,14 @@ class RecepcaoPageState extends State<RecepcaoPage> {
           telefoneCliente = numeroControllerTelefone.text;
 
           if (precisoCadastrarCliente) {
-            await abrirCliente(
+            numeroCliente = await abrirCliente(
               nomeCliente,
               cpfCliente,
               datanascimentoCliente,
               telefoneCliente,
               sexoSelecionadoForm,
             );
-            await encontrarNumeroClientePeloTelefone(telefoneCliente);
+            // await encontrarNumeroClientePeloTelefone(telefoneCliente);
           } else {
             await atualizarClientePorNumero(
               nomeCliente,
@@ -1958,7 +1940,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
         numeroPedido = await abrirPedido(
           numeroComanda,
           await configuracaoServico(),
-          numeroClienteInt,
+          int.parse(numeroCliente),
         );
 
         await devolverPedido(numeroComanda);
@@ -1975,7 +1957,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
             numeroDoProduto,
             numeroComanda,
             numeroDaLicencaSelecionada,
-            numeroUsuario,
+            numeroDoGarcom,
           );
 
           /* String taxaServico =  await pedidosController.configuracaoServicoComanda();
@@ -2238,7 +2220,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   }
 
   // Função quando cliente não existe
-  Future<void> abrirCliente(
+  Future<String> abrirCliente(
     nomeCliente,
     cpfCliente,
     dataNascimentoCliente,
@@ -2285,15 +2267,15 @@ class RecepcaoPageState extends State<RecepcaoPage> {
       VALUES ('$nome', '$cidade', '$uf', '$cpf', '$sexo', '$dataNascimentoFormatada', '$telefoneClienteFormatado', '$observacao', '$dataCadastroFormatado');
     ''';
     try {
-      String resultado = await Connection().ipd(sql);
+      String resultado = await Connection().insertId(sql);
       print(sql);
-      if (resultado == 'sucesso') {
-        print("Pedido aberto com sucesso para comanda ");
+      if (resultado != '') {
+        return resultado;
       } else {
-        print(" Erro ao abrir pedido: $resultado");
+        return "";
       }
     } catch (e) {
-      print(" Erro inesperado: $e");
+      return "";
     }
   }
 
@@ -2305,15 +2287,14 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   ) async {
     // Valores fixos
     String numeroCaixaAtual = '0';
-    String numeroUsuarioAtual = '1';
-    String numeroTradepointAtual = '1';
+    String numeroUsuarioAtual = numeroDoGarcom;
+    String numeroTradepointAtual = numeroDaLicencaSelecionada;
     String cobrarTaxa = taxaservico;
     String NumeroComanda = numeroComanda;
     int numeroCliente = numeroClienteInt;
 
     // Montando o SQL
-    // String sql = "INSERT INTO pedidos (numerocartao_FK,numerocaixa_FK,numerousuarioabertura_FK,status,pessoas,observacao,numerotradepointabertura_FK,taxaservico,descricaopedido,abertura) VALUES ('$NumeroComanda','$numeroCaixaAtual','$numeroUsuarioAtual','1','1','','$numeroTradepointAtual','$cobrarTaxa','Comanda - '$NumeroComanda','CURRENT_TIMESTAMP')";
-    String sql =  "INSERT INTO pedidos (numerocartao_FK,numerocaixa_FK,numerousuarioabertura_FK,status,pessoas,observacao,numerotradepointabertura_FK,taxaservico,descricaopedido,abertura,numerocliente_FK) VALUES ('$NumeroComanda','$numeroCaixaAtual','$numeroUsuarioAtual','1','1','','$numeroTradepointAtual','$cobrarTaxa','Comanda - $NumeroComanda', CURRENT_TIMESTAMP,'$numeroCliente')";
+    String sql = "INSERT INTO pedidos (numerocartao_FK,numerocaixa_FK,numerousuarioabertura_FK,status,pessoas,observacao,numerotradepointabertura_FK,taxaservico,descricaopedido,abertura,numerocliente_FK) VALUES ('$NumeroComanda','$numeroCaixaAtual','$numeroUsuarioAtual','1','1','','$numeroTradepointAtual','$cobrarTaxa','Comanda - $NumeroComanda', CURRENT_TIMESTAMP,'$numeroCliente')";
     try {
       String numeroPedido = await Connection().insertId(sql);
 
@@ -3997,7 +3978,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                         );
                                                       },
                                                       decoration: InputDecoration(
-                                                        labelText: 'Data de Nascimento',
+                                                        labelText: 'Data de aniversário',
                                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10,),
                                                         ),
                                                         fillColor: dataCorreta
@@ -4270,7 +4251,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                         );
                                                       },
                                                       decoration: InputDecoration(
-                                                        labelText: 'Data de Nascimento',
+                                                        labelText: 'Data de aniversário',
                                                         border: OutlineInputBorder(
                                                           borderRadius: BorderRadius.circular(10,),
                                                         ),
@@ -5426,7 +5407,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                                   FittedBox(
                                                     fit: BoxFit.scaleDown,
                                                     child: Text(
-                                                      'Garçom',
+                                                      'Atendente',
                                                       textAlign:
                                                           TextAlign.center,
                                                       style: TextStyle(

@@ -87,6 +87,13 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> cupomAvulso = ['Cupom Avulso'];
   Set<String> cupomAvulsoSelecionados = {};
 
+  List<String> cadastroCliente = ['Cadastro Cliente'];
+  Set<String> cadastroClienteSelecionados = {};
+  List<String> tipoCadastroCliente = ['CPF', 'Telefone'];
+  Set<String> tipoCadastroClienteSelecionados = {};
+  List<String> forcarCadastroCliente = ['Forçar cadastro'];
+  Set<String> forcarCadastroClienteSelecionados = {};
+
   bool servidorConectado = false;
 
   bool clicado = false;
@@ -168,6 +175,16 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
   bool aparecerCupomAvulso = false;
 
+  bool aparecerCadastroCliente = false;
+
+  // Listener nomeado para poder ser removido corretamente no dispose
+  void _onServidorFocusChange() {
+    if (!mounted) return;
+    setState(() {
+      _isFocused = servidorFocusNode.hasFocus;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -178,18 +195,12 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     // inicia timer seguro (não assume que será não-nulo)
     _atualizarHora();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      // sem setState direto sem checar mounted
       if (!mounted) return;
       _atualizarHora();
     });
 
-    // focus listener
-    servidorFocusNode.addListener(() {
-      if (!mounted) return;
-      setState(() {
-        _isFocused = servidorFocusNode.hasFocus;
-      });
-    });
+    // focus listener — usando referência nomeada para remoção segura no dispose
+    servidorFocusNode.addListener(_onServidorFocusChange);
 
     _loadServidor();
     _loadModoSalvo();
@@ -211,12 +222,16 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadNomeEmpresa();
     pegarServidorAntigo();
     pegarRotaAntiga();
+    _loadCadastroClienteSalvo();
+    _loadTipoCadastroClienteSalvo();
+    _loadFocarCadastroClienteSalvo();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    servidorFocusNode.removeListener(() {});
+    // Remove pela mesma referência adicionada no initState — sem vazamento de listener
+    servidorFocusNode.removeListener(_onServidorFocusChange);
     servidorFocusNode.dispose();
     _timer?.cancel();
     servidorController.dispose();
@@ -296,21 +311,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       cupomAvulsoSelecionados = setLocal;
     });
   }
-  /* _loadCupomAvulsoSalvo() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedCupomAvulso = prefs.getString('cupom_avulso');
-      if (savedCupomAvulso != null) {
-        final setLocal = Set<String>.from(jsonDecode(savedCupomAvulso));
-        if (!mounted) return;
-        setState(() {
-          cupomAvulsoSelecionados = setLocal;
-        });
-      }
-    } catch (e, st) {
-      // debugPrint("Erro _loadCupomAvulsoSalvo(): $e\n$st");
-    }
-  } */
 
   // Carrega o cupom avulso - bool para rota
   Future<void> carregarCupomAvulso() async {
@@ -334,31 +334,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       aparecerCupomAvulso = setLocal.contains('Cupom Avulso');
     });
   }
-  /* carregarCupomAvulso() async {
-    final prefs = await SharedPreferences.getInstance();
-    final cupomAvulsoJson = prefs.getString('cupom_avulso');
-
-    if (cupomAvulsoJson != null) {
-      final cupomAvulsoSalvos = Set<String>.from(jsonDecode(cupomAvulsoJson));
-
-      if (cupomAvulsoSalvos.contains('Cupom Avulso')) {
-        // se note selecionado
-        setState(() {
-          aparecerCupomAvulso = true;
-        });
-      } else {
-        // se note nao selecionado
-        setState(() {
-          aparecerCupomAvulso = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerCupomAvulso = false;
-      });
-    }
-  } */
 
   // Salva o cupom avulso
   _saveCupomAvulso(Set<String> cupomAvulsoSelecionados) async {
@@ -366,6 +341,89 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await prefs.setString(
       'cupom_avulso',
       jsonEncode(cupomAvulsoSelecionados.toList()),
+    );
+  }
+
+  // Carrega o cadastro do cliente - bool para rota
+  Future<void> _loadCadastroClienteSalvo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('cadastro_cliente');
+
+    if (valor == null || valor.isEmpty) return;
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      cadastroClienteSelecionados = setLocal;
+    });
+  }
+
+  // Salva o cupom avulso
+  _saveCadastroCliente(Set<String> cadastroClienteSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'cadastro_cliente',
+      jsonEncode(cadastroClienteSelecionados.toList()),
+    );
+  }
+
+  // Carrega o tipo de cadastro do cliente - bool para rota
+  Future<void> _loadTipoCadastroClienteSalvo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedCheck = prefs.getString('tipo_cadastro_cliente');
+      if (savedCheck != null) {
+        final setLocal = Set<String>.from(jsonDecode(savedCheck));
+        if (!mounted) return;
+        setState(() {
+          tipoCadastroClienteSelecionados = setLocal;
+        });
+      }
+    } catch (e, st) {
+      // debugPrint("Erro _loadCheckSalvo(): $e\n$st");
+    }
+  }
+
+  // Salva o tipo de cadastro do cliente
+  _saveTipoCadastroCliente(Set<String> tipoCadastroClienteSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'tipo_cadastro_cliente',
+      jsonEncode(tipoCadastroClienteSelecionados.toList()),
+    );
+  }
+
+  // Carrega se deve forcar popup aparecer 
+  Future<void> _loadFocarCadastroClienteSalvo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedCheck = prefs.getString('forcar_cadastro_cliente');
+      if (savedCheck != null) {
+        final setLocal = Set<String>.from(jsonDecode(savedCheck));
+        if (!mounted) return;
+        setState(() {
+          forcarCadastroClienteSelecionados = setLocal;
+        });
+      }
+    } catch (e, st) {
+      // debugPrint("Erro _loadCheckSalvo(): $e\n$st");
+    }
+  }
+
+  // Salva o tipo de cadastro do cliente
+  _saveForcarCadastroCliente(Set<String> forcarCadastroClienteSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'forcar_cadastro_cliente',
+      jsonEncode(forcarCadastroClienteSelecionados.toList()),
     );
   }
 
@@ -1225,6 +1283,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await salvarPainelSalvo(paineisSelecionados);
     await salvarRota(rotasSelecionadas);
     await _saveCupomAvulso(cupomAvulsoSelecionados);
+    await _saveCadastroCliente(cadastroClienteSelecionados);
+    await _saveTipoCadastroCliente(tipoCadastroClienteSelecionados);
+    await _saveForcarCadastroCliente(forcarCadastroClienteSelecionados);
   }
 
   // Deriva as variáveis booleanas de navegação diretamente dos Sets em memória.
@@ -1246,6 +1307,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     // Cupom avulso
     await _loadCupomAvulsoSalvo();
     await carregarCupomAvulso();
+    // Cadastro cliente
+    await _loadCadastroClienteSalvo();
+    await _loadTipoCadastroClienteSalvo();
+    await _loadFocarCadastroClienteSalvo();
   }
 
   Future<void> salvarGarcomSalvo(Set<String> garcomSalvos) async {
@@ -2384,6 +2449,121 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
+
+                      SizedBox(height: 4),
+
+                      Center(
+                        child: Text(
+                          'Cadastro cliente(Abertura comanda):',
+                          style: TextStyle(
+                            color: colorScheme.onSecondary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      if (cadastroCliente.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else
+                        Padding(
+                          padding: EdgeInsets.only(right: 150),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: cadastroCliente.length,
+                            itemBuilder: (context, index) {
+                              String modo = cadastroCliente[index];
+                              bool isChecked = cadastroClienteSelecionados.contains(modo);
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      cadastroClienteSelecionados.add(modo);
+                                    } else {
+                                      cadastroClienteSelecionados.remove(modo);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      SizedBox(height: 4),
+                      if (cadastroClienteSelecionados.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(right: 150, left: 20),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: tipoCadastroCliente.length,
+                            itemBuilder: (context, index) {
+                              String modo = tipoCadastroCliente[index];
+                              bool isChecked = tipoCadastroClienteSelecionados.contains(modo);
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                activeColor: colorScheme.secondary,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      tipoCadastroClienteSelecionados.clear();
+                                      tipoCadastroClienteSelecionados.add(modo);
+                                    } else {
+                                      tipoCadastroClienteSelecionados.remove(modo);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        if (cadastroClienteSelecionados.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(right: 150, left: 20),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: forcarCadastroCliente.length,
+                            itemBuilder: (context, index) {
+                              String modo = forcarCadastroCliente[index];
+                              bool isChecked = forcarCadastroClienteSelecionados.contains(modo);
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                activeColor: colorScheme.tertiary,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      forcarCadastroClienteSelecionados.clear();
+                                      forcarCadastroClienteSelecionados.add(modo);
+                                    } else {
+                                      forcarCadastroClienteSelecionados.remove(modo);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+
                       Center(
                         child: Text(
                           'Configuração dos painéis:',
@@ -2435,7 +2615,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ),
 
-                      Center(
+                      /* Center(
                         child: Text(
                           'Configuração cupom avulso:',
                           style: TextStyle(
@@ -2482,7 +2662,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               );
                             },
                           ),
-                        ),
+                        ), */
 
                       Center(
                         child: Text(

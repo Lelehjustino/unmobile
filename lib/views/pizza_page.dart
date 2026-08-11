@@ -2563,13 +2563,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                         child: GestureDetector(
                           onTap: () {
                             if(configurarPizza){
-                              Get.toNamed('/garcom',
-                                arguments: {
-                                    'tamanhoSelecionado': tamanhoSelecionadoNaPage,
-                                    'comanda': comandaDoPedido,
-                                    'mesa': mesaDoPedido,
-                                  },
-                              );
+                              Get.back();
                             } else if (terminarPizza){
                               setState(() {
                                 terminarPizza = false;
@@ -2580,13 +2574,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                 showKeyboardNumero = false;
                               });
                             } else {
-                              Get.toNamed('/garcom',
-                                arguments: {
-                                    'tamanhoSelecionado': tamanhoSelecionadoNaPage,
-                                    'comanda': comandaDoPedido,
-                                    'mesa': mesaDoPedido,
-                                  },
-                              );
+                              Get.back();
                             }
                           },
                           child: Icon(
@@ -2663,17 +2651,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                     );
                                   }
                                 
-                                  String comandaDoPedido = Get.arguments['comanda'] ?? '';
-                                  String mesaDoPedido = Get.arguments['mesa'] ?? '';
-                                  String numeropedido = Get.arguments['numeropedido'] ?? '0';
-      
-                                  Get.toNamed('/garcom',
-                                    arguments: {
-                                        'comanda': comandaDoPedido,
-                                        'mesa': mesaDoPedido,
-                                        'numeropedido': numeropedido,
-                                      },
-                                  );
+                                  Get.back();
                                   return;
                                 }
       

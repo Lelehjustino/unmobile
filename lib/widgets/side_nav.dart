@@ -7,11 +7,12 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/configuracoes_page.dart';
-import 'package:un_recepcao/views/garcom_page.dart';
+import 'package:un_recepcao/views/garcom_page.dart' hide Padding;
 import 'package:un_recepcao/views/mapa_page.dart';
 import 'package:un_recepcao/views/notes_page.dart';
 import 'package:un_recepcao/views/recepcao_page.dart';
@@ -43,6 +44,7 @@ class SideNavState extends State<SideNav> {
   bool rotaExpedicaoMotoboy = false;
 
   final FuncoesController funcoesController = Get.put(FuncoesController());
+  final CarrinhoController carrinhoController = Get.find<CarrinhoController>();
 
   bool isloadingProdutos = false;
 
@@ -489,7 +491,7 @@ class SideNavState extends State<SideNav> {
                       funcoesController.zerarAtendimento();
                     },
                   ), 
-                  if(aparecerCupomAvulso && rotaHome)
+                  if(rotaHome)
                   ListTile(
                     leading: Icon(
                       Icons.print,
@@ -593,7 +595,7 @@ class SideNavState extends State<SideNav> {
                 ],
               ),
             ),
-            Spacer(),
+            // Spacer(),
               isloadingProdutos ? 
               Padding(
                   padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),

@@ -790,6 +790,16 @@ class MapaPageState extends State<MapaPage> {
     }
   }
 
+  Future<void> _selecionarNenhumGrupo() async {
+    if(logicaPorComandaNaMesa){
+      indexMesa = 0;
+      setState(() {
+        mesaSelecionada = null;
+        indexMesa = indexMesa;
+      });
+    }
+  }
+
   Future<void> _selecionarMesa(List<dynamic> mesas, int index) async {
     setState(() {
       modoCarrossel = true;
@@ -2557,7 +2567,7 @@ class MapaPageState extends State<MapaPage> {
                         if(!modoCarrossel)
                         SizedBox(width: 3),
                         // Botao tres funções - abertas - fechadas - todas
-                        if(!modoCarrossel)
+                        if(!modoCarrossel && !logicaPorComandaNaMesa)
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -2608,8 +2618,8 @@ class MapaPageState extends State<MapaPage> {
                             )
                           ],
                         ),
-                        SizedBox(width: 3),
-                        if(logicaPorComandaNaMesa && !modoCarrossel)
+                        // SizedBox(width: 3),
+                        /* if(logicaPorComandaNaMesa && !modoCarrossel)
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -2648,7 +2658,7 @@ class MapaPageState extends State<MapaPage> {
                               ),
                             )
                           ],
-                        ),
+                        ), */
                         SizedBox(width: 3),
                         if(logicaPorComandaNaMesa)
                         Column(
@@ -2660,7 +2670,7 @@ class MapaPageState extends State<MapaPage> {
                                     modoCarrossel = false;
                                   });
                                 }else{
-                                  _selecionarPrimeiroGrupo(mapaController.abertasMesas.toList());
+                                  _selecionarNenhumGrupo();
                                   setState(() {
                                     modoCarrossel = true;
                                   });
@@ -2669,13 +2679,13 @@ class MapaPageState extends State<MapaPage> {
                               style: ElevatedButton.styleFrom(
                                 shape: CircleBorder(),
                                 padding: EdgeInsets.all(20), // tamanho do círculo
-                                backgroundColor: colorScheme.secondary,
+                                backgroundColor: colorScheme.primary,
                                 elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
                                 shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
                               ),
                               child: Icon(
-                                modoCarrossel ? Icons.list :  Icons.grid_view,
-                                size: 30,
+                                modoCarrossel ? Icons.grid_view :  Icons.list,
+                                size: 25,
                                 color: colorScheme.onPrimary,
                               ),
                             ),
@@ -2683,7 +2693,7 @@ class MapaPageState extends State<MapaPage> {
                               modoCarrossel ? 'Lista' : 'Grade',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: colorScheme.secondary,
+                                color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             )
@@ -2747,20 +2757,22 @@ class MapaPageState extends State<MapaPage> {
                 ),
               ),
             ),
-              if(logicaPorComanda || logicaPorMesa)
-              if (mostrarMesas)
-                _buildGridMesas(itensParaMostrar, true)
-              else
-                _buildGridComandas(itensParaMostrar, false),
+            // body
+            if(logicaPorComanda || logicaPorMesa)
+            if (mostrarMesas)
+              _buildGridMesas(itensParaMostrar, true)
+            else
+              _buildGridComandas(itensParaMostrar, false),
 
-              if(logicaPorComandaNaMesa && modoCarrossel)
+            if(logicaPorComandaNaMesa && modoCarrossel)
               _buildGridComandaNaMesa(mapaController.abertasMesas.toList(), mapaController.abertasComandas.toList()),
 
-              if(logicaPorComandaNaMesa && !modoCarrossel)
-              if (mostrarMesas)
+            if(logicaPorComandaNaMesa && !modoCarrossel)
+              _buildGridComandas(mapaController.abertasComandas.toList(), false)
+              /* if (mostrarMesas)
                 _buildGridMesas(itensParaMostrar, true)
               else
-                _buildGridComandas(itensParaMostrar, false),
+                _buildGridComandas(itensParaMostrar, false), */
             ],
           ),
         ],
@@ -3129,7 +3141,7 @@ class MapaPageState extends State<MapaPage> {
                                   FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Text(
-                                      'Garçom',
+                                      'Atendente',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 12,

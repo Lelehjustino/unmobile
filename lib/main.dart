@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/navegacao_inteligente.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
+import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/zerar_atendimento.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
 import 'package:un_recepcao/controllers/connectivity_controller.dart';
@@ -46,6 +47,7 @@ void main() async {
   Get.put(CarrinhoController(), permanent: true);
   Get.put(ComandaCarrinhoController(), permanent: true);
   Get.put(ZerarAtendimentoController(), permanent: true);
+  Get.put(GarcomController(), permanent: true);
 
   ServicoNotificacao.configurarAudio();
 

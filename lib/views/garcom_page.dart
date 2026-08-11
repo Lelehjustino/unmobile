@@ -3,16 +3,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:cpf_cnpj_validator/cpf_validator.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:pinput/pinput.dart';
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
+import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/views/carrinho_comandas_page.dart';
@@ -109,6 +112,11 @@ class GarcomPageState extends State<GarcomPage>
   final TextEditingController senhaController = TextEditingController();
   final TextEditingController observacaoProdutoSelecionadoObsAddController = TextEditingController();
 
+  final TextEditingController nomeClienteDialogoController = TextEditingController();
+  final TextEditingController telefoneClienteDialogoController = TextEditingController();
+  final TextEditingController cpfClienteDialogoController = TextEditingController();
+  final TextEditingController dataNascimentoClienteDialogoController = TextEditingController();
+
   final FocusNode comandaFocus = FocusNode();
   final FocusNode mesaFocus = FocusNode();
   final FocusNode cardapioFocus = FocusNode();
@@ -119,8 +127,14 @@ class GarcomPageState extends State<GarcomPage>
   final FocusNode senhaFocus = FocusNode();
   final FocusNode observacaoProdutoSelecionadoObsAddFocus = FocusNode();
 
+  final FocusNode nomeClienteDialogoFocus = FocusNode();
+  final FocusNode telefoneClienteDialogoFocus = FocusNode();
+  final FocusNode cpfClienteDialogoFocus = FocusNode();
+  final FocusNode dataNascimentoClienteDialogoFocus = FocusNode();
+
   final CarrinhoController carrinhoController = Get.find<CarrinhoController>();
   final ComandaCarrinhoController comandaCarrinhoController = Get.find<ComandaCarrinhoController>();
+  final GarcomController garcomController = Get.find<GarcomController>();
 
   bool isProcessing = false;
   String nomeEmpresa = '';
@@ -219,11 +233,6 @@ class GarcomPageState extends State<GarcomPage>
 
   static final ValueNotifier<bool> isConnected = ValueNotifier(false);
 
-  // String tipoDoPedido = "";
-/*   bool logicaPorMesa = false;
-  bool logicaPorComanda = false;
-  bool logicaPorComandaNaMesa = false; */
-
   String nomePVD = "";
   String numeroDaLicencaSelecionada = "";
 
@@ -233,6 +242,8 @@ class GarcomPageState extends State<GarcomPage>
   bool desejaMesa = false;
   bool aparecerCardapio = false;
   bool vinculandoMesa = false;
+
+  StateSetter? estadoPopupCadastro;
 
   bool mostrarProdutos = false;
   bool mostrarGrupos = true;
@@ -333,14 +344,58 @@ class GarcomPageState extends State<GarcomPage>
   bool meiaPorcaoProduto = false;
   bool meiaPorcaoClicado = false;
 
+  // Cadastro cliente 
+  bool cadastrarCliente = false;
+  bool querCadastrarCliente = false;
+
+  bool telefoneValido = false;
+  bool dataNascimentoValida = false;
+  bool cpfValido = false;
+  bool nomeValido = false;
+
+  bool telefoneErro = false;
+  bool dataNascimentoErro = false;
+  bool cpfErro = false;
+  bool nomeErro = false;
+
+  bool clienteJaCadastrado = false;
+  int numeroCliente = 0;
+  String numeroClienteString = "0";
+
+  // Snapshot dos dados originais do cliente ao abrir o popup
+  String _snapshotNome = '';
+  String _snapshotTelefone = '';
+  String _snapshotCpf = '';
+  String _snapshotDataNascimento = '';
+
+  int cliquei = 0;
+
+  bool cliqueiSelecionarGarcom = false;
+
+  bool clienteJaExisteComanda = false;
+
+  // A máscara permite 10 ou 11 dígitos para o número (com DDD)
+  final _maskFormatter = MaskTextInputFormatter(
+    mask: '(##)#####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
+  String get telefoneEmpresaMascara {
+    if (garcomController.telefoneEmpresa.isEmpty) return '(  )';
+    return '(${garcomController.telefoneEmpresa})';
+  }
+
   /// FocusNode "buraco negro" — enquanto estiver com primaryFocus,
   late final FocusNode _focoBloqueio = FocusNode(
     debugLabel: 'focoBloqueioDialogo',
     skipTraversal: true,
     canRequestFocus: true,
   );
-
+ 
   final painelController = Get.put(PainelController());
+
+  bool cliqueiSenha = false;
 
   @override
   void initState() {
@@ -402,8 +457,6 @@ class GarcomPageState extends State<GarcomPage>
       carrinhoController.carrinho.clear();
     }
 
-    carregarValoresMesaComanda();
-
     _carregarchecks();
 
     carregarUltimoAdicionalObservacaoSelecionado();
@@ -413,6 +466,315 @@ class GarcomPageState extends State<GarcomPage>
     observacaoProdutoSelecionadoFocus.addListener(_syncKeyboardAlfaFromFocus);
 
     // limparCarrinho();
+
+    garcomController.configuracoesCadastroCliente();
+  }
+
+  Future<void> atualizarValores(
+    StateSetter setStatePopup,
+    String nome,
+    String telefone,
+    String cpf,
+    String dataNascimento,
+  ) async {
+    try {
+      setStatePopup(() {
+        nomeClienteDialogoController.text = nome;
+        telefoneClienteDialogoController.text = telefone;
+        cpfClienteDialogoController.text = cpf;
+        dataNascimentoClienteDialogoController.text = dataNascimento;
+      });
+    } catch (e) {
+      nomeClienteDialogoController.text = nome;
+      telefoneClienteDialogoController.text = telefone;
+      cpfClienteDialogoController.text = cpf;
+      dataNascimentoClienteDialogoController.text = dataNascimento;
+    }
+  }
+
+  // Função para buscar valores do pedido
+  Future<bool> buscarInformacoesClientePedidoAberto (String numeroPedido, StateSetter setStatePopup) async {
+    try {
+      String dadosJson = await Connection().select(
+        """
+        SELECT p.numerocliente_FK, p.numero, c.nome, c.telefone, c.cpf, c.datanascimento
+          FROM pedidos p
+          INNER JOIN clientes c
+              ON c.numero = p.numerocliente_FK WHERE p.numero = '$numeroPedido';
+        """,
+      );
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+
+      if (lista.isNotEmpty) {
+        final valor = lista[0]['numerocliente_FK'].toString();
+        final valor1 = lista[0]['nome'].toString();
+        final valor2 = lista[0]['telefone'].toString();
+        final valor3 = lista[0]['cpf'].toString();
+        final valor4 = lista[0]['datanascimento'].toString();
+        numeroClienteString = valor;
+        
+        String dataFormatada = valor4;
+        if (dataFormatada.contains('1000-01-01') || dataFormatada == '01/01/1000') {
+          dataFormatada = "";
+        } else if (dataFormatada.isNotEmpty && dataFormatada != 'null') {
+          try {
+             dataFormatada = formatarData(dataFormatada);
+          } catch (_) {}
+        } else {
+          dataFormatada = "";
+        }
+        nomeClienteDialogoController.text = valor1;
+        telefoneClienteDialogoController.text = valor2;
+        cpfClienteDialogoController.text = valor3;
+        dataNascimentoClienteDialogoController.text = dataFormatada;
+        await atualizarValores(setStatePopup, valor1, valor2, valor3, dataFormatada);
+        return true;
+      } else {
+        numeroClienteString = "0";
+        return false;
+      }
+    } catch (e) {
+      numeroClienteString = "0";
+      return false;
+    }
+  }
+
+  void verCadastroCliente (){
+    bool podeCadastrar = false;
+
+    if(nomeClienteDialogoController.text.isNotEmpty || telefoneClienteDialogoController.text.isNotEmpty || cpfClienteDialogoController.text.isNotEmpty || dataNascimentoClienteDialogoController.text.isNotEmpty){
+      querCadastrarCliente = true;
+    } else {
+      querCadastrarCliente = false;
+    }
+
+    bool cadastroTelefoneCompleto = (nomeValido && telefoneValido && dataNascimentoValida) && (garcomController.tipoCadastroClienteTelefone.value);
+    bool cadastroCpfCompleto = (nomeValido && cpfValido && dataNascimentoValida) && (garcomController.tipoCadastroClienteCpf.value);
+    
+    if(querCadastrarCliente){
+      if(cadastroTelefoneCompleto || cadastroCpfCompleto){
+        cadastrarCliente = true;
+      }
+    }
+  }
+
+  void validarCampos(){
+    validarNomeDialogo(nomeClienteDialogoController.text);
+    validarTelefoneDialogo(telefoneClienteDialogoController.text);
+    validarCpfDialogo(cpfClienteDialogoController.text); 
+    validarDataNascimentoDialogo(dataNascimentoClienteDialogoController.text);
+  }
+
+  bool validarCamposCadastroCliente(StateSetter setStatePopup){
+    validarCampos();
+
+    final bool nomeValido = nomeClienteDialogoController.text.isNotEmpty;
+    bool valido = true;
+
+    setStatePopup(() {
+      // Limpa os erros antes de validar
+      nomeErro = false;
+      telefoneErro = false;
+      cpfErro = false;
+      dataNascimentoErro = false;
+      
+      bool focoAjustado = false;
+
+      if (garcomController.tipoCadastroClienteTelefone.value) {
+        if (!nomeValido) {
+          nomeErro = true;
+          valido = false;
+          if (!focoAjustado) {
+            focoAjustado = true;
+            Future.delayed(Duration(milliseconds: 300), () {
+              if (nomeClienteDialogoFocus.canRequestFocus) {
+                nomeClienteDialogoFocus.requestFocus();
+              }
+            });
+          }
+        }
+
+        if (!telefoneValido) {
+          telefoneErro = true;
+          valido = false;
+          if (!focoAjustado) {
+            focoAjustado = true;
+            Future.delayed(Duration(milliseconds: 300), () {
+              if (telefoneClienteDialogoFocus.canRequestFocus) {
+                telefoneClienteDialogoFocus.requestFocus();
+              }
+            });
+          }
+        }
+
+        if (!dataNascimentoValida) {
+          dataNascimentoErro = true;
+          valido = false;
+          if (!focoAjustado) {
+            focoAjustado = true;
+            Future.delayed(Duration(milliseconds: 300), () {
+              if (dataNascimentoClienteDialogoFocus.canRequestFocus) {
+                dataNascimentoClienteDialogoFocus.requestFocus();
+              }
+            });
+          }
+        }
+      } else if (garcomController.tipoCadastroClienteCpf.value) {
+        if (!nomeValido) {
+          nomeErro = true;
+          valido = false;
+          if (!focoAjustado) {
+            focoAjustado = true;
+            Future.delayed(Duration(milliseconds: 300), () {
+              if (nomeClienteDialogoFocus.canRequestFocus) {
+                nomeClienteDialogoFocus.requestFocus();
+              }
+            });
+          }
+        }
+
+        if (!cpfValido) {
+          cpfErro = true;
+          valido = false;
+          if (!focoAjustado) {
+            focoAjustado = true;
+            Future.delayed(Duration(milliseconds: 300), () {
+              if (cpfClienteDialogoFocus.canRequestFocus) {
+                cpfClienteDialogoFocus.requestFocus();
+              }
+            });
+          }
+        }
+
+        if (!dataNascimentoValida) {
+          dataNascimentoErro = true;
+          valido = false;
+          if (!focoAjustado) {
+            focoAjustado = true;
+            Future.delayed(Duration(milliseconds: 300), () {
+              if (dataNascimentoClienteDialogoFocus.canRequestFocus) {
+                dataNascimentoClienteDialogoFocus.requestFocus();
+              }
+            });
+          }
+        }
+      }
+    });
+
+    setState(() {
+      nomeErro = nomeErro;
+      telefoneErro = telefoneErro;
+      cpfErro = cpfErro;
+      dataNascimentoErro = dataNascimentoErro;
+    });
+
+    return valido;
+  }
+
+  // Preencher campos cadastro cliente 
+   puxarSeClienteCadastrado(String cpfOuTelefone) async {
+    if(garcomController.tipoCadastroClienteCpf.value){
+      // buscar por cpf 
+      await buscarPorCpf(cpfOuTelefone);
+    } else {
+      // buscar por telefone 
+      await buscarPorNumero(cpfOuTelefone);
+    }
+  }
+
+  // Função para buscar cliente por cpf
+  Future<void> buscarPorCpf(String cpf) async {
+    try {
+      // Permite a UI renderizar antes do processo pesado
+      await Future.delayed(Duration.zero);
+
+      String jsonResult = await Connection().select(
+        "SELECT nome, datanascimento FROM clientes WHERE cpf='$cpf' LIMIT 1",
+      );
+
+      // Decode fora do setState
+      final List<dynamic> lista = jsonDecode(jsonResult);
+
+      if (lista.isNotEmpty) {
+        final item = lista[0];
+
+        String dataNascimento = item['datanascimento']?.toString() ?? '';
+        String nome = item['nome']?.toString() ?? '';
+
+        // Formatação de data FORA do setState
+        String dataFormatada = '';
+        if (dataNascimento.isNotEmpty && dataNascimento != 'null') {
+          try {
+            dataFormatada = formatarData(dataNascimento);
+          } catch (_) {
+            dataFormatada = '';
+          }
+        }
+
+        if (!mounted) return;
+        dataNascimentoClienteDialogoController.text = dataFormatada;
+        nomeClienteDialogoController.text = nome;
+        clienteJaCadastrado = true;
+       
+      } else {
+        if (!mounted) return;
+        clienteJaCadastrado = false;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      clienteJaCadastrado = false;
+    }
+  }
+
+  // Função para buscar cliente por Numero
+  Future<void> buscarPorNumero(String telefone) async {
+    try {
+      // Dá um respiro para a UI antes do processamento pesado
+      await Future.delayed(Duration.zero);
+
+      String jsonResult = await Connection().select(
+        "SELECT nome, datanascimento FROM clientes WHERE (telefone='$telefone' OR telefone2='$telefone') LIMIT 1",
+      );
+
+      if (!mounted) return;
+
+      // Decode fora do setState
+      final List<dynamic> lista = jsonDecode(jsonResult);
+
+      if (lista.isNotEmpty) {
+        final item = lista[0];
+
+        String dataNascimento = item['datanascimento']?.toString() ?? '';
+        String nome = item['nome']?.toString() ?? '';
+
+        // Formatação de data FORA do setState
+        String dataFormatada = '';
+        if (dataNascimento.isNotEmpty && dataNascimento != 'null') {
+          try {
+            dataFormatada = formatarData(dataNascimento);
+          } catch (_) {
+            dataFormatada = '';
+          }
+        }
+
+        setState(() {
+          dataNascimentoClienteDialogoController.text = dataFormatada;
+          nomeClienteDialogoController.text = nome;
+          clienteJaCadastrado = true;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          clienteJaCadastrado = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        clienteJaCadastrado = false;
+      });
+    }
   }
 
   // Carrega os valores da mesa e comanda - quando comanda aberta 
@@ -524,7 +886,7 @@ class GarcomPageState extends State<GarcomPage>
 
     // Produto do tipo pizza
     else if (idFuncao == 'PZ') {
-      Get.offNamed(
+      Get.toNamed(
         '/pizza',
         preventDuplicates: false,
         arguments: {
@@ -678,7 +1040,7 @@ class GarcomPageState extends State<GarcomPage>
     salvarUltimaConfiguracao(modo);
     Future.delayed(const Duration(milliseconds: 300), () {
       cardapioFocus.unfocus();
-    });
+    }); 
     _selecionarUltimoGrupo();
   }
 
@@ -701,10 +1063,9 @@ class GarcomPageState extends State<GarcomPage>
       }
     });  */
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted &&
-          cardapioFocus.canRequestFocus &&
-          cardapioFocus.context != null) {
-        cardapioFocus.requestFocus();
+      if (mounted && cardapioFocus.canRequestFocus && cardapioFocus.context != null) {
+        // cardapioFocus.requestFocus();
+        cardapioFocus.unfocus();
       }
     });
     String modo = "Carrinho";
@@ -780,8 +1141,7 @@ class GarcomPageState extends State<GarcomPage>
       );
       List<dynamic> lista = jsonDecode(dadosJson);
       if (lista.isNotEmpty) {
-        double valorLiquido =
-            double.tryParse(lista[0]['valorliquidopedido'].toString()) ?? 0.0;
+        double valorLiquido = double.tryParse(lista[0]['valorliquidopedido'].toString()) ?? 0.0;
         if (valorLiquido != 0.0) {
           setState(() {
             mostrarDentroComandaMesa = true;
@@ -802,8 +1162,7 @@ class GarcomPageState extends State<GarcomPage>
       );
       List<dynamic> lista = jsonDecode(dadosJson);
       if (lista.isNotEmpty) {
-        double valorLiquido =
-            double.tryParse(lista[0]['valorliquidopedido'].toString()) ?? 0.0;
+        double valorLiquido =  double.tryParse(lista[0]['valorliquidopedido'].toString()) ?? 0.0;
         if (valorLiquido != 0.0) {
           setState(() {
             mostrarDentroComandaMesa = true;
@@ -1780,7 +2139,8 @@ class GarcomPageState extends State<GarcomPage>
           obsborda5,
           obsborda6,
           obsborda7,
-          obsborda8
+          obsborda8,
+          numerocliente_FK
         ) VALUES (
           '$numeroSerie',
           '$numeroTradepointParaInsert',
@@ -1825,7 +2185,8 @@ class GarcomPageState extends State<GarcomPage>
           '$obsborda5ParaInsert',
           '$obsborda6ParaInsert',
           '$obsborda7ParaInsert',
-          '$obsborda8ParaInsert'
+          '$obsborda8ParaInsert',
+          '$numeroClienteString'
         )
       """;
       print('SQL: $sql');
@@ -1889,7 +2250,8 @@ class GarcomPageState extends State<GarcomPage>
           nomeproduto, 
           numeromesa, 
           status,
-          divisaosabores
+          divisaosabores,
+          numerocliente_FK
         ) VALUES (
           '$numeroSerie',
           '$numeroTradepointParaInsert',
@@ -1902,7 +2264,8 @@ class GarcomPageState extends State<GarcomPage>
           '$nomeProdutoParaInsert',
           '$numeroMesaParaInsert',
           '$status',
-          '$divisaoDeSaboresParaInsert'
+          '$divisaoDeSaboresParaInsert',
+          '$numeroClienteString'
         )
       """;
 
@@ -1928,6 +2291,7 @@ class GarcomPageState extends State<GarcomPage>
   Future<void> limparAmbas() async {
     carrinhoController.limparCarrinho();
     limparInformacoesProduto();
+    cliquei = 0;
     quantidadesAdicionais.clear();
     quantidadesObservacoes.clear();
 
@@ -2107,8 +2471,44 @@ class GarcomPageState extends State<GarcomPage>
       print("Erro ao zerar atendimento no banco: $e");
     }
 
+    nomeClienteDialogoController.clear();
+    telefoneClienteDialogoController.clear();
+    cpfClienteDialogoController.clear();
+    dataNascimentoClienteDialogoController.clear();
+    cliquei = 0;
+
+    cadastrarCliente = false;
+    querCadastrarCliente = false;
+    clienteJaCadastrado = false;
+    nomeValido = false;
+    telefoneValido = false;
+    cpfValido = false;
+    dataNascimentoValida = false;
+
+    nomeErro = false;
+    telefoneErro = false;
+    cpfErro = false;
+    dataNascimentoErro = false;
+
+    isProcessing = false;
+    aparecerFazerPedido = false;
+    aparecerCardapio = false;
+    aparecerCarrinho = false;
+    aparecerLista = false;
+    aparecerConfiguracaoProduto = false;
+    aparecerBotoes = true;
+    mostrarDentroComandaMesa = false;
+    mesaVinculada = false;
+    produtoKilo = false;
+    contadorPonto = 0;
+    enviarComanda = false;
+    isProcessingConfirmar = false;
+    numeroMesaParaCarrinho = "";
+    isProcessing = false;
+
     if (mounted) {
       setState(() {
+
         carrinhoController.numeroComanda.value = "";
         carrinhoController.numeroMesa.value = "";
         carrinhoController.numeroPedido.value = "";
@@ -2134,22 +2534,6 @@ class GarcomPageState extends State<GarcomPage>
 
         numeroComandaEmUso = "";
         numeroMesaEmUso = "";
-
-        isProcessing = false;
-        aparecerFazerPedido = false;
-        aparecerCardapio = false;
-        aparecerCarrinho = false;
-        aparecerLista = false;
-        aparecerConfiguracaoProduto = false;
-        aparecerBotoes = true;
-        mostrarDentroComandaMesa = false;
-        mesaVinculada = false;
-        produtoKilo = false;
-        contadorPonto = 0;
-        enviarComanda = false;
-        isProcessingConfirmar = false;
-        numeroMesaParaCarrinho = "";
-        isProcessing = false;
         // isProcessing e cliqueiFazerPedido substituídos pelo FuncoesController
 
         // chama o foco para o campo de comanda ou mesa
@@ -2433,9 +2817,7 @@ class GarcomPageState extends State<GarcomPage>
             await atualizarComanda(numeroDaLicencaSelecionada, numeroComanda);
             await saveComanda(numeroComanda);
 
-            double valorLiquido =
-                double.tryParse(comanda['valorliquidopedido'].toString()) ??
-                0.0;
+            double valorLiquido = double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
             if (funcoesController.logicaPorComanda.value) {
               setState(() {
@@ -2474,8 +2856,7 @@ class GarcomPageState extends State<GarcomPage>
         await atualizarComanda(numeroDaLicencaSelecionada, numeroComanda);
         await saveComanda(numeroComanda);
 
-        double valorLiquido =
-            double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
+        double valorLiquido = double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
         if (funcoesController.logicaPorComanda.value) {
           setState(() {
@@ -2510,15 +2891,14 @@ class GarcomPageState extends State<GarcomPage>
           await saveComanda(numeroComanda);
 
           // Verificação se ja tem itens no pedido da comanda
-          double valorLiquido =
-              double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
+          double valorLiquido =  double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
           setState(() {
             numeroComandaEmUso = numeroComanda;
             comandaValida = true;
             aparecerFazerPedido = true;
             mesaComandaNaoTemConta = true;
-            mostrarDentroComandaMesa = valorLiquido != 0.0;
+            mostrarDentroComandaMesa = valorLiquido!= 0.0;
           });
         } catch (e) {
           setState(() {
@@ -2678,8 +3058,7 @@ class GarcomPageState extends State<GarcomPage>
 
         if (numeroDaLicencaSelecionada != mobileId) {
           setState(() {
-            mensagemNaMesa =
-                "A mesa $numeroMesa já esta sendo atendida pelo PDV:\n$nomePVD!";
+            mensagemNaMesa = "A mesa $numeroMesa já esta sendo atendida pelo PDV:\n$nomePVD!";
             mesaValida = false;
             icone = false;
             mesaComandaNaoTemConta = true;
@@ -2695,10 +3074,10 @@ class GarcomPageState extends State<GarcomPage>
             await _loadNumeroLicenca();
             await atualizarMesa(numeroDaLicencaSelecionada, numeroMesa);
 
-            double valorLiquido =
-                double.tryParse(mesa['valorliquidopedido'].toString()) ?? 0.0;
+            double valorLiquido = double.tryParse(mesa['valorliquidopedido'].toString()) ?? 0.0;
 
             if (funcoesController.logicaPorMesa.value) {
+              carrinhoController.numeroMesa.value = numeroMesa;
               setState(() {
                 numeroMesaEmUso = numeroMesa;
                 mesaValida = true;
@@ -2715,13 +3094,14 @@ class GarcomPageState extends State<GarcomPage>
                 });
               });
             } else if (funcoesController.logicaPorComandaNaMesa.value) {
+              carrinhoController.numeroMesa.value = numeroMesa;
               // Atualização da tela
               setState(() {
                 numeroMesaEmUso = numeroMesa;
                 mesaValida = true;
                 aparecerFazerPedido = true;
                 mesaComandaNaoTemConta = true;
-                mostrarDentroComandaMesa = valorLiquido != 0.0;
+                // mostrarDentroComandaMesa = valorLiquido != 0.0;
               });
             }
           } catch (e) {
@@ -2743,16 +3123,21 @@ class GarcomPageState extends State<GarcomPage>
         await atualizarMesa(numeroDaLicencaSelecionada, numeroMesa);
 
         // Verificação se ja tem itens no pedido da mesa
-        double valorLiquido =
-            double.tryParse(mesa['valorliquidopedido'].toString()) ?? 0.0;
+        double valorLiquido = double.tryParse(mesa['valorliquidopedido'].toString()) ?? 0.0;
 
+        carrinhoController.numeroMesa.value = numeroMesa;
         setState(() {
           aparecerFazerPedido = true;
           mesaValida = true;
           numeroMesaEmUso = numeroMesa;
           mesaComandaNaoTemConta = true;
-          mostrarDentroComandaMesa = valorLiquido != 0.0;
         });
+
+        if(funcoesController.logicaPorMesa.value){
+          setState(() {
+            mostrarDentroComandaMesa = valorLiquido != 0.0;
+          });
+        }
       }
       setState(() {
         validaMesa = lista;
@@ -3028,7 +3413,7 @@ class GarcomPageState extends State<GarcomPage>
                                   } // Se o produto for do tipo pizza
                                   else if (produto['produto_id'] == 'PZ') {
                                     Navigator.pop(context);
-                                    Get.offNamed('/pizza',
+                                    Get.toNamed('/pizza',
                                       preventDuplicates: false,
                                       arguments: {
                                         'tamanhoSelecionado': produto['produto_nome'],
@@ -3330,7 +3715,7 @@ class GarcomPageState extends State<GarcomPage>
                       ],
                     ),
 
-                    Center(
+                    /* Center(
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: 0,
@@ -3342,6 +3727,7 @@ class GarcomPageState extends State<GarcomPage>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
+
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               // Botão de menos
@@ -3460,6 +3846,50 @@ class GarcomPageState extends State<GarcomPage>
                               Padding(
                                 padding: EdgeInsets.all(8.0),
                                 child: SizedBox(
+                                  width: larguraBotao,
+                                  height: 60,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      if (meiaPorcaoClicado) {
+                                        setModalState(() {
+                                          meiaPorcaoClicado = false;
+                                          quantidadeProdutoSelecionadoModalController.text =
+                                              "1";
+                                          quantidadeInicial = 1;
+                                        });
+                                      } else {
+                                        setModalState(() {
+                                          meiaPorcaoClicado = true;
+                                          quantidadeProdutoSelecionadoModalController.text =
+                                              "0.5";
+                                          quantidadeInicial = 0.5;
+                                        });
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          Theme.of(context).colorScheme.scrim,
+                                      padding: EdgeInsets.zero,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '1/2 +',
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              /* Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: SizedBox(
                                   child: ElevatedButton(
                                     onPressed: () {
                                       if(meiaPorcaoClicado){
@@ -3477,7 +3907,8 @@ class GarcomPageState extends State<GarcomPage>
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: meiaPorcaoClicado ? Theme.of(context).colorScheme.scrim : Theme.of(context).colorScheme.surfaceDim,
+                                      // backgroundColor: meiaPorcaoClicado ? Theme.of(context).colorScheme.scrim : Theme.of(context).colorScheme.surfaceDim,
+                                      backgroundColor: Theme.of(context).colorScheme.scrim,
                                       padding: EdgeInsets.symmetric(
                                         vertical: 15,
                                         horizontal: 15,
@@ -3488,15 +3919,199 @@ class GarcomPageState extends State<GarcomPage>
                                     ),
                                     child: 
                                     Text(
-                                      '1/2',
+                                      '1/2 +',
                                       style: TextStyle(
                                         color: Theme.of(context).colorScheme.onPrimary,
                                       ),
                                     )
                                   ),
                                 ),
-                              ),
+                              ), */
                             ],
+                          ),
+                        ),
+                      ),
+                    ), */
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Largura responsiva dos botões
+                              final larguraBotao = ((constraints.maxWidth * 0.18).clamp(60.0, 100.0)) / 1.5;
+                              final alturaBotao = ((constraints.maxWidth * 0.18).clamp(60.0, 100.0)) / 1.5;
+
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+
+                                  // Botão de menos
+                                  if (!meiaPorcaoClicado)
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: SizedBox(
+                                        width: larguraBotao,
+                                        height: alturaBotao,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            if (quantidadeInicial > 1) {
+                                              setModalState(() {
+                                                quantidadeInicial--;
+
+                                                final texto =
+                                                    quantidadeInicial.toInt().toString();
+
+                                                quantidadeProdutoSelecionadoController.text =
+                                                    texto;
+
+                                                quantidadeProdutoSelecionadoModalController.text =
+                                                    texto;
+                                              });
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color.fromRGBO(216, 216, 216, 0.843),
+                                            padding: EdgeInsets.zero,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.remove,
+                                            color: Theme.of(context).colorScheme.onPrimary,
+                                            size: 28,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                  // Quantidade
+                                  Padding(
+                                    padding: EdgeInsets.all(4.0),
+                                    child: SizedBox(
+                                      width: constraints.maxWidth * 0.3,
+                                      height: alturaBotao,
+                                      child: TextField(
+                                        controller: quantidadeProdutoSelecionadoModalController,
+                                        focusNode: quantidadeProdutoSelecionadoModalFocus,
+                                        style: TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1,
+                                        ),
+                                        readOnly: true,
+                                        showCursor: false,
+                                        keyboardType: TextInputType.none,
+                                        enableInteractiveSelection: false,
+                                        textAlign: TextAlign.center,
+                                        onTap: () {
+                                          if (produtoKilo) {
+                                            showKeyboardNumero = false;
+                                            showKeyboardAlfa = false;
+                                            showKeyboardQuantidade = true;
+                                          } else {
+                                            showKeyboardNumero = true;
+                                            showKeyboardAlfa = false;
+                                            showKeyboardQuantidade = false;
+                                          }
+                                        },
+                                        decoration: InputDecoration(
+                                          filled: true,
+                                          fillColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Botão de mais
+                                  if (!meiaPorcaoClicado)
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: SizedBox(
+                                        width: larguraBotao,
+                                        height: alturaBotao,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            setModalState(() {
+                                              quantidadeInicial++;
+
+                                              final texto = produtoKilo ? quantidadeInicial.toString() : quantidadeInicial.toInt().toString();
+
+                                              quantidadeProdutoSelecionadoController.text = texto;
+
+                                              quantidadeProdutoSelecionadoModalController.text = texto;
+                                            });
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color.fromRGBO(216, 216, 216, 0.843),
+                                            padding: EdgeInsets.zero,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.add,
+                                            color: Theme.of(context).colorScheme.onPrimary,
+                                            size: 28,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                  // Botão de meia porção
+                                  if (meiaPorcaoProduto)
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: SizedBox(
+                                        width: larguraBotao,
+                                        height: alturaBotao,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            if (meiaPorcaoClicado) {
+                                              setModalState(() {
+                                                meiaPorcaoClicado = false;
+                                                quantidadeProdutoSelecionadoModalController.text = "1";
+                                                quantidadeInicial = 1;
+                                              });
+                                            } else {
+                                              setModalState(() {
+                                                meiaPorcaoClicado = true;
+                                                quantidadeProdutoSelecionadoModalController.text = "0.5";
+                                                quantidadeInicial = 0.5;
+                                              });
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Theme.of(context).colorScheme.scrim,
+                                            padding: EdgeInsets.zero,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '1/2 +',
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.onPrimary,
+                                              fontSize: alturaBotao * 0.3,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -4463,7 +5078,9 @@ class GarcomPageState extends State<GarcomPage>
   // Função com o popup para selecionar garçom
   void popupSelecionarGarcom() {
     if (_popupGarcomAberto) return;
-    _popupGarcomAberto = true;    showDialog(
+    if (!cliqueiSelecionarGarcom) return;
+    _popupGarcomAberto = true;    
+    showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
@@ -4493,6 +5110,8 @@ class GarcomPageState extends State<GarcomPage>
                           // subtitle: Text("Número: ${garcom['numero']}"),
                           onTap: () async {
                             Navigator.pop(context);
+                            cliqueiSenha = true;
+                            cliqueiSelecionarGarcom = false;
                             popupDigitarSenha(
                               context: context,
                               senhaDoGarcom: garcom['senhanova'],
@@ -4514,7 +5133,10 @@ class GarcomPageState extends State<GarcomPage>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                Navigator.of(context).pop();
+                cliqueiSelecionarGarcom = false;
+              },
               child: Text("Cancelar"),
             ),
           ],
@@ -4553,6 +5175,10 @@ class GarcomPageState extends State<GarcomPage>
           SystemChannels.textInput.invokeMethod('TextInput.hide');
         }
       });
+    }
+
+    if (!cliqueiSenha) {
+      Navigator.of(context).pop();
     }
     
     return showDialog(
@@ -4710,6 +5336,7 @@ class GarcomPageState extends State<GarcomPage>
                             setDialogState(() {
                               isLoadingSenha = true;
                             });
+                            cliqueiSenha = false;
                           }
                         },
                       ),
@@ -4724,6 +5351,7 @@ class GarcomPageState extends State<GarcomPage>
                           onPressed: (){
                             Navigator.pop(ctx);
                             senhaController.clear();
+                            cliqueiSenha = false;
                           },
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(
@@ -4778,6 +5406,7 @@ class GarcomPageState extends State<GarcomPage>
                               setDialogState(() {
                                 isLoadingSenha = true;
                               });
+                              cliqueiSenha = false;
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -5496,6 +6125,12 @@ class GarcomPageState extends State<GarcomPage>
 
       if (funcoesController.logicaPorComanda.value) {
         await _fluxoComanda();
+        clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+        if(garcomController.forcarCadastroCliente.value){
+          if(garcomController.cadastroCliente.value){
+            popupCadastrarCliente();
+          }
+        }
         return;
       }
     } finally {
@@ -5579,14 +6214,15 @@ class GarcomPageState extends State<GarcomPage>
       return;
     }
 
-    /* if(comandaValida && mesaController.text.isEmpty){
-      _irParaCardapio();
-      return;
-    } */
-
     if (mesaVinculada) {
       carrinhoController.numeroMesa.value = mesaController.text;
       _irParaCardapio();
+      clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+      if(garcomController.forcarCadastroCliente.value){
+        if(garcomController.cadastroCliente.value){
+          popupCadastrarCliente();
+        }
+      }
       return;
     }
   }
@@ -5674,6 +6310,13 @@ class GarcomPageState extends State<GarcomPage>
               aparecerFazerPedido = true;
             });
           }
+
+          clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+          if(garcomController.forcarCadastroCliente.value){
+            if(garcomController.cadastroCliente.value){
+              popupCadastrarCliente();
+            }
+          }
         },
         onCancel: () async {
           await verificarSeTemConta(comandaController.text);
@@ -5687,6 +6330,13 @@ class GarcomPageState extends State<GarcomPage>
           });
           if (mesaVinculada) {
             mesaController.text = numeroMesaEmUso;
+          }
+
+          clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+          if(garcomController.forcarCadastroCliente.value){
+            if(garcomController.cadastroCliente.value){
+              popupCadastrarCliente();
+            }
           }
         },
 
@@ -5761,6 +6411,22 @@ class GarcomPageState extends State<GarcomPage>
           comandaFocus.requestFocus();
         },
       );
+    }
+  }
+
+  void colocarFoco(){
+    if(garcomController.tipoCadastroClienteCpf.value){
+      Future.delayed(Duration(milliseconds: 300), () {
+        if (cpfClienteDialogoFocus.canRequestFocus) {
+          cpfClienteDialogoFocus.requestFocus();
+        }
+      });
+    } else if (garcomController.tipoCadastroClienteTelefone.value){
+      Future.delayed(Duration(milliseconds: 300), () {
+        if (telefoneClienteDialogoFocus.canRequestFocus) {
+          telefoneClienteDialogoFocus.requestFocus();
+        }
+      });
     }
   }
 
@@ -6156,6 +6822,73 @@ class GarcomPageState extends State<GarcomPage>
     );
   }
 
+  Widget _buildCampoCliente({
+    required BuildContext context,
+    required TextEditingController controller,
+    required FocusNode currentFocus,
+    FocusNode? nextFocus,
+    required String hintText,
+    TextInputType keyboardType = TextInputType.text,
+    TextInputAction textInputAction = TextInputAction.next,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    VoidCallback? onDone,
+    List<TextInputFormatter>? inputFormatters,
+    required double tamanhoFonte,
+    required double tamanhoHint,
+    required double paddingInterno,
+    Function(String)? onChanged,
+    required bool mostrarErro,
+  }) {
+    return TextField(
+      controller: controller,
+      focusNode: currentFocus,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      textCapitalization: clienteJaExisteComanda ? textCapitalization : TextCapitalization.none,
+      inputFormatters: inputFormatters,
+      readOnly: clienteJaExisteComanda,
+      textAlign: TextAlign.center,
+      onTap: () {
+        currentFocus.requestFocus();
+      },
+      onSubmitted: (_) {
+        if (nextFocus != null) {
+          nextFocus.requestFocus();
+        } else if (onDone != null) {
+          onDone();
+        }
+      },
+      onChanged: onChanged,
+      style: TextStyle(
+        fontSize: tamanhoFonte,
+        fontWeight: FontWeight.bold,
+        color: const Color.fromARGB(255, 71, 71, 71),
+      ),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(
+          color: const Color.fromARGB(255, 173, 173, 173),
+          fontSize: tamanhoHint,
+        ),
+        contentPadding: EdgeInsets.all(paddingInterno),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: mostrarErro ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: mostrarErro ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
   Future<void> shownDialogTwoBottomKeyboard({
     required BuildContext context,
     String title = 'Confirmação',
@@ -6169,192 +6902,219 @@ class GarcomPageState extends State<GarcomPage>
     FocusNode? focusNode,
     ValueChanged<String>? onSubmitted, // Callback ao submeter o texto
   }) {
+    void handleConfirm(BuildContext ctx) {
+      Navigator.of(ctx).pop();
+      if (onConfirm != null) onConfirm();
+    }
+
     return showDialog(
       context: context,
       barrierDismissible: false, // Não pode fechar tocando fora
       builder: (ctx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Ícone central
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(ctx).colorScheme.primary.withOpacity(0.08),
+        return Scaffold(
+          backgroundColor: Colors.transparent, // Torna o Scaffold transparente para agir como um wrapper
+          resizeToAvoidBottomInset: false, // Nós controlaremos o insets via AnimatedPadding
+          body: AnimatedPadding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.9, // Altura máxima 90%
+                  maxWidth: MediaQuery.of(ctx).size.width > 600 ? 500 : MediaQuery.of(ctx).size.width * 0.95, // Largura em tabelt/TV e mobile
+                ),
+                child: Material(
+                  color: Theme.of(ctx).dialogBackgroundColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: EdgeInsets.all(12),
-                  child: Icon(
-                    icon,
-                    size: 40,
-                    color: Theme.of(ctx).colorScheme.primary,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final double largura = constraints.maxWidth;
+                      final double altura = constraints.maxHeight;
+
+                      // Tamanhos responsivos
+                      final double tamanhoFonte = (largura * 0.035).clamp(16.0, 25.0);
+                      final double tamanhoHint = (largura * 0.028).clamp(13.0, 20.0);
+                      final double espacamento = (altura * 0.015).clamp(8.0, 15.0);
+                      final double paddingInterno = (largura * 0.025).clamp(10.0, 20.0);
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min, // Não usamos Expanded para o layout acompanhar o conteúdo
+                          children: [
+                            // Ícone central
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Theme.of(ctx).colorScheme.primary.withOpacity(0.08),
+                              ),
+                              padding: const EdgeInsets.all(12),
+                              child: Icon(
+                                icon,
+                                size: 40,
+                                color: Theme.of(ctx).colorScheme.primary,
+                              ),
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // Título opcional
+                            if (title.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Text(
+                                  title,
+                                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color.fromARGB(255, 71, 71, 71),
+                                    fontSize: 24,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+
+                            const SizedBox(height: 5),
+
+                            // CAMPO DE TEXTO OPCIONAL EXISTENTE (comanda/mesa)
+                            if (textController != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 15.0),
+                                child: TextField(
+                                  onTap: () {
+                                    focusNode?.requestFocus();
+                                  },
+                                  keyboardType: TextInputType.number, // TECLADO NUMÉRICO
+                                  controller: textController,
+                                  readOnly: false,
+                                  showCursor: true,
+                                  focusNode: focusNode,
+                                  onSubmitted: (value) async {
+                                    if (mesaController.text.isEmpty) {
+                                      await verificarSeTemConta(comandaController.text);
+                                      mesaController.clear();
+                                      comandaController.text = numeroComandaEmUso;
+                                      _irParaCardapio();
+                                      setState(() {
+                                        aparecerFazerPedido = true;
+                                      });
+                                      if (mesaVinculada) {
+                                        mesaController.text = numeroMesaEmUso;
+                                      }
+                                    } else {
+                                      await confirmarQueroMesa(mesaController.text, comandaController.text);
+                                      if (mesaValida) {
+                                        comandaController.text = numeroComandaEmUso;
+                                        _irParaCardapio();
+                                        await verificarSeTemConta(comandaController.text);
+                                        setState(() {
+                                          aparecerFazerPedido = true;
+                                        });
+                                      }
+                                    }
+                                    Navigator.pop(ctx);
+                                  },
+                                  autofocus: focusNode == null ? true : false,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 35,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color.fromARGB(255, 71, 71, 71),
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Digite aqui...',
+                                    hintStyle: const TextStyle(
+                                      color: Color.fromARGB(255, 173, 173, 173),
+                                      fontSize: 20,
+                                    ),
+                                    border: const OutlineInputBorder(),
+                                    contentPadding: const EdgeInsets.all(20),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Theme.of(ctx).colorScheme.primary,
+                                        width: 1.5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Theme.of(ctx).colorScheme.primary,
+                                        width: 2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // Botões centralizados
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Botão Cancelar
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(ctx).pop();
+                                        if (onCancel != null) onCancel();
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 26,
+                                          vertical: 20,
+                                        ),
+                                        backgroundColor: Theme.of(ctx).colorScheme.error.withOpacity(0.7),
+                                      ),
+                                      child: Text(
+                                        cancelText.toUpperCase(),
+                                        style: TextStyle(
+                                          color: Theme.of(ctx).colorScheme.onPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  // Botão Confirmar
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        handleConfirm(ctx);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 26,
+                                          vertical: 20,
+                                        ),
+                                        backgroundColor: Theme.of(ctx).colorScheme.primary,
+                                      ),
+                                      child: Text(
+                                        confirmText.toUpperCase(),
+                                        style: TextStyle(
+                                          color: Theme.of(ctx).colorScheme.onPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
-
-                SizedBox(height: 10),
-
-                // Título opcional
-                if (title.isNotEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      title,
-                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromARGB(255, 71, 71, 71),
-                        fontSize: 24,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-
-                SizedBox(height: 5),
-
-                // O SEU NOVO CAMPO DE TEXTO COM OS CONTROLADORES
-                if (textController !=
-                    null) // Só mostra o TextField se um controller for fornecido
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 15.0),
-                    child: TextField(
-                      onTap: () {
-                        focusNode?.requestFocus();
-                      },
-                      keyboardType: TextInputType.number, // TECLADO NUMÉRICO
-                      controller: textController, // Usa o controller passado
-                      readOnly: false,
-                      showCursor: true,
-                      focusNode: focusNode, // Usa o focusNode passado
-                      onSubmitted: (value) async {
-                       if (mesaController.text.isEmpty) {
-                          await verificarSeTemConta(comandaController.text);
-                          mesaController.clear();
-                          comandaController.text = numeroComandaEmUso;
-                          _irParaCardapio();
-                          setState(() {
-                            aparecerFazerPedido = true;
-                          });
-                          if (mesaVinculada) {
-                            mesaController.text = numeroMesaEmUso;
-                          }
-                        } else {
-                          await confirmarQueroMesa(mesaController.text, comandaController.text);
-                          if (mesaValida) {
-                            comandaController.text = numeroComandaEmUso;
-                            _irParaCardapio();
-                            await verificarSeTemConta(comandaController.text);
-                            setState(() {
-                              aparecerFazerPedido = true;
-                            });
-                          }
-                        }
-                        Navigator.pop(ctx);
-                        // onSubmitted: onSubmitted, // Usa o onSubmitted passado
-                      },
-                      autofocus: focusNode == null
-                          ? true
-                          : false, // Autofoco padrão se não houver FocusNode
-                      textAlign: TextAlign.center, // Centraliza o texto e o ponteiro
-                      style: TextStyle(
-                        fontSize: 35,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromARGB(255, 71, 71, 71),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Digite aqui...',
-                        hintStyle: TextStyle(
-                          color: const Color.fromARGB(255, 173, 173, 173),
-                          fontSize: 20,
-                        ),
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.all(20),
-
-                        // Borda quando NÃO está focado
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Theme.of(ctx).colorScheme.primary, // cor da borda
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-
-                        // Borda quando está focado
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Theme.of(ctx).colorScheme.primary, // cor ao focar
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Botões centralizados
-                Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Botão Cancelar
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            if (onCancel != null) onCancel();
-                          },
-                          child: Text(
-                            cancelText.toUpperCase(),
-                            style: TextStyle(
-                              color: Theme.of(ctx).colorScheme.onPrimary,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 26,
-                              vertical: 20,
-                            ),
-                            backgroundColor: Theme.of(ctx).colorScheme.error.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      // Botão Confirmar
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            if (onConfirm != null) onConfirm();
-                          },
-                          child: Text(
-                            confirmText.toUpperCase(),
-                            style: TextStyle(
-                              color: Theme.of(ctx).colorScheme.onPrimary,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 26,
-                              vertical: 20,
-                            ),
-                            backgroundColor: Theme.of(ctx).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -6362,34 +7122,754 @@ class GarcomPageState extends State<GarcomPage>
     );
   }
 
-  // Função para adicionar número no popup
-  void _adicionarNumeroNoPopup(
-    String numero, [
-    TextEditingController? controller,
-  ]) {
-    HapticFeedback.lightImpact();
-    final targetController = controller ?? mesaController;
-    final newText = targetController.text + numero;
-    targetController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: newText.length),
+  /* String formatarData(String data) {
+    if (data.trim() == "01/01/1000" || data.contains("1000-01-01")) {
+      return "";
+    }
+    
+    DateTime date;
+
+    try {
+      if (data.contains('-')) {
+        date = DateTime.parse(data);
+        if (data.trim().endsWith('/1000')) {
+          final partes = data.trim().split('/');
+
+          final dia = int.parse(partes[0]);
+          final mes = int.parse(partes[1]);
+
+          date = DateTime(2000, mes, dia);
+          date = DateFormat('dd/MM').parse(data.substring(0, 5));
+        }
+      } else {
+        date = DateFormat('dd/MM/yyyy').parse(data);
+      }
+    } catch (_) {
+      return data;
+    }
+
+    String dataFormatada = data.trim().endsWith('/1000') ? DateFormat('dd/MM').format(date) : DateFormat('dd/MM/yyyy').format(date);
+    if (dataFormatada == '01/01/1000') {
+      return "";
+    }
+    return dataFormatada;
+  } */
+
+  String formatarData(String data) {
+    data = data.trim();
+
+    if (data == "01/01/1000" || data.contains("1000-01-01")) {
+      return "";
+    }
+
+    try {
+      // Data especial: 07/12/1000
+      if (data.endsWith('/1000')) {
+        final partes = data.split('/');
+
+        if (partes.length >= 2) {
+          final dia = int.parse(partes[0]);
+          final mes = int.parse(partes[1]);
+
+          // Cria uma data usando ano fictício apenas internamente
+          final date = DateTime(2000, mes, dia);
+
+          return DateFormat('dd/MM').format(date);
+        }
+      }
+
+      // Data vinda do banco: 2021-02-01
+      if (data.contains('-')) {
+        final date = DateTime.parse(data);
+        if (date.year == 1000) {
+          return DateFormat('dd/MM').format(date);
+        }
+        return DateFormat('dd/MM/yyyy').format(date);
+      }
+
+      // Data normal: 07/12/2006
+      final date = DateFormat('dd/MM/yyyy').parseStrict(data);
+      if (date.year == 1000) {
+        return DateFormat('dd/MM').format(date);
+      }
+      return DateFormat('dd/MM/yyyy').format(date);
+
+    } catch (_) {
+      return data;
+    }
+  }
+
+  Future<void> popupCadastrarCliente() {
+    // ── Snapshot dos dados originais ao abrir o popup ──────────────────────
+    _snapshotNome = nomeClienteDialogoController.text;
+    _snapshotTelefone = telefoneClienteDialogoController.text;
+    _snapshotCpf = cpfClienteDialogoController.text;
+    if(dataNascimentoClienteDialogoController.text.isNotEmpty){
+      _snapshotDataNascimento = formatarData(dataNascimentoClienteDialogoController.text);
+      dataNascimentoClienteDialogoController.text = _snapshotDataNascimento;
+    } else {
+      _snapshotDataNascimento = "";
+    }
+
+    if (_snapshotDataNascimento.trim() == "01/01/1000" || 
+        dataNascimentoClienteDialogoController.text.trim() == "01/01/1000" ||
+        _snapshotDataNascimento.contains("1000-01-01") ||
+        dataNascimentoClienteDialogoController.text.contains("1000-01-01")) {
+        
+      dataNascimentoClienteDialogoController.text = "";
+      _snapshotDataNascimento = "";
+    }
+
+    if (clienteJaExisteComanda) {
+      _snapshotTelefone = telefoneClienteDialogoController.text;
+    } else if (telefoneClienteDialogoController.text.isEmpty && !clienteJaExisteComanda) {
+      _maskFormatter.clear();
+      String empTel = garcomController.telefoneEmpresa;
+      var initialVal = _maskFormatter.formatEditUpdate(
+        TextEditingValue.empty,
+        TextEditingValue(
+          text: empTel,
+          selection: TextSelection.collapsed(offset: empTel.length),
+        ),
+      );
+
+      String finalString = initialVal.text;
+      if (finalString == '($empTel' || finalString == '($empTel)') {
+        finalString = '($empTel) ';
+        initialVal = _maskFormatter.formatEditUpdate(
+          initialVal,
+          TextEditingValue(
+            text: finalString,
+            selection: TextSelection.collapsed(offset: finalString.length),
+          ),
+        );
+      }
+      telefoneClienteDialogoController.value = initialVal;
+    }
+
+    colocarFoco();
+
+    return showDialog(
+      context: context,
+      barrierDismissible: false, // Não pode fechar tocando fora
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setStatePopup) {
+            estadoPopupCadastro = setStatePopup;
+            return Scaffold(
+              backgroundColor: Colors.transparent, // Torna o Scaffold transparente para agir como um wrapper
+          resizeToAvoidBottomInset: false, // Nós controlaremos o insets via AnimatedPadding
+          body: AnimatedPadding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.9, // Altura máxima 90%
+                  maxWidth: MediaQuery.of(ctx).size.width > 600 ? 500 : MediaQuery.of(ctx).size.width * 0.95, // Largura em tabelt/TV e mobile
+                ),
+                child: Material(
+                  color: Theme.of(ctx).dialogBackgroundColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final double largura = constraints.maxWidth;
+                      final double altura = constraints.maxHeight;
+
+                      // Tamanhos responsivos
+                      final double tamanhoFonte = (largura * 0.035).clamp(16.0, 25.0);
+                      final double tamanhoHint = (largura * 0.028).clamp(13.0, 20.0);
+                      final double espacamento = (altura * 0.015).clamp(8.0, 15.0);
+                      final double paddingInterno = (largura * 0.025).clamp(10.0, 20.0);
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min, // Não usamos Expanded para o layout acompanhar o conteúdo
+                          children: [
+                            // Ícone central
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Theme.of(ctx).colorScheme.primary.withOpacity(0.08),
+                              ),
+                              padding: const EdgeInsets.all(12),
+                              child: Icon(
+                                Icons.person,
+                                size: 40,
+                                color: Theme.of(ctx).colorScheme.primary,
+                              ),
+                            ),
+
+                            SizedBox(height: 10),
+
+                            Padding(
+                              padding: EdgeInsets.only(bottom: 8.0),
+                              child: Text(
+                                clienteJaExisteComanda ? "Informações do cliente:" : "Deseja vincular a um cliente?",
+                                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color.fromARGB(255, 71, 71, 71),
+                                  fontSize: 24,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
+                            // TELEFONE
+                            if(garcomController.tipoCadastroClienteTelefone.value)
+                            Padding(
+                              padding: EdgeInsets.only(bottom: espacamento),
+                              child: _buildCampoCliente(
+                                context: context,
+                                controller: telefoneClienteDialogoController,
+                                currentFocus: telefoneClienteDialogoFocus,
+                                nextFocus: cpfClienteDialogoFocus,
+                                hintText: 'Telefone',
+                                keyboardType: TextInputType.phone,
+                                tamanhoFonte: tamanhoFonte,
+                                tamanhoHint: tamanhoHint,
+                                paddingInterno: paddingInterno,
+                                inputFormatters: [_maskFormatter],
+                                onChanged: (value) {
+                                  validarTelefoneDialogo(value);
+                                  setStatePopup(() {});
+                                },
+                                mostrarErro: telefoneErro
+                              ),
+                            ),
+
+                            // CPF
+                            if(garcomController.tipoCadastroClienteCpf.value)
+                            Padding(
+                              padding: EdgeInsets.only(bottom: espacamento),
+                              child: _buildCampoCliente(
+                                context: context,
+                                controller: cpfClienteDialogoController,
+                                currentFocus: cpfClienteDialogoFocus,
+                                nextFocus: dataNascimentoClienteDialogoFocus,
+                                hintText: 'CPF',
+                                keyboardType: TextInputType.number,
+                                tamanhoFonte: tamanhoFonte,
+                                tamanhoHint: tamanhoHint,
+                                paddingInterno: paddingInterno,
+                                onChanged: (value) {
+                                  validarCpfDialogo(value);
+                                  setStatePopup(() {});
+                                },
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(11),
+                                ],
+                                mostrarErro: cpfErro
+                              ),
+                            ),
+
+                            
+                            // NOME
+                            if((garcomController.tipoCadastroClienteCpf.value && cpfValido) || (garcomController.tipoCadastroClienteTelefone.value && telefoneValido) || (clienteJaExisteComanda))
+                            Padding(
+                              padding: EdgeInsets.only(bottom: espacamento),
+                              child: _buildCampoCliente(
+                                context: context,
+                                controller: nomeClienteDialogoController,
+                                currentFocus: nomeClienteDialogoFocus,
+                                nextFocus: telefoneClienteDialogoFocus,
+                                hintText: 'Nome do cliente',
+                                textCapitalization: TextCapitalization.words,
+                                tamanhoFonte: tamanhoFonte,
+                                tamanhoHint: tamanhoHint,
+                                paddingInterno: paddingInterno,
+                                onChanged: (value) {
+                                  validarNomeDialogo(value);
+                                  setStatePopup(() {});
+                                },
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[a-zA-ZÀ-ÿ\s]'),
+                                  ),
+                                ],
+                                mostrarErro: nomeErro
+                              ),
+                            ),
+
+                            // DATA NASCIMENTO
+                            if((garcomController.tipoCadastroClienteCpf.value && cpfValido) || (garcomController.tipoCadastroClienteTelefone.value && telefoneValido) || (clienteJaExisteComanda))
+                            Padding(
+                              padding: EdgeInsets.only(bottom: espacamento),
+                              child: _buildCampoCliente(
+                                context: context,
+                                controller: dataNascimentoClienteDialogoController,
+                                currentFocus: dataNascimentoClienteDialogoFocus,
+                                textInputAction: TextInputAction.done,
+                                hintText: 'Data de nascimento',
+                                keyboardType: TextInputType.datetime,
+                                tamanhoFonte: tamanhoFonte,
+                                tamanhoHint: tamanhoHint,
+                                paddingInterno: paddingInterno,
+                                onChanged: (value) {
+                                  validarDataNascimentoDialogo(value);
+                                  setStatePopup(() {});
+                                },
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly, DateInputFormatter(), LengthLimitingTextInputFormatter(10)],
+                                mostrarErro: dataNascimentoErro
+                              ),
+                            ),
+
+                            if(clienteJaExisteComanda)
+                            Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        Navigator.of(ctx).pop();
+                                        _irParaCardapio();
+                                        entrarModoTouch();
+                                        return;
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 26,
+                                          vertical: 20,
+                                        ),
+                                        backgroundColor: Theme.of(ctx).colorScheme.shadow,
+                                      ),
+                                      child: Text(
+                                        "OK",
+                                        style: TextStyle(
+                                          color: Theme.of(ctx).colorScheme.onPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Botões centralizados
+                            if(!clienteJaExisteComanda)
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Botão Cancelar
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        if(!clienteJaExisteComanda){
+                                          nomeClienteDialogoController.clear();
+                                          telefoneClienteDialogoController.clear();
+                                          cpfClienteDialogoController.clear();
+                                          dataNascimentoClienteDialogoController.clear();
+                                        }
+                                        Navigator.of(ctx).pop();
+                                        _irParaCardapio();
+                                        entrarModoTouch();
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 26,
+                                          vertical: 20,
+                                        ),
+                                        backgroundColor: Theme.of(ctx).colorScheme.error.withOpacity(0.7),
+                                      ),
+                                      child: Text(
+                                        "NÃO",
+                                        style: TextStyle(
+                                          color: Theme.of(ctx).colorScheme.onPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  // Botão Confirmar
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        final String nomeAtual = nomeClienteDialogoController.text;
+                                        final String telefoneAtual = telefoneClienteDialogoController.text;
+                                        final String cpfAtual = cpfClienteDialogoController.text;
+                                        String dataNascimentoAtual = dataNascimentoClienteDialogoController.text;
+                                        if(dataNascimentoAtual.length == 5){
+                                          dataNascimentoAtual = dataNascimentoAtual + "/1000";
+                                        }
+
+                                        // ── Detectar se chave de busca (telefone/cpf) mudou ────────────
+                                        final bool telefoneMudou = garcomController.tipoCadastroClienteTelefone.value && telefoneAtual != _snapshotTelefone;
+                                        final bool cpfMudou = garcomController.tipoCadastroClienteCpf.value && cpfAtual != _snapshotCpf;
+                                        final bool chaveBuscaMudou = telefoneMudou || cpfMudou;
+
+                                        // ── Detectar se qualquer dado foi alterado ──────────────────
+                                        final bool dadosMudaram = nomeAtual != _snapshotNome || telefoneAtual != _snapshotTelefone || cpfAtual != _snapshotCpf || dataNascimentoAtual != _snapshotDataNascimento;
+
+                                        // Validar todos os campos 
+
+                                        bool todosValidos = validarCamposCadastroCliente(setStatePopup);
+
+                                        if(!todosValidos){
+                                          return;
+                                        } else {
+                                          // ── Cenário 1: nada mudou → fechar sem ação ─────────────────
+                                          if (!dadosMudaram) {
+                                            debugPrint('[popupCadastrarCliente] Nenhum dado alterado. Fechando sem ação.');
+                                            Navigator.of(ctx).pop();
+                                            _irParaCardapio();
+                                            entrarModoTouch();
+                                            return;
+                                          }
+
+                                          // ── Cenário 2: chave de busca mudou com cliente já carregado
+                                          //              → nova busca / troca de cliente ───────────────
+                                          if (clienteJaCadastrado && chaveBuscaMudou) {
+                                            debugPrint('[popupCadastrarCliente] Chave de busca alterada. Iniciando troca de cliente...');
+                                            // Limpar cliente atual
+                                            setState(() {
+                                              clienteJaCadastrado = false;
+                                              numeroCliente = 0;
+                                              numeroClienteString = '0';
+                                            });
+
+                                            // Nova busca pelo valor digitado
+                                            if (garcomController.tipoCadastroClienteTelefone.value) {
+                                              await buscarPorNumero(telefoneAtual);
+                                            } else {
+                                              await buscarPorCpf(cpfAtual);
+                                            }
+
+                                            if (clienteJaCadastrado) {
+                                              // Encontrou outro cliente: apenas atualizar o ID
+                                              debugPrint('[popupCadastrarCliente] Outro cliente encontrado. Carregando ID.');
+                                              String? idClienteStr;
+                                              if (garcomController.tipoCadastroClienteTelefone.value) {
+                                                idClienteStr = await garcomController.buscarNumeroClientePorTelefone(telefoneAtual);
+                                              } else {
+                                                idClienteStr = await garcomController.buscarNumeroClientePorCpf(cpfAtual);
+                                              }
+                                              setState(() {
+                                                numeroClienteString = idClienteStr ?? '0';
+                                                numeroCliente = int.tryParse(numeroClienteString) ?? 0;
+                                              });
+                                            } else {
+                                              // Não encontrou: permite cadastrar novo cliente
+                                              debugPrint('[popupCadastrarCliente] Nenhum cliente encontrado para a nova chave. Permitindo cadastro.');
+                                              validarCampos();
+                                              verCadastroCliente();
+                                              if (querCadastrarCliente && cadastrarCliente) {
+                                                int idClienteRetornado = await garcomController.abrirCliente(
+                                                  nomeClienteDialogoController.text,
+                                                  cpfAtual,
+                                                  dataNascimentoClienteDialogoController.text,
+                                                  telefoneAtual,
+                                                );
+                                                setState(() {
+                                                  numeroCliente = idClienteRetornado;
+                                                  numeroClienteString = idClienteRetornado.toString();
+                                                });
+                                              }
+                                            }
+
+                                            Navigator.of(ctx).pop();
+                                            _irParaCardapio();
+                                            entrarModoTouch();
+                                            return;
+                                          }
+
+                                          // ── Cenário 3: validar e chamar abrirCliente ────────────────
+                                          validarCampos();
+                                          verCadastroCliente();
+                                          if(querCadastrarCliente && cadastrarCliente){
+                                            if(!clienteJaCadastrado){
+                                              // Novo cliente
+                                              debugPrint('[popupCadastrarCliente] Cadastrando novo cliente.');
+                                              int idClienteRetornado = await garcomController.abrirCliente(
+                                                nomeAtual,
+                                                cpfAtual,
+                                                dataNascimentoAtual,
+                                                telefoneAtual,
+                                              );
+                                              setState(() {
+                                                numeroCliente = idClienteRetornado;
+                                                numeroClienteString = idClienteRetornado.toString();
+                                              });
+                                            } else {
+                                              // Atualizar cliente existente
+                                              debugPrint('[popupCadastrarCliente] Atualizando cliente existente.');
+                                              if (garcomController.tipoCadastroClienteTelefone.value) {
+                                                String? idClienteStr = await garcomController.buscarNumeroClientePorTelefone(telefoneAtual);
+                                                setState(() {
+                                                  numeroClienteString = idClienteStr ?? '0';
+                                                  numeroCliente = int.tryParse(numeroClienteString) ?? 0;
+                                                });
+                                                garcomController.atualizarClientePorNumero(
+                                                  nomeAtual,
+                                                  cpfAtual,
+                                                  dataNascimentoAtual,
+                                                  telefoneAtual,
+                                                );
+                                              } else if (garcomController.tipoCadastroClienteCpf.value) {
+                                                String? idClienteStr = await garcomController.buscarNumeroClientePorCpf(cpfAtual);
+                                                setState(() {
+                                                  numeroClienteString = idClienteStr ?? '0';
+                                                  numeroCliente = int.tryParse(numeroClienteString) ?? 0;
+                                                });
+                                                garcomController.atualizarClientePorCpf(
+                                                  nomeAtual,
+                                                  cpfAtual,
+                                                  dataNascimentoAtual,
+                                                  telefoneAtual,
+                                                );
+                                              }
+                                              /* int idClienteRetornado = await garcomController.abrirCliente(
+                                                nomeAtual,
+                                                cpfAtual,
+                                                dataNascimentoAtual,
+                                                telefoneAtual,
+                                              ); */
+                                            }
+                                            _irParaCardapio();
+                                            entrarModoTouch();
+                                            Navigator.of(ctx).pop();
+                                          } else if (querCadastrarCliente && !cadastrarCliente){
+                                            validarCampos();
+                                            setStatePopup(() {
+                                              if(garcomController.tipoCadastroClienteTelefone.value){
+                                                if(!nomeClienteDialogoController.text.isNotEmpty) nomeErro = true;
+                                                if(!telefoneValido) telefoneErro = true;
+                                                if(!dataNascimentoValida) dataNascimentoErro = true;
+                                              } else if (garcomController.tipoCadastroClienteCpf.value){
+                                                if(!nomeValido) nomeErro = true;
+                                                if(!cpfValido) cpfErro = true;
+                                                if(!dataNascimentoValida) dataNascimentoErro = true;
+                                              }
+                                            });
+                                            if(garcomController.tipoCadastroClienteTelefone.value){
+                                              setState(() {
+                                                if(!nomeValido) nomeErro = true;
+                                                if(!telefoneValido) telefoneErro = true;
+                                                if(!dataNascimentoValida) dataNascimentoErro = true;
+                                              });
+                                            } else if (garcomController.tipoCadastroClienteCpf.value){
+                                              setState(() {
+                                                if(!nomeValido) nomeErro = true;
+                                                if(!cpfValido) cpfErro = true;
+                                                if(!dataNascimentoValida) dataNascimentoErro = true;
+                                              });
+                                            }
+                                          }
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 26,
+                                          vertical: 20,
+                                        ),
+                                        backgroundColor: Theme.of(ctx).colorScheme.primary,
+                                      ),
+                                      child: Text(
+                                        "SIM",
+                                        style: TextStyle(
+                                          color: Theme.of(ctx).colorScheme.onPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        });
+      },
     );
   }
 
-  // Função para apagar número no popup
-  void _apagarNumeroNoPopup([TextEditingController? controller]) {
-    HapticFeedback.lightImpact();
-    final targetController = controller ?? mesaController;
-    if (targetController.text.isNotEmpty) {
-      final newText = targetController.text.substring(
-        0,
-        targetController.text.length - 1,
-      );
-      targetController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: newText.length),
-      );
+  void validarNomeDialogo(String value) {
+    if(value.isNotEmpty){
+      setState(() {
+        nomeValido = true;
+        nomeErro = false;
+      });
+    } else {
+      setState(() {
+        nomeValido = false;
+      });
     }
+  }
+
+  void validarTelefoneDialogo(String value) {
+    if(value.length == 14){
+      setState(() {
+        telefoneValido = true;
+        telefoneErro = false;
+        puxarSeClienteCadastrado(value);
+      });
+    } else {
+      setState(() {
+        telefoneValido = false;
+      });
+    }
+  }
+
+  void validarCpfDialogo(String value) {
+    final hora = DateTime.now().toIso8601String();
+
+    final bool cpfEhValido = CPFValidator.isValid(value);
+
+    if(cpfEhValido){
+      puxarSeClienteCadastrado(value);
+      setState(() {
+        cpfValido = true;
+        cpfErro = false;
+      });
+    } else {
+      setState(() {
+        cpfValido = false;
+      });
+    }
+  }
+
+  /* void validarDataNascimentoDialogo(String data) {
+    final hora = DateTime.now().toIso8601String();
+
+    final String dataNascimento = data.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (dataNascimento.isEmpty) {
+      setState(() {
+        dataNascimentoValida = false;
+      });
+      return;
+    }
+
+    final bool dataEhCorreta = dataNascimento.length >= 8;
+    setState(() {
+      dataNascimentoValida = dataEhCorreta;
+    });
+  } */
+
+  /* void validarDataNascimentoDialogo(String data) {
+    final String valor = data.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (valor.length != 8) {
+      setState(() {
+        dataNascimentoValida = false;
+      });
+      return;
+    }
+
+    final int dia = int.parse(valor.substring(0, 2));
+    final int mes = int.parse(valor.substring(2, 4));
+    final int ano = int.parse(valor.substring(4, 8));
+
+    try {
+      final DateTime dataNascimento = DateTime(ano, mes, dia);
+
+      final bool dataValida = dataNascimento.year == ano && dataNascimento.month == mes && dataNascimento.day == dia;
+
+      setState(() {
+        dataNascimentoValida = dataValida;
+        if (dataValida) dataNascimentoErro = false;
+      });
+    } catch (_) {
+      setState(() {
+        dataNascimentoValida = false;
+      });
+    }
+  } */
+
+  void validarDataNascimentoDialogo(String data) {
+    if(dataNascimentoClienteDialogoController.text.isEmpty ){
+      setState(() {
+        dataNascimentoValida = true;
+        dataNascimentoErro = false;
+      });
+      return;
+    }
+
+    if(data.length == 10){
+      try {
+        DateFormat('dd/MM/yyyy').parseStrict(data);
+        setState(() {
+          dataNascimentoValida = true;
+          dataNascimentoErro = false;
+        });
+      } catch (e) {
+        setState(() {
+          dataNascimentoValida = false;
+          dataNascimentoErro = true;
+        });
+      }
+    }
+
+    if(data.length == 5){
+      if(validarDiaMes(data)){
+        setState(() {
+          dataNascimentoValida = true;
+          dataNascimentoErro = false;
+        });
+        dataNascimentoClienteDialogoController.text = "${data}";
+      } else {
+        setState(() {
+          dataNascimentoValida = false;
+          dataNascimentoErro = true;
+        });
+        dataNascimentoClienteDialogoController.text = "${data}";
+      }
+    }
+  }
+
+  bool validarDiaMes(String valor) {
+    final partes = valor.split('/');
+
+    if (partes.length != 2) return false;
+
+    final dia = int.tryParse(partes[0]);
+    final mes = int.tryParse(partes[1]);
+
+    if (dia == null || mes == null) return false;
+    if (mes < 1 || mes > 12) return false;
+
+    final diasPorMes = <int, int>{
+      1: 31,
+      2: 28,
+      3: 31,
+      4: 30,
+      5: 31,
+      6: 30,
+      7: 31,
+      8: 31,
+      9: 30,
+      10: 31,
+      11: 30,
+      12: 31,
+    };
+
+    bool resposta = dia >= 1 && dia <= diasPorMes[mes]!;
+
+    return resposta;
   }
 
   void permitirApenasInteiros(String value) {
@@ -6777,8 +8257,7 @@ class GarcomPageState extends State<GarcomPage>
                       child: Align(
                         alignment: Alignment.center,
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment
-                              .spaceEvenly, // Ajuste para melhor distribuição
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Ajuste para melhor distribuição
                           children: [
                             Flexible(
                               child: Row(
@@ -6792,6 +8271,7 @@ class GarcomPageState extends State<GarcomPage>
                                       child: GestureDetector(
                                         onTap: () {
                                           // quando clicar no nome
+                                          cliqueiSelecionarGarcom = true;
                                           popupSelecionarGarcom();
                                         },
                                         child: Container(
@@ -6799,26 +8279,19 @@ class GarcomPageState extends State<GarcomPage>
                                           child: Padding(
                                             padding: EdgeInsets.all(15.0),
                                             child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.center,
                                               children: [
                                                 Flexible(
-                                                  /*  child: Center( */
                                                   child: Text(
-                                                    nomeDoGarcomSelecionado
-                                                        .toUpperCase(),
+                                                    nomeDoGarcomSelecionado.toUpperCase(),
                                                     maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                    overflow: TextOverflow.ellipsis,
                                                     textAlign: TextAlign.center,
                                                     style: TextStyle(
-                                                      color:
-                                                          colorScheme.onPrimary,
+                                                      color: colorScheme.onPrimary,
                                                       fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                      fontWeight: FontWeight.bold,
                                                     ),
                                                   ),
                                                   /* ), */
@@ -7166,10 +8639,8 @@ class GarcomPageState extends State<GarcomPage>
                                           child: Padding(
                                             padding: EdgeInsets.all(15.0),
                                             child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
+                                              mainAxisAlignment:  MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.center,
                                               children: [
                                                 // SizedBox(width: 4),
                                                 Flexible(
@@ -7185,9 +8656,7 @@ class GarcomPageState extends State<GarcomPage>
                                                     ),
                                                   ),
                                                 ),
-                                                isProcessing
-                                                    ? SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary,),)
-                                                    : Icon(Icons.check, size: 15, color: colorScheme.onPrimary,), 
+                                                isProcessing ? SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary,),) : Icon(Icons.check, size: 15, color: colorScheme.onPrimary,), 
                                               ],
                                             ),
                                           ),
@@ -8337,17 +9806,11 @@ class GarcomPageState extends State<GarcomPage>
                               // Ícone da mesa
                               if (funcoesController.logicaPorComandaNaMesa.value)
                                 Padding(
-                                  padding: EdgeInsets.only(
-                                    left: 8,
-                                    right: 0,
-                                    top: 8,
-                                    bottom: 8,
-                                  ),
+                                  padding: EdgeInsets.only(left: 8, right: 0, top: 8, bottom: 8,),
                                   child: GestureDetector(
                                     onTap: () {
                                       // Controladores e focus nodes do dialog
-                                      final TextEditingController
-                                      mesaDialogController = TextEditingController(text: mesaController.text);
+                                      final TextEditingController mesaDialogController = TextEditingController(text: mesaController.text);
                                       final FocusNode mesaDialogFocus = FocusNode();
 
                                       setState(() {
@@ -8387,41 +9850,64 @@ class GarcomPageState extends State<GarcomPage>
                                             aparecerCardapio = true;
                                             aparecerCarrinho = true;
                                           });
+                                          if(garcomController.cadastroCliente.value){
+                                            popupCadastrarCliente();
+                                          }
                                         },
                                         onCancel: () {
-                                          // Navigator.pop(context);
+                                          // Remove listener antes de alterar o controller para não disparar _onMesaChanged
                                           mesaController.removeListener(_onMesaChanged);
                                           if (mesaDialogController.text != "") {
                                             mesaDialogController.text = numeroMesaEmUso;
                                           }
+                                          // Atribuição FORA do setState e com listener já removido
+                                          mesaController.text = numeroMesaEmUso;
                                           setState(() {
                                             aparecerCarrinho = true;
                                             desejaMesa = false;
                                             aparecerCardapio = true;
-
                                             showKeyboardQuantidade = false;
-                                            mesaController.text = numeroMesaEmUso;
                                           });
+                                          // Re-adiciona o listener após a atribuição
+                                          mesaController.addListener(_onMesaChanged);
+                                          if(garcomController.cadastroCliente.value){
+                                            popupCadastrarCliente();
+                                          }
                                         },
                                       );
                                     },
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize
-                                          .min, // IMPEDIR QUE QUEBRE O LAYOUT
+                                    child: Column(
                                       children: [
-                                        if (mesaController.text.isNotEmpty)
-                                          Text(
-                                            mesaController.text.isNotEmpty
-                                                ? mesaController.text == "0"
-                                                      ? ""
-                                                      : mesaController.text
-                                                : '',
-                                            style: TextStyle(
-                                              fontSize: 25,
-                                              fontWeight: FontWeight.bold,
-                                              color: colorScheme.primary,
+                                        mesaController.text.isEmpty ?
+                                        Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.table_bar,
+                                              size: 35,
+                                              color: Theme.of(context).colorScheme.primary,
                                             ),
-                                          ),
+                                            Positioned(
+                                              // right: -2,
+                                              top: -1,
+                                              left: -0.5,
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: Colors.white,
+                                                  border: BoxBorder.all(
+                                                    color: Theme.of(context).colorScheme.primary,
+                                                  )
+                                                ),
+                                                child: Icon(
+                                                  Icons.add,
+                                                  size: 15,
+                                                  color: Theme.of(context).colorScheme.primary,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ) : 
                                         Icon(
                                           Icons.table_bar,
                                           size: 35,
@@ -8429,10 +9915,167 @@ class GarcomPageState extends State<GarcomPage>
                                             context,
                                           ).colorScheme.primary,
                                         ),
+                                        if(mesaController.text.isNotEmpty)
+                                        SizedBox(
+                                          width: 50, // largura máxima do nome
+                                          child: Text(
+                                            mesaController.text,
+                                            softWrap: true,
+                                            maxLines: 1,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(context).colorScheme.primary,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
+                                    /* Row(
+                                      mainAxisSize: MainAxisSize.min, // IMPEDIR QUE QUEBRE O LAYOUT
+                                      children: [
+                                        if (mesaController.text.isNotEmpty)
+                                          Text(
+                                            mesaController.text.isNotEmpty ? mesaController.text == "0" ? "" : mesaController.text : '',
+                                            style: TextStyle(
+                                              fontSize: 25,
+                                              fontWeight: FontWeight.bold,
+                                              color: colorScheme.primary,
+                                            ),
+                                          ),
+                                       
+                                      ],
+                                    ), */
                                   ),
                                 ),
+                                
+                                if(garcomController.cadastroCliente.value && !funcoesController.logicaPorMesa.value)
+                                Padding(
+                                  padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 8,),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () async {
+                                          validarCampos();
+                                          if(garcomController.cadastroCliente.value){
+                                            popupCadastrarCliente();
+                                          }
+                                        },
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if(nomeClienteDialogoController.text.isNotEmpty)
+                                            Icon(
+                                              Icons.person,
+                                              size: 35,
+                                              color: Theme.of(context).colorScheme.scrim,
+                                            ),
+                                            if(nomeClienteDialogoController.text.isEmpty)
+                                            Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.person,
+                                                  size: 35,
+                                                  color: Theme.of(context).colorScheme.scrim,
+                                                ),
+                                                Positioned(
+                                                  // right: -2,
+                                                  top: -1,
+                                                  left: -0.5,
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: Colors.white,
+                                                      border: BoxBorder.all(
+                                                        color: Theme.of(context).colorScheme.scrim,
+                                                      )
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.add,
+                                                      size: 15,
+                                                      color: Theme.of(context).colorScheme.scrim,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            /* Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.add,
+                                                  size: 18,
+                                                  color: colorScheme.scrim,
+                                                ),
+                                                Icon(
+                                                  Icons.person,
+                                                  size: 35,
+                                                  color: Theme.of(context).colorScheme.scrim,
+                                                ),
+                                              ],
+                                            ), */
+                                          ],
+                                        ),
+                                      ),
+
+                                      if(nomeClienteDialogoController.text.isNotEmpty)
+                                      SizedBox(
+                                        width: 50, // largura máxima do nome
+                                        child: Text(
+                                          nomeClienteDialogoController.text,
+                                          softWrap: true,
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context).colorScheme.scrim,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                /* Padding(
+                                  padding: EdgeInsets.only(left: 8, right: 0, top: 16, bottom: 8,),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () async {
+                                          validarCampos();
+                                          popupCadastrarCliente();
+                                        },
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min, // IMPEDIR QUE QUEBRE O LAYOUT
+                                          children: [
+                                            // if (mesaController.text.isNotEmpty)
+                                            Icon(
+                                              Icons.person,
+                                              size: 35,
+                                              color: Theme.of(context,).colorScheme.scrim,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        nomeClienteDialogoController.text,
+                                        softWrap: true,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context).colorScheme.scrim,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ) */
                             ],
                           ),
                         ),
@@ -8677,30 +10320,6 @@ class GarcomPageState extends State<GarcomPage>
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
-                                             /*  Row(
-                                                children: [
-                                                  Flexible(
-                                                    child: Text(
-                                                      '${produto['produto_numero']} - ',
-                                                      style: TextStyle(
-                                                        fontSize: 13,
-                                                        color: colorScheme.onSurface,
-                                                        fontWeight: FontWeight.w300,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Flexible(
-                                                    child: Text(
-                                                      '${produto['produto_nome']}',
-                                                      style: TextStyle(
-                                                        fontSize: 1,
-                                                        color: colorScheme.onSurface,
-                                                        fontWeight: FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ), */
                                               Text(
                                                 '(${produto['produto_un']})',
                                                 style: TextStyle(
@@ -9026,7 +10645,7 @@ class GarcomPageState extends State<GarcomPage>
                                       Container(
                                         width: MediaQuery.of(context).size.width * 0.35,
                                         decoration: BoxDecoration(
-                                          color: ehKilo
+                                          color: ehKilo || produto.temMeiaPorcao
                                               ? Colors.transparent
                                               : colorScheme.surface,
                                           borderRadius: BorderRadius.circular(
@@ -9036,7 +10655,7 @@ class GarcomPageState extends State<GarcomPage>
                                         child: Row(
                                           mainAxisAlignment: MainAxisAlignment.center, // Centraliza os elementos
                                           children: [
-                                            if (!ehKilo)
+                                            if (!(ehKilo || produto.temMeiaPorcao))
                                               IconButton(
                                                 icon: Icon(
                                                   Icons.remove,
@@ -9088,7 +10707,7 @@ class GarcomPageState extends State<GarcomPage>
                                               ),
                                             ),
 
-                                            if (!ehKilo)
+                                            if (!(ehKilo || produto.temMeiaPorcao))
                                               IconButton(
                                                 icon: Icon(
                                                   Icons.add,
@@ -9101,7 +10720,7 @@ class GarcomPageState extends State<GarcomPage>
                                           ],
                                         ),
                                       ),
-                                      // if(produto.id != "PZ")
+                                      if(!(produto.temMeiaPorcao))
                                       GestureDetector(
                                         onTap: () {
                                           FocusScope.of(context).unfocus();
@@ -9223,7 +10842,63 @@ class GarcomPageState extends State<GarcomPage>
                                         height: 48,
                                         child: ElevatedButton(
                                           onPressed: () {
-                                            quantidadeProdutoSelecionadoController.text = "0.5";
+                                            try{
+                                              setState(() {
+                                                quantidadeProdutoSelecionadoController.text = "0.5";
+                                              });
+                                              // lanca carrinho
+                                              final numero = numeroProdutoSelecionadoController.text;
+                                              final nome = cardapioController.text;
+                                              final qtdText = quantidadeProdutoSelecionadoController.text.replaceAll(',', '.');
+                                              final quantidade = produtoKilo 
+                                                  ? (double.tryParse(qtdText) ?? 1.0)
+                                                  : meiaPorcaoProduto ? (double.tryParse(qtdText) ?? 1.0) : (double.tryParse(qtdText)?.roundToDouble() ?? 1.0);
+                                              final observacao = observacaoProdutoSelecionadoController.text;
+                                              final valor = valorDoProdutoSelecionado.toString();
+
+                                              // adiciona no carrinho
+                                              if(cliqueiEditarProduto){
+                                                carrinhoController.editarProdutoAoCarrinho(
+                                                  indexClicado,
+                                                  nome,
+                                                  valor,  
+                                                  numero,
+                                                  quantidade,
+                                                  observacao,
+                                                  idDoProdutoSelecionado,
+                                                  temMeiaPorcao: meiaPorcaoProduto,
+                                                  adicionais: carrinhoController.carrinho[indexClicado].adicionais,
+                                                  observacoesTexto: carrinhoController.carrinho[indexClicado].observacoesTexto,
+                                                );
+                                              } else {
+                                                carrinhoController.adicionarProdutoAoCarrinho(
+                                                  nome,
+                                                  valor,  
+                                                  numero,
+                                                  quantidade,
+                                                  observacao,
+                                                  idDoProdutoSelecionado,
+                                                  temMeiaPorcao: meiaPorcaoProduto,
+                                                  adicionais: adicionaisSelecionados,
+                                                );
+                                              }
+
+                                              // altera estado visual
+                                              // setState(() {
+                                                aparecerConfiguracaoProduto = false;
+                                                aparecerBotoes = true;
+                                                aparecerLista = false;
+                                                temAdicionalObservacao = false;
+                                                quantidadeInicial = 1;
+                                                cliqueiEditarProduto = false;
+                                                meiaPorcaoProduto = false;
+                                              // });
+                                              limparInformacoesProduto();
+
+                                              sairModoTouch();
+                                            } catch(e){
+                                              print(e);
+                                            }
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: colorScheme.scrim,
@@ -9234,7 +10909,7 @@ class GarcomPageState extends State<GarcomPage>
                                             ),
                                           ),
                                           child: Text(
-                                            '1/2',
+                                            '1/2 +',
                                             style: TextStyle(
                                               color: colorScheme.onPrimary,
                                             ),
@@ -9648,7 +11323,7 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                   // Se o produto for do tipo pizza
                                   else if (produto['produto_id'] == 'PZ') {
-                                    Get.offNamed('/pizza',
+                                    Get.toNamed('/pizza',
                                       preventDuplicates: false,
                                       arguments: {
                                         'tamanhoSelecionado': produto['produto_nome'],
@@ -10400,7 +12075,7 @@ class GarcomPageState extends State<GarcomPage>
                                       FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: Text(
-                                          'Garçom',
+                                          'Atendente',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             fontSize: 12,

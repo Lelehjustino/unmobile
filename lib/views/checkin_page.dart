@@ -2675,7 +2675,7 @@ class CheckinPageState extends State<CheckinPage>
                                       FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: Text(
-                                          'Garçom',
+                                          'Atendente',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             fontSize: 12,

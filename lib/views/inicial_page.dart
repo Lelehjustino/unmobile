@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -1476,9 +1477,12 @@ class InicialPageState extends State<InicialPage> {
                             Navigator.pop(context, 'transition');
                             _dialogAtivo = false; // Libera flag para o próximo popup
                             aparecerConectar = true;
-                            if (senhaFocusNode.canRequestFocus) {
-                              senhaFocusNode.requestFocus();
-                            }
+                            Future.delayed(const Duration(milliseconds: 80), () {
+                              if (senhaFocusNode.canRequestFocus) {
+                                senhaFocusNode.requestFocus();
+                              }
+                            });
+                            erroBool = false;
                             // abrir pop up senha 
                             popupDigitarSenha(
                               context: context,
@@ -1548,6 +1552,7 @@ class InicialPageState extends State<InicialPage> {
       barrierDismissible: false,
       builder: (ctx) {
         String erro = "";
+        int _shakeCount = 0;
 
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
@@ -1599,14 +1604,23 @@ class InicialPageState extends State<InicialPage> {
 
                     SizedBox(height: 5),
 
-                    Pinput(
-                      controller: textController,
-                      focusNode: focusNode,
-                      length: 6, // quantidade de bolinhas
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: _shakeCount.toDouble()),
+                      duration: const Duration(milliseconds: 300),
+                      builder: (context, value, child) {
+                        return Transform.translate(
+                          offset: Offset(math.sin(value * 3 * 3.1415926535 * 2) * 8, 0),
+                          child: child,
+                        );
+                      },
+                      child: Pinput(
+                        controller: textController,
+                        focusNode: focusNode,
+                        length: 6, // quantidade de bolinhas
 
-                      keyboardType: TextInputType.number,
-                      obscureText: true,
-                      obscuringCharacter: "•",
+                        keyboardType: TextInputType.number,
+                        obscureText: true,
+                        obscuringCharacter: "•",
 
                       defaultPinTheme: PinTheme(
                         width: 55,
@@ -1664,6 +1678,7 @@ class InicialPageState extends State<InicialPage> {
                             erro = "Senha incorreta";
                             senhaController.clear();
                             erroBool = true;
+                            _shakeCount++;
                             Future.delayed(Duration(milliseconds: 300), () {
                               if (senhaFocusNode.canRequestFocus) {
                                 senhaFocusNode.requestFocus();
@@ -1701,6 +1716,7 @@ class InicialPageState extends State<InicialPage> {
                           }
                         }
                       },
+                    ),
                     ),
 
                     SizedBox(height: 20),
@@ -1744,6 +1760,7 @@ class InicialPageState extends State<InicialPage> {
                                 erro = "Senha incorreta";
                                 senhaController.clear();
                                 erroBool = true;
+                                _shakeCount++;
                                 Future.delayed(Duration(milliseconds: 300), () {
                                   if (senhaFocusNode.canRequestFocus) {
                                     senhaFocusNode.requestFocus();

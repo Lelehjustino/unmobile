@@ -170,6 +170,87 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
     return documento;
   }
 
+
+  String gerarDocumentoTeste(String texto, String colunasFuncao) {
+    int larguraCupom = int.parse(colunasFuncao);
+    int larguraCupom2 = int.parse(colunasFuncao) ~/ 2;
+
+    String centralizar(String texto) {
+      if (texto.length >= larguraCupom) {
+        return texto.substring(0, larguraCupom);
+      }
+
+      final int espacos = (larguraCupom - texto.length) ~/ 2;
+
+      return '${' ' * espacos}$texto';
+    }
+
+    String centralizarTamanho2(String texto) {
+      if (texto.length >= larguraCupom2) {
+        return texto.substring(0, larguraCupom2);
+      }
+
+      final int espacos = ((larguraCupom2 - texto.length) ~/ 2);
+
+      return '${' ' * espacos}$texto';
+    }
+
+    String linha = '-' * larguraCupom;
+
+    String hashtag = '*' * larguraCupom;
+
+    String gerarLinhaTexto(String texto) {
+      if (texto.length <= larguraCupom) {
+        return texto;
+      }
+
+      final List<String> partes = [];
+
+      for (int i = 0; i < texto.length; i += larguraCupom) {
+        final int fim = (i + larguraCupom < texto.length)
+            ? i + larguraCupom
+            : texto.length;
+
+        partes.add(texto.substring(i, fim));
+      }
+
+      return partes.join('\n<0>');
+    }
+
+    String gerarTexto(String texto) {
+      final List<String> partes = [];
+
+      for (int i = 0; i < texto.length; i += larguraCupom) {
+        final int fim = (i + larguraCupom < texto.length)
+            ? i + larguraCupom
+            : texto.length;
+
+        final String parte = texto.substring(i, fim);
+
+        partes.add(centralizar(parte));
+      }
+
+      return partes.join('\n<5>');
+    }
+
+    final String gerandoDocumento = '''
+<0>$linha
+<2>${centralizarTamanho2('#Teste de impressão#')}
+<0>$linha
+<0>
+<5>${gerarTexto(texto)}
+<0>
+<0>$linha
+<0>${centralizar('UN Gourmet | PedeAqu!.app | Etiqueta.ai')}
+<0>$linha
+<0>
+<0>
+''';
+
+    documento = gerandoDocumento;
+    return documento;
+  }
+
   void limparPage(){
     textoCupomAvulsoController.clear();
     impressorasSelecionadas.clear();
@@ -546,14 +627,14 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        "Impressoras disponíveis:",
+                        "Selecione a(s) impressora(s):",
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: colorScheme.primary,
                         ),
                       ),
-                      ElevatedButton(
+                     /*  ElevatedButton(
                         onPressed: () async {
                           if(impressorasSelecionadas.isEmpty){
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -566,7 +647,7 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
                           }
                           String textoCupomAvulso = "Teste concluído com sucesso";
                           for(int i = 0; i < impressorasSelecionadas.length; i++){
-                              String documentoProntoRetorno = await gerarDocumento(textoCupomAvulso, funcoesController.listaImpressoras[i]['colunas']);
+                              String documentoProntoRetorno = await gerarDocumentoTeste(textoCupomAvulso, funcoesController.listaImpressoras[i]['colunas']);
                               await inserirServidorImpressao(
                                 numeroDaLicencaSelecionada,
                                 impressorasSelecionadas[i],
@@ -574,15 +655,6 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
                                 funcoesController.listaImpressoras[i]['colunas'],
                               );
                             }
-                          /* for(int i = 0; i < funcoesController.listaImpressoras.length; i++){
-                            String documentoProntoRetorno = await gerarDocumento(textoCupomAvulso, funcoesController.listaImpressoras[i]['colunas']);
-                            await inserirServidorImpressao(
-                              numeroDaLicencaSelecionada,
-                              funcoesController.listaImpressoras[i]['numero'],
-                              documentoProntoRetorno,
-                              funcoesController.listaImpressoras[i]['colunas'],
-                            );
-                          } */
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
@@ -599,7 +671,7 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
                             color: colorScheme.onPrimary,
                           ),
                         ),
-                      ),
+                      ), */
                     ],
                   ),
 
@@ -609,62 +681,68 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
                       const larguraMinimaCard = 100.0;
                       final crossAxisCount = (constraints.maxWidth / larguraMinimaCard).floor().clamp(1, 8);
               
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: funcoesController.listaImpressoras.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 1,
-                        ),
-                        itemBuilder: (context, index) {
-                          final item = funcoesController.listaImpressoras[index];
-                          final nomeImpressora = item['nome'].toString();
-                          final numeroImpressora = item['numero'].toString();
-
-                          final selecionado = impressorasSelecionadas.contains(numeroImpressora);
-                          // final selecionado = numeroImpressoraSelecionada.value == numeroImpressora;
-                          return GestureDetector(
-                            onTap: () {
-                              if (selecionado) {
-                                setState(() {
-                                  impressorasSelecionadas.remove(numeroImpressora);
-                                });
-                              } else {
-                                setState(() {
-                                  impressorasSelecionadas.add(numeroImpressora);
-                                });
-                              }
-                              /* setState(() {
-                                numeroImpressoraSelecionada.value = numeroImpressora;
-                                nomeImpressoraSelecionada.value = nomeImpressora;
-                              }); */
-                            },
-                            child: Card(
-                              color: selecionado
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.surfaceContainerLow,
-                              child: Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8),
-                                  child: Text(
-                                    nomeImpressora,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: selecionado
-                                          ? Theme.of(context).colorScheme.onPrimary
-                                          : Theme.of(context).colorScheme.onSurface,
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: funcoesController.listaImpressoras.length,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              childAspectRatio: 1,
+                            ),
+                            itemBuilder: (context, index) {
+                              final item = funcoesController.listaImpressoras[index];
+                              final nomeImpressora = item['nome'].toString();
+                              final numeroImpressora = item['numero'].toString();
+                          
+                              final selecionado = impressorasSelecionadas.contains(numeroImpressora);
+                              // final selecionado = numeroImpressoraSelecionada.value == numeroImpressora;
+                              return GestureDetector(
+                                onTap: () {
+                                  if (selecionado) {
+                                    setState(() {
+                                      impressorasSelecionadas.remove(numeroImpressora);
+                                    });
+                                  } else {
+                                    setState(() {
+                                      impressorasSelecionadas.add(numeroImpressora);
+                                    });
+                                  }
+                                  /* setState(() {
+                                    numeroImpressoraSelecionada.value = numeroImpressora;
+                                    nomeImpressoraSelecionada.value = nomeImpressora;
+                                  }); */
+                                },
+                                child: Card(
+                                  color: selecionado
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.surfaceContainerLow,
+                                  child: Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(8),
+                                      child: Text(
+                                        nomeImpressora,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: selecionado
+                                              ? Theme.of(context).colorScheme.onPrimary
+                                              : Theme.of(context).colorScheme.onSurface,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
+                              );
+                            },
+                          ),
+                        ],
                       );
                     },
                   ),
@@ -672,7 +750,7 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
                   Padding(
                     padding: EdgeInsets.all(8.0),
                     child: Text(
-                      "Digite o texto do cupom avulso:",
+                      "Digite a mensagem do cupom avulso:",
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -736,80 +814,129 @@ class _CupomAvulsoPageState extends State<CupomAvulsoPage> {
                       color: colorScheme.primary,
                     ),
                   )
-                  : Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if(textoCupomAvulsoController.text.isEmpty || impressorasSelecionadas.isEmpty){
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Selecione o texto do cupom avulso e pelo menos uma impressora!',
-                                ),
-                                backgroundColor: Theme.of(context).colorScheme.error,
+                  : Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if(textoCupomAvulsoController.text.isEmpty || impressorasSelecionadas.isEmpty){
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Selecione o texto do cupom avulso e pelo menos uma impressora!',
+                                    ),
+                                    backgroundColor: Theme.of(context).colorScheme.error,
+                                  ),
+                                );
+                                return;
+                              }
+                              setState(() {
+                                isLoading = true;
+                              });
+                              try{
+                                for(int i = 0; i < impressorasSelecionadas.length; i++){
+                                  String documentoProntoRetorno = await gerarDocumento(textoCupomAvulsoController.text, funcoesController.listaImpressoras[i]['colunas']);
+                                  await inserirServidorImpressao(
+                                    numeroDaLicencaSelecionada,
+                                    impressorasSelecionadas[i],
+                                    documentoProntoRetorno,
+                                    funcoesController.listaImpressoras[i]['colunas'],
+                                  );
+                                }
+                                limparPage();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Cupom avulso impresso com sucesso!',
+                                    ),
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                  ),
+                                );
+                              }catch(e){
+                                setState(() {
+                                  isLoading = false;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Erro ao imprimir cupom avulso!',
+                                    ),
+                                    backgroundColor: Theme.of(context).colorScheme.error,
+                                  ),
+                                );
+                              } finally {
+                                setState(() {
+                                  isLoading = false;
+                                });
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              // backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.55),
+                              padding: EdgeInsets.symmetric(vertical: 25),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                            );
-                            return;
-                          }
-                          setState(() {
-                            isLoading = true;
-                          });
-                          try{
-                            for(int i = 0; i < impressorasSelecionadas.length; i++){
-                              String documentoProntoRetorno = await gerarDocumento(textoCupomAvulsoController.text, funcoesController.listaImpressoras[i]['colunas']);
-                              await inserirServidorImpressao(
-                                numeroDaLicencaSelecionada,
-                                impressorasSelecionadas[i],
-                                documentoProntoRetorno,
-                                funcoesController.listaImpressoras[i]['colunas'],
-                              );
-                            }
-                            limparPage();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Cupom avulso impresso com sucesso!',
-                                ),
-                                backgroundColor: Theme.of(context).colorScheme.primary,
+                            ),
+                            child: Text(
+                              'Imprimir',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
-                            );
-                          }catch(e){
-                            setState(() {
-                              isLoading = false;
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Erro ao imprimir cupom avulso!',
-                                ),
-                                backgroundColor: Theme.of(context).colorScheme.error,
-                              ),
-                            );
-                          } finally {
-                            setState(() {
-                              isLoading = false;
-                            });
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.55),
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: Text(
-                          'Imprimir',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onPrimary,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      Padding(
+                        padding: EdgeInsets.only(left: 4.0, right: 4.0, top: 4.0, bottom: 8.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                            if(impressorasSelecionadas.isEmpty){
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Selecione pelo menos uma impressora"),
+                                  backgroundColor: colorScheme.error,
+                                ),
+                              );
+                              return;
+                            }
+                            String textoCupomAvulso = "Teste concluído com sucesso";
+                            for(int i = 0; i < impressorasSelecionadas.length; i++){
+                                String documentoProntoRetorno = await gerarDocumentoTeste(textoCupomAvulso, funcoesController.listaImpressoras[i]['colunas']);
+                                await inserirServidorImpressao(
+                                  numeroDaLicencaSelecionada,
+                                  impressorasSelecionadas[i],
+                                  documentoProntoRetorno,
+                                  funcoesController.listaImpressoras[i]['colunas'],
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.scrim,
+                              padding: EdgeInsets.symmetric(vertical: 25),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              'Enviar página de teste',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
