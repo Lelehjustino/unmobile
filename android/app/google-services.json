@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "545827630158",
+    "project_id": "under-recepcao",
+    "storage_bucket": "under-recepcao.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:545827630158:android:940db2ea205ea5ced8671f",
+        "android_client_info": {
+          "package_name": "com.un.recepcao"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3-uoTH6VQdcSkKHe2uC0pVfRKAT96NqE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

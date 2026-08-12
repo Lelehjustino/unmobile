@@ -9910,7 +9910,7 @@ class GarcomPageState extends State<GarcomPage>
                                         ) : 
                                         Icon(
                                           Icons.table_bar,
-                                          size: 35,
+                                          size: 25,
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.primary,
@@ -9924,7 +9924,7 @@ class GarcomPageState extends State<GarcomPage>
                                             maxLines: 1,
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 20,
                                               fontWeight: FontWeight.bold,
                                               color: Theme.of(context).colorScheme.primary,
                                             ),

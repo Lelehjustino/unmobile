@@ -1,10 +1,14 @@
-
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:un_recepcao/services/remote_config_service.dart';
+import 'package:un_recepcao/views/cupom_avulso_page.dart';
+import 'package:un_recepcao/views/fechar_page.dart';
+
+import 'firebase_options.dart';
+
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
-import 'package:un_recepcao/controllers/navegacao_inteligente.dart';
-import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/zerar_atendimento.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
@@ -15,7 +19,6 @@ import 'package:un_recepcao/views/carrinho_comandas_page.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/configuracoes_page.dart';
-import 'package:un_recepcao/views/cupom_avulso_page.dart';
 import 'package:un_recepcao/views/expedicao_motoboy_page.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/inicial_page.dart';
@@ -27,6 +30,8 @@ import 'package:un_recepcao/views/pizza_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:un_recepcao/views/recepcao_page.dart';
 import 'package:un_recepcao/views/splash_page.dart';
+import 'package:un_recepcao/views/force_update_screen.dart';
+import 'package:un_recepcao/views/maintenance_screen.dart';
 import 'package:un_recepcao/views/visualizar_comandas_mesa_page.dart';
 
 // projeto versao com app Apple
@@ -34,7 +39,12 @@ import 'package:un_recepcao/views/visualizar_comandas_mesa_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // await Future.delayed(const Duration(milliseconds: 50));
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await RemoteConfigService.instance.initialize();
+
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   try {
@@ -162,6 +172,26 @@ class _AppState extends State<App> {
         GetPage(name: '/checkout', page: () => CheckoutPage()),
         GetPage(name: '/cupom_avulso', page: () => CupomAvulsoPage()),
         GetPage(name: '/visualizar_comandas_mesa', page: () => VisualizarComandasMesaPage()),
+        GetPage(
+          name: '/force_update',
+          page: () {
+            final args = Get.arguments as Map<String, dynamic>? ?? {};
+            return ForceUpdateScreen(
+              minimumVersion: args['minimumVersion'] ?? '0.0.0',
+              installedVersion: args['installedVersion'] ?? '0.0.0',
+              storeUrlAndroid: args['storeUrlAndroid'] ?? '',
+              storeUrlIos: args['storeUrlIos'] ?? '',
+            );
+          },
+        ),
+        GetPage(
+          name: '/maintenance',
+          page: () => const MaintenanceScreen(),
+        ),
+        GetPage(
+          name: '/fechar',
+          page: () => FecharPage(),
+        ),
       ],
     );
   }
