@@ -6211,6 +6211,12 @@ class GarcomPageState extends State<GarcomPage>
       setState(() {
         empurrarBotoes = false;
       });
+      clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+      if(garcomController.forcarCadastroCliente.value){
+        if(garcomController.cadastroCliente.value){
+          popupCadastrarCliente();
+        }
+      }
       return;
     }
 
@@ -6310,13 +6316,6 @@ class GarcomPageState extends State<GarcomPage>
               aparecerFazerPedido = true;
             });
           }
-
-          clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
-          if(garcomController.forcarCadastroCliente.value){
-            if(garcomController.cadastroCliente.value){
-              popupCadastrarCliente();
-            }
-          }
         },
         onCancel: () async {
           await verificarSeTemConta(comandaController.text);
@@ -6330,13 +6329,6 @@ class GarcomPageState extends State<GarcomPage>
           });
           if (mesaVinculada) {
             mesaController.text = numeroMesaEmUso;
-          }
-
-          clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
-          if(garcomController.forcarCadastroCliente.value){
-            if(garcomController.cadastroCliente.value){
-              popupCadastrarCliente();
-            }
           }
         },
 
@@ -7524,7 +7516,6 @@ class GarcomPageState extends State<GarcomPage>
                                         } else {
                                           // ── Cenário 1: nada mudou → fechar sem ação ─────────────────
                                           if (!dadosMudaram) {
-                                            debugPrint('[popupCadastrarCliente] Nenhum dado alterado. Fechando sem ação.');
                                             Navigator.of(ctx).pop();
                                             _irParaCardapio();
                                             entrarModoTouch();
@@ -7534,7 +7525,6 @@ class GarcomPageState extends State<GarcomPage>
                                           // ── Cenário 2: chave de busca mudou com cliente já carregado
                                           //              → nova busca / troca de cliente ───────────────
                                           if (clienteJaCadastrado && chaveBuscaMudou) {
-                                            debugPrint('[popupCadastrarCliente] Chave de busca alterada. Iniciando troca de cliente...');
                                             // Limpar cliente atual
                                             setState(() {
                                               clienteJaCadastrado = false;
@@ -7551,7 +7541,6 @@ class GarcomPageState extends State<GarcomPage>
 
                                             if (clienteJaCadastrado) {
                                               // Encontrou outro cliente: apenas atualizar o ID
-                                              debugPrint('[popupCadastrarCliente] Outro cliente encontrado. Carregando ID.');
                                               String? idClienteStr;
                                               if (garcomController.tipoCadastroClienteTelefone.value) {
                                                 idClienteStr = await garcomController.buscarNumeroClientePorTelefone(telefoneAtual);
@@ -7564,7 +7553,6 @@ class GarcomPageState extends State<GarcomPage>
                                               });
                                             } else {
                                               // Não encontrou: permite cadastrar novo cliente
-                                              debugPrint('[popupCadastrarCliente] Nenhum cliente encontrado para a nova chave. Permitindo cadastro.');
                                               validarCampos();
                                               verCadastroCliente();
                                               if (querCadastrarCliente && cadastrarCliente) {
@@ -7593,7 +7581,6 @@ class GarcomPageState extends State<GarcomPage>
                                           if(querCadastrarCliente && cadastrarCliente){
                                             if(!clienteJaCadastrado){
                                               // Novo cliente
-                                              debugPrint('[popupCadastrarCliente] Cadastrando novo cliente.');
                                               int idClienteRetornado = await garcomController.abrirCliente(
                                                 nomeAtual,
                                                 cpfAtual,
@@ -7606,7 +7593,6 @@ class GarcomPageState extends State<GarcomPage>
                                               });
                                             } else {
                                               // Atualizar cliente existente
-                                              debugPrint('[popupCadastrarCliente] Atualizando cliente existente.');
                                               if (garcomController.tipoCadastroClienteTelefone.value) {
                                                 String? idClienteStr = await garcomController.buscarNumeroClientePorTelefone(telefoneAtual);
                                                 setState(() {
@@ -9806,7 +9792,7 @@ class GarcomPageState extends State<GarcomPage>
                               // Ícone da mesa
                               if (funcoesController.logicaPorComandaNaMesa.value)
                                 Padding(
-                                  padding: EdgeInsets.only(left: 8, right: 0, top: 8, bottom: 8,),
+                                  padding: EdgeInsets.only(left: 8, right: 0, top: 16, bottom: 8,),
                                   child: GestureDetector(
                                     onTap: () {
                                       // Controladores e focus nodes do dialog
@@ -9850,9 +9836,6 @@ class GarcomPageState extends State<GarcomPage>
                                             aparecerCardapio = true;
                                             aparecerCarrinho = true;
                                           });
-                                          if(garcomController.cadastroCliente.value){
-                                            popupCadastrarCliente();
-                                          }
                                         },
                                         onCancel: () {
                                           // Remove listener antes de alterar o controller para não disparar _onMesaChanged
@@ -9870,9 +9853,6 @@ class GarcomPageState extends State<GarcomPage>
                                           });
                                           // Re-adiciona o listener após a atribuição
                                           mesaController.addListener(_onMesaChanged);
-                                          if(garcomController.cadastroCliente.value){
-                                            popupCadastrarCliente();
-                                          }
                                         },
                                       );
                                     },
@@ -9910,14 +9890,14 @@ class GarcomPageState extends State<GarcomPage>
                                         ) : 
                                         Icon(
                                           Icons.table_bar,
-                                          size: 25,
+                                          size: 20,
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.primary,
                                         ),
                                         if(mesaController.text.isNotEmpty)
                                         SizedBox(
-                                          width: 50, // largura máxima do nome
+                                          width: 50,
                                           child: Text(
                                             mesaController.text,
                                             softWrap: true,
@@ -9932,27 +9912,12 @@ class GarcomPageState extends State<GarcomPage>
                                         ),
                                       ],
                                     ),
-                                    /* Row(
-                                      mainAxisSize: MainAxisSize.min, // IMPEDIR QUE QUEBRE O LAYOUT
-                                      children: [
-                                        if (mesaController.text.isNotEmpty)
-                                          Text(
-                                            mesaController.text.isNotEmpty ? mesaController.text == "0" ? "" : mesaController.text : '',
-                                            style: TextStyle(
-                                              fontSize: 25,
-                                              fontWeight: FontWeight.bold,
-                                              color: colorScheme.primary,
-                                            ),
-                                          ),
-                                       
-                                      ],
-                                    ), */
                                   ),
                                 ),
                                 
                                 if(garcomController.cadastroCliente.value && !funcoesController.logicaPorMesa.value)
                                 Padding(
-                                  padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 8,),
+                                  padding: EdgeInsets.only(left: 8, right: 8, top: 16, bottom: 8,),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     mainAxisAlignment: MainAxisAlignment.center,
