@@ -6062,7 +6062,7 @@ class GarcomPageState extends State<GarcomPage>
               message: "",
               icon: Icons.error, // você pode trocar para outro ícone
               onConfirm: () async {
-                _dialogVincularMesa();
+                _dialogVincularMesa(false);
                 if (funcoesController.logicaPorComandaNaMesa.value) {
                   comandaController.text = numeroComanda;
                   numeroComandaEmUso = numeroComanda;
@@ -6185,7 +6185,7 @@ class GarcomPageState extends State<GarcomPage>
   // Função para lógica comanda na mesa
   Future<void> _fluxoComandaNaMesa() async {
     if (vinculandoMesa) {
-      _dialogVincularMesa(); 
+      _dialogVincularMesa(false); 
       return;
     }
 
@@ -6206,17 +6206,11 @@ class GarcomPageState extends State<GarcomPage>
     }
 
     if (comandaValida && !mesaVinculada) {
-      _dialogVincularMesa();
+      _dialogVincularMesa(true);
       carrinhoController.numeroComanda.value = comandaController.text;
       setState(() {
         empurrarBotoes = false;
       });
-      clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
-      if(garcomController.forcarCadastroCliente.value){
-        if(garcomController.cadastroCliente.value){
-          popupCadastrarCliente();
-        }
-      }
       return;
     }
 
@@ -6286,7 +6280,7 @@ class GarcomPageState extends State<GarcomPage>
   }
 
   // Função Diálogo de vincular mesa
-  void _dialogVincularMesa() {
+  void _dialogVincularMesa(bool aparecer) {
     setState(() {
       _campoAtivo = 'mesaController';
       Future.delayed(Duration(milliseconds: 300), () {
@@ -6316,6 +6310,14 @@ class GarcomPageState extends State<GarcomPage>
               aparecerFazerPedido = true;
             });
           }
+          if(aparecer){
+            clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+            if(garcomController.forcarCadastroCliente.value){
+              if(garcomController.cadastroCliente.value){
+                popupCadastrarCliente();
+              }
+            }
+          }
         },
         onCancel: () async {
           await verificarSeTemConta(comandaController.text);
@@ -6330,8 +6332,15 @@ class GarcomPageState extends State<GarcomPage>
           if (mesaVinculada) {
             mesaController.text = numeroMesaEmUso;
           }
+          if(aparecer){
+            clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+            if(garcomController.forcarCadastroCliente.value){
+              if(garcomController.cadastroCliente.value){
+                popupCadastrarCliente();
+              }
+            }
+          }
         },
-
       );
     } else {
       mesaController.clear();
@@ -6380,7 +6389,7 @@ class GarcomPageState extends State<GarcomPage>
               ),
             );
           } else {
-          _dialogVincularMesa();
+          _dialogVincularMesa(false);
           }
         },
       );

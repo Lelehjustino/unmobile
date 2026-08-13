@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:un_recepcao/controllers/views/painel_cliente_controller.dart';
 
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
@@ -23,6 +24,7 @@ class PainelCliente extends StatefulWidget {
 
 class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserver {
   final painelController = Get.put(PainelController());
+  final painelClienteController = Get.put(PainelClienteController());
 
   // Timer de atualização periódica de dados (5 s)
   Timer? _timerDados;
@@ -32,6 +34,8 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
   List<dynamic> listaPedidosEmPreparo = [];
   List<dynamic> listaPedidosProntos = [];
+  List<dynamic> listaPedidosSelecionados = [];
+  List<dynamic> impressorasSelecionadas = [];
 
   /// Flag de controle: evita chamadas duplicadas ao window_manager.
   /// false = interface visível | true = fullscreen ativo
@@ -78,6 +82,75 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     }
 
     carregarConfiguracaoSom();
+    carregarLista();
+  }
+
+  Future<void> carregarLista() async {
+    if(impressorasSelecionadas.isEmpty){
+      listaPedidosSelecionados = await painelClienteController.buscarPedidosSemImpressora();
+    } else {
+      listaPedidosSelecionados = await painelClienteController.buscarPedidosComImpressora(impressorasSelecionadas.map((e) => e['numero']).join(','));
+    }
+    organizarListas();
+  }
+
+  Future<void> popupSelecaoImpressora() async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Center(
+            child: Text(
+              'Selecione as impressoras', 
+              style: TextStyle(
+                fontSize: 15
+              ),
+            ),
+          ),
+          content: StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return SizedBox(
+                width: double.maxFinite,
+                height: 300,
+                child: ListView.builder(
+                  itemCount: painelClienteController.impressoras.length,
+                  itemBuilder: (context, index) {
+                    final impressora =
+                        painelClienteController.impressoras[index];
+
+                    return CheckboxListTile(
+                      title: Text(impressora['nome']),
+                      value: impressorasSelecionadas.contains(impressora),
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          if (value == true) {
+                            impressorasSelecionadas.add(impressora);
+                          } else {
+                            impressorasSelecionadas.remove(impressora);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () { 
+                  carregarLista();
+                  Navigator.pop(context);
+                },
+                child: Text('Fechar'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -229,8 +302,8 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     listaPedidosEmPreparo.clear();
     listaPedidosProntos.clear();
     setState(() {
-      if (painelController.listaPedidosDelivery.isNotEmpty) {
-        for (var pedido in painelController.listaPedidosDelivery) {
+      if (listaPedidosSelecionados.isNotEmpty) {
+        for (var pedido in listaPedidosSelecionados) {
           if (pedido['statuspainel'] == '1') {
             listaPedidosEmPreparo.add(pedido);
           } else if (pedido['statuspainel'] == '2') {
@@ -1040,14 +1113,19 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                       ),
                     ),
                     Expanded(
-                      child: Text(
-                        'ACOMPANHE SEU PEDIDO',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.montserrat(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: appBarLetterSpacing,
-                          fontSize: appBarFontSize,
+                      child: GestureDetector(
+                        onTap: () {
+                          popupSelecaoImpressora();
+                        },
+                        child: Text(
+                          'ACOMPANHE SEU PEDIDO',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.montserrat(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: appBarLetterSpacing,
+                            fontSize: appBarFontSize,
+                          ),
                         ),
                       ),
                     ),

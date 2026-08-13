@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
@@ -167,6 +168,13 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
 
   bool editarPizza = false;
 
+  bool modoTouch = false; 
+  bool modoCarrinho = true;
+  String grupoSelecionadoNoTouch = "";
+
+  int posicaoUltimoGrupo = 0;
+
+
   @override
   void initState() {
     super.initState();
@@ -229,6 +237,62 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
       verificarEdicao();
     });
 
+  }
+
+  void entrarModoTouch(){
+    setState(() {
+      modoTouch = true;
+      modoCarrinho = false;
+      numeroPizzaBordaSelecionadoController.text = "";
+      cardapioController.text = "";
+      valorDoProdutoSelecionado = "";
+      idDoProdutoSelecionado = "";
+    });
+
+    _selecionarPrimeiroGrupo();
+
+    Future.delayed(Duration(milliseconds: 200), () {
+      cardapioFocus.unfocus();
+    });
+
+    // logica anterior
+    /* setState(() {
+      mostrarGrupos = true;
+      mostrarSabores = false;
+    });
+    abrirSelecaoGrupoProduto(); */
+  }
+
+  void sairModoTouch(){
+    setState(() {
+      modoTouch = false;
+      modoCarrinho = true;
+    });
+  }
+
+  /// Seleciona automaticamente o primeiro grupo disponível e carrega seus produtos.
+  void _selecionarPrimeiroGrupo() {
+    if (funcoesController.listaGruposPizza.isEmpty) return;
+
+    final primeiro = funcoesController.listaGruposPizza.first;
+    setState(() {
+      grupoSelecionadoNoTouch = primeiro['numero'].toString();
+      listaSaboresPrecoPizzaDentroDoTamanhoNoGrupo = produtosPorGrupo(grupoSelecionadoNoTouch);
+    });
+  }
+
+  void _selecionarUltimoGrupo() {
+    if (funcoesController.listaGruposPizza.isEmpty) return;
+
+    final ultimo = funcoesController.listaGruposPizza[posicaoUltimoGrupo];
+    setState(() {
+      grupoSelecionadoNoTouch = ultimo['numero'].toString();
+      listaSaboresPrecoPizzaDentroDoTamanhoNoGrupo = produtosPorGrupo(grupoSelecionadoNoTouch);
+    });
+  } 
+
+  void _guardarUltimoGrupoPosicao(int posicao){
+    posicaoUltimoGrupo = posicao;
   }
 
   void verificarEdicao() {
@@ -1749,7 +1813,6 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                             itemCount: funcoesController.listaGruposPizza.length,
                             itemBuilder: (context, index) {
                               final grupo = funcoesController.listaGruposPizza[index];
-                              print(">>>>>>>>>>>>>>>>>>>>>>>>>>Grupo: $grupo");
                               return GestureDetector(
                                 onTap: () async {
                                   final numeroGrupoSelecionado = grupo['numero'].toString();
@@ -1806,23 +1869,20 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                       },
                                     );
                                   } else {
-                                    setModalState(() {
+                                    sairModoTouch();
+                                    setState(() {
                                       configurarPizza = true;
                                       terminarPizza = false;
                                       aparecerLista = false;
                                       aparecerSaboresBordas = true;
-                                      showKeyboardAlfa = false;
                                       funcaoConfigurarPizza(numero, nome, valor, id);
-                                      Navigator.pop(context);
                                       mostrarGrupos = true;
                                       mostrarSabores = false;
-                                      campoAtivo = 'quantidadePizzaBordaSelecionadoController';
                                       Future.delayed(Duration(milliseconds: 300), () {
                                         if (quantidadePizzaBordaSelecionadoFocus.canRequestFocus) {
                                           quantidadePizzaBordaSelecionadoFocus.requestFocus();
                                         }
                                       });
-                                      showKeyboardNumero = true;
                                     });
                                   }
                                 },
@@ -1880,72 +1940,6 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                       ),
                                     ],
                                   ),
-                                  /* Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      if(valor != '0.00')
-                                        Flexible(
-                                          child: Text(
-                                            nome,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Theme.of(context).colorScheme.onSurface,
-                                              /* fontWeight: FontWeight.w300, */
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        if(valor == '0.00')
-                                        Flexible(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${nome}',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Theme.of(context).colorScheme.onSurface,
-                                                  // fontWeight: FontWeight.w300,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Sabor indisponível para este tamanho',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Theme.of(context).colorScheme.onSurface,
-                                                  // fontWeight: FontWeight.w300,
-                                                  fontStyle: FontStyle.italic
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(child: Row()),
-                                        if(valor != '0.00')
-                                        Flexible(
-                                          child: Text(
-                                            'R\$ ${valor}',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Theme.of(context).colorScheme.onSurface,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        if(valor == '0.00')
-                                          Flexible(
-                                          child: Text(
-                                            'R\$ -.--',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Theme.of(context).colorScheme.onSurface,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ), */
                                 ),
                               );
                             },
@@ -2518,29 +2512,6 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                         ),
                       ],
                     ),
-                    /* Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Obx(
-                          () => Text(
-                            Connection.connectionStatus.value ? 'Online' : 'Offline',
-                            style: TextStyle(
-                              color: colorScheme.onPrimary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          "Versão: $versaoAplicacao",
-                          style: TextStyle(
-                            color: colorScheme.onPrimary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ), */
                   ),
                 ],
               ),
@@ -2656,6 +2627,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                 }
       
                                 if (listaSaboresSelecionados.isNotEmpty) {
+                                  sairModoTouch();
                                   setState(() {
                                     terminarPizza = true;
                                     aparecerCardapio = false;
@@ -2715,19 +2687,19 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                   children: [
                                       IconButton(
                                       icon: Icon(
-                                        Icons.local_pizza,
+                                        modoTouch ? Icons.local_pizza : Icons.fingerprint,
                                         // size: 30,
-                                        color: Theme.of(context).colorScheme.onTertiary,
+                                        color: modoTouch ? colorScheme.onTertiary : colorScheme.onTertiary,
                                       ),
                                       onPressed: () async {
-                                        setState(() {
-                                          mostrarGrupos = true;
-                                          mostrarSabores = false;
-                                        });
-                                        abrirSelecaoGrupoProduto();
+                                        if(modoTouch){
+                                          sairModoTouch();
+                                        } else {
+                                          entrarModoTouch();
+                                        }
                                       },
                                       style: IconButton.styleFrom(
-                                        backgroundColor: Theme.of(context,).colorScheme.scrim,
+                                        backgroundColor: modoTouch ? colorScheme.scrim : colorScheme.shadow,
                                         padding: EdgeInsets.all(10),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(10),
@@ -2735,9 +2707,9 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                       ),
                                     ),
                                     Text(
-                                      'Menu',
+                                      modoTouch ? 'Carrinho' : 'Touch',
                                       style: TextStyle(
-                                        color: colorScheme.scrim,
+                                        color:modoTouch ? colorScheme.scrim : colorScheme.shadow,
                                         fontWeight: FontWeight.bold
                                       ),
                                     )
@@ -2818,37 +2790,6 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                   Expanded(
                     child: Column(
                       children: [
-                        // Botão para voltar ao carrinho 
-                        /* Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 8),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                aparecerLista = false;
-                                aparecerCardapio = true;
-                                aparecerSaboresBordas = true;
-                                configurarPizza = true;
-                              });
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 0, horizontal: 8),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.arrow_back, color: colorScheme.primary),
-                                  Expanded(
-                                    child: Center(
-                                      child: Text(
-                                        'Voltar ao carrinho',
-                                        style: TextStyle(color: colorScheme.primary),
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(Icons.arrow_back, color: colorScheme.onPrimary),
-                                ],
-                              ),
-                            ),
-                          )
-                        ), */
                         Expanded(
                           child: Container(
                             // height: MediaQuery.of(context).size.height * 1,
@@ -2948,176 +2889,6 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                       ),
                                     ],
                                   ),
-                                    /* Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            // mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                valor != '0.00' ? sabores['Sabor'] : 'Sabor ${sabores['Sabor']} indisponível para este tamanho',
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  color: colorScheme.onSurface,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            /*   if(valor != '0.00')
-                                              Text(
-                                                  'R\$ ${sabores['Preco_Final']}',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: colorScheme.onSurface,
-                                                    fontWeight: FontWeight.w300,
-                                                  ),
-                                                ),
-                                              if(valor == '0.00')
-                                              Text(
-                                                  'R\$ -.--',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: colorScheme.onSurface,
-                                                    fontWeight: FontWeight.w300,
-                                                  ),
-                                                ), */
-                                            ],
-                                          ),
-                                        ),  
-                                        /* if(valor != '0.00')
-                                        Flexible(
-                                          child: Text(
-                                            sabores['Sabor'],
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: colorScheme.onSurface,
-                                              /* fontWeight: FontWeight.w300, */
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        if(valor == '0.00')
-                                        Flexible(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${sabores['Sabor']}',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: colorScheme.onSurface,
-                                                  // fontWeight: FontWeight.w300,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Sabor indisponível para este tamanho',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: colorScheme.onSurface,
-                                                  // fontWeight: FontWeight.w300,
-                                                  fontStyle: FontStyle.italic
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(child: Row()), */
-                                        if(valor != '0.00')
-                                        Flexible(
-                                          child: Text(
-                                            'R\$ ${sabores['Preco_Final']}',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: colorScheme.onSurface,
-                                              fontWeight: FontWeight.w300,
-                                            ),
-                                          ),
-                                        ),
-                                        if(valor == '0.00')
-                                         Flexible(
-                                          child: Text(
-                                            'R\$ -.--',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: colorScheme.onSurface,
-                                              fontWeight: FontWeight.w300,
-                                            ),
-                                          ),
-                                        ),
-                                        //'-.--'
-                                      ],
-                                    ), */
-                                    /* Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        if(valor != '0.00')
-                                        Flexible(
-                                          child: Text(
-                                            sabores['Sabor'],
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: colorScheme.onSurface,
-                                              /* fontWeight: FontWeight.w300, */
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        if(valor == '0.00')
-                                        Flexible(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${sabores['Sabor']}',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: colorScheme.onSurface,
-                                                  // fontWeight: FontWeight.w300,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Sabor indisponível para este tamanho',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: colorScheme.onSurface,
-                                                  // fontWeight: FontWeight.w300,
-                                                  fontStyle: FontStyle.italic
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(child: Row()),
-                                        if(valor != '0.00')
-                                        Flexible(
-                                          child: Text(
-                                            'R\$ ${sabores['Preco_Final']}',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: colorScheme.onSurface,
-                                              fontWeight: FontWeight.w300,
-                                            ),
-                                          ),
-                                        ),
-                                        if(valor == '0.00')
-                                         Flexible(
-                                          child: Text(
-                                            'R\$ -.--',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: colorScheme.onSurface,
-                                              fontWeight: FontWeight.w300,
-                                            ),
-                                          ),
-                                        ),
-                                        //'-.--'
-                                      ],
-                                    ), */
                                   ),
                                 );
                               },
@@ -3135,6 +2906,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                 aparecerSaboresBordas = true;
                                 configurarPizza = true;
                               });
+                              sairModoTouch();
                             },
                             child: Padding(
                               padding: EdgeInsets.symmetric(vertical: 0, horizontal: 16),
@@ -3160,7 +2932,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                   ),
             
                   // Configuração da pizza 
-                  if(configurarPizza)
+                  if(configurarPizza && modoCarrinho)
                   Padding(
                   padding: EdgeInsets.only(left: 8, right: 8, top: 0, bottom: 0,),
                   child: Container(
@@ -3388,11 +3160,11 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                       aparecerCardapio = true;
                                       aparecerSaboresBordas = true; */
       
-                                      Future.delayed(Duration(milliseconds: 300), () {
+                                      /* Future.delayed(Duration(milliseconds: 300), () {
                                         if (cardapioFocus.canRequestFocus) {
                                           cardapioFocus.requestFocus();
                                         }
-                                      });
+                                      }); */
       
                                       campoAtivo = 'cardapioController';
                                       aparecerLista = false;
@@ -3534,434 +3306,518 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                 ),
             
                 // Lista de sabores e bordas selecionadas 
-                if(aparecerSaboresBordas)
+                if(aparecerSaboresBordas && (modoCarrinho || terminarPizza))
                 Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        // COLUNA SABORES
-                        Expanded(
-                          child: Column(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Row(
                             children: [
-                              // Cabeçalho
-                              Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(vertical: 8),
-                                color: colorScheme.primary,
-                                child: Text(
-                                  'SABORES',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                    
-                              // Lista de sabores
+                              // COLUNA SABORES
                               Expanded(
-                                child: listaSaboresSelecionados.isEmpty
-                                  ? SizedBox()
-                                  : ListView.builder(
-                                      itemCount: listaSaboresSelecionados.length,
-                                      itemBuilder: (context, index) {
-                                        final sabor = listaSaboresSelecionados[index];
-                                        final double quantidadeTotalSabores = listaSaboresSelecionados.fold( // pega a lista de sabores selecionados e soma a quantidade de cada um
-                                          0,
-                                          (total, produto) => total + produto.quantidade,
-                                        );
-                                        return Card(
-                                          margin: EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 4),
-                                          child: Padding(
-                                            padding: EdgeInsets.symmetric(
-                                                vertical: 8, horizontal: 8),
-                                            child: Padding(
-                                              padding: EdgeInsets.all(2.0),
-                                              child: Row(
-                                                children: [
-                                                  GestureDetector(
-                                                    onTap: () async {
-                                                      if(sabor.quantidade <= 1){
-                                                        // aparecer aviso 
-                                                        shownDialogErrorTwoBottom(
-                                                          context: context,
-                                                          title: "Excluir ${sabor.nome}?",
-                                                          message: "Deseja descartar ${sabor.nome} do pedido?",
-                                                          icon: Icons.shopping_cart,
-                                                          onConfirm: () async {
-                                                            removerProdutoLista(
-                                                              sabor.numero,
-                                                              sabor.preco,
-                                                              1,
-                                                              sabor.observacaoEscrita,
-                                                              'P', // ou 'B'
-                                                            );
-                                                            setState(() {
-                                                              configurarPizza = true;
-                                                              aparecerSaboresBordas = true;
-                                                            });
-                                                          },
-                                                          onCancel: () async {
-                                                            setState(() {
-                                                              configurarPizza = true;
-                                                              aparecerSaboresBordas = true;
-                                                            });
-                                                          },
-                                                        );
-                                                      } else {
-                                                        removerProdutoLista(
-                                                          sabor.numero,
-                                                          sabor.preco,
-                                                          1,
-                                                          sabor.observacaoEscrita,
-                                                          'P', // ou 'B'
-                                                        );
-                                                        setState(() {
-                                                          configurarPizza = true;
-                                                          aparecerSaboresBordas = true;
-                                                        });
-                                                      }
-                                                    },
-                                                    child: Icon(
-                                                      Icons.delete, 
-                                                      size: 18,
-                                                      color: colorScheme.error,
-                                                    ),
-                                                  ),
-                                                  // Fração do sabor
-                                                  Text(
-                                                    formatarFracaoQuantidade(
-                                                      quantidadeItem: sabor.quantidade,
-                                                      quantidadeTotal: quantidadeTotalSabores,
-                                                    ),
-                                                     style: TextStyle(fontWeight: FontWeight.bold),
-                                                  ),
-                                                  SizedBox(width: 4),
-                                                  // Nome do sabor sem observação
-                                                  if(sabor.observacaoEscrita.isEmpty)
-                                                  Flexible(
-                                                    child: Text(
-                                                      sabor.nome,
-                                                      /*  style: TextStyle(fontWeight: FontWeight.bold), */
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 4),
-                                                  if(sabor.observacaoEscrita.isNotEmpty)
-                                                  Expanded(
-                                                    child: Align(
-                                                      alignment: Alignment.centerLeft,
-                                                      child: Column(
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            sabor.nome,
-                                                            /*  style: TextStyle(fontWeight: FontWeight.bold), */
-                                                          ),
-                                                          if(sabor.observacaoEscrita.isNotEmpty)
-                                                          Text(
-                                                            sabor.observacaoEscrita,
-                                                            style: TextStyle(fontSize: 10),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                  
-                            SizedBox(width: 6),
-                        
-                            // COLUNA BORDAS
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  // Cabeçalho
-                                  Container(
-                                    width: double.infinity,
-                                    padding: EdgeInsets.symmetric(vertical: 8),
-                                    color: colorScheme.primary,
-                                    child: Text(
-                                      'BORDAS',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                                child: Column(
+                                  children: [
+                                    // Cabeçalho
+                                    Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.symmetric(vertical: 8),
+                                      color: colorScheme.primary,
+                                      child: Text(
+                                        'SABORES',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: colorScheme.onPrimary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                        
-                                  // Lista de bordas
-                                  Expanded(
-                                    child: listaBordasSelecionadas.isEmpty
-                                      ? SizedBox()
-                                      : ListView.builder(
-                                          itemCount: listaBordasSelecionadas.length,
-                                          itemBuilder: (context, index) {
-                                            final borda = listaBordasSelecionadas[index];
-                                            final double quantidadeTotalBordas = listaBordasSelecionadas.fold(
-                                              0,
-                                              (total, produto) => total + produto.quantidade,
-                                            );
-                                            return Card(
-                                              margin: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          
+                                    // Lista de sabores
+                                    Expanded(
+                                      child: listaSaboresSelecionados.isEmpty
+                                        ? SizedBox()
+                                        : ListView.builder(
+                                            itemCount: listaSaboresSelecionados.length,
+                                            itemBuilder: (context, index) {
+                                              final sabor = listaSaboresSelecionados[index];
+                                              final double quantidadeTotalSabores = listaSaboresSelecionados.fold( // pega a lista de sabores selecionados e soma a quantidade de cada um
+                                                0,
+                                                (total, produto) => total + produto.quantidade,
+                                              );
+                                              return Card(
+                                                margin: EdgeInsets.symmetric(
+                                                    horizontal: 6, vertical: 4),
                                                 child: Padding(
-                                                  padding: EdgeInsets.all(2.0),
-                                                  child: Row(
-                                                    children: [
-                                                      GestureDetector(
-                                                      onTap: () async {
-                                                        if(borda.quantidade <= 1){
-                                                          shownDialogErrorTwoBottom(
-                                                            context: context,
-                                                            title: "Excluir ${borda.nome}?",
-                                                            message: "Deseja descartar ${borda.nome} do pedido?",
-                                                            icon: Icons.shopping_cart,
-                                                            onConfirm: () async {
+                                                  padding: EdgeInsets.symmetric(
+                                                      vertical: 8, horizontal: 8),
+                                                  child: Padding(
+                                                    padding: EdgeInsets.all(2.0),
+                                                    child: Row(
+                                                      children: [
+                                                        GestureDetector(
+                                                          onTap: () async {
+                                                            if(sabor.quantidade <= 1){
+                                                              // aparecer aviso 
+                                                              shownDialogErrorTwoBottom(
+                                                                context: context,
+                                                                title: "Excluir ${sabor.nome}?",
+                                                                message: "Deseja descartar ${sabor.nome} do pedido?",
+                                                                icon: Icons.shopping_cart,
+                                                                onConfirm: () async {
+                                                                  removerProdutoLista(
+                                                                    sabor.numero,
+                                                                    sabor.preco,
+                                                                    1,
+                                                                    sabor.observacaoEscrita,
+                                                                    'P', // ou 'B'
+                                                                  );
+                                                                  setState(() {
+                                                                    configurarPizza = true;
+                                                                    aparecerSaboresBordas = true;
+                                                                  });
+                                                                },
+                                                                onCancel: () async {
+                                                                  setState(() {
+                                                                    configurarPizza = true;
+                                                                    aparecerSaboresBordas = true;
+                                                                  });
+                                                                },
+                                                              );
+                                                            } else {
                                                               removerProdutoLista(
-                                                                borda.numero,
-                                                                borda.preco,
+                                                                sabor.numero,
+                                                                sabor.preco,
                                                                 1,
-                                                                borda.observacaoEscrita,
-                                                                'B', // ou 'B'
+                                                                sabor.observacaoEscrita,
+                                                                'P', // ou 'B'
                                                               );
                                                               setState(() {
                                                                 configurarPizza = true;
                                                                 aparecerSaboresBordas = true;
                                                               });
-                                                            },
-                                                            onCancel: () async {
-                                                              setState(() {
-                                                                configurarPizza = true;
-                                                                aparecerSaboresBordas = true;
-                                                              });
-                                                            },
-                                                          );
-                                                        } else {
-                                                          removerProdutoLista(
-                                                            borda.numero,
-                                                            borda.preco,
-                                                            1,
-                                                            borda.observacaoEscrita,
-                                                            'B', // ou 'B'
-                                                          );
-                                                          setState(() {
-                                                            configurarPizza = true;
-                                                            aparecerSaboresBordas = true;
-                                                          });
-                                                        }
-                                                      },
-                                                      child: Icon(
-                                                        Icons.delete, 
-                                                        size: 18,
-                                                        color: colorScheme.error,
-                                                      ),
-                                                    ),
-                                                      Text(
-                                                        formatarFracaoQuantidade(
-                                                          quantidadeItem: borda.quantidade,
-                                                          quantidadeTotal: quantidadeTotalBordas,
+                                                            }
+                                                          },
+                                                          child: Icon(
+                                                            Icons.delete, 
+                                                            size: 18,
+                                                            color: colorScheme.error,
+                                                          ),
                                                         ),
-                                                        style: TextStyle(fontWeight: FontWeight.bold),
-                                                      ),
-                                                      SizedBox(width: 4),
-                                                      Expanded(
-                                                        child: Column(
-                                                          mainAxisAlignment: MainAxisAlignment.center,
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              borda.nome,
-                                                              style: TextStyle(fontSize: 14),
+                                                        // Fração do sabor
+                                                        Text(
+                                                          formatarFracaoQuantidade(
+                                                            quantidadeItem: sabor.quantidade,
+                                                            quantidadeTotal: quantidadeTotalSabores,
+                                                          ),
+                                                           style: TextStyle(fontWeight: FontWeight.bold),
+                                                        ),
+                                                        SizedBox(width: 4),
+                                                        // Nome do sabor sem observação
+                                                        if(sabor.observacaoEscrita.isEmpty)
+                                                        Flexible(
+                                                          child: Text(
+                                                            sabor.nome,
+                                                            /*  style: TextStyle(fontWeight: FontWeight.bold), */
+                                                          ),
+                                                        ),
+                                                        SizedBox(width: 4),
+                                                        if(sabor.observacaoEscrita.isNotEmpty)
+                                                        Expanded(
+                                                          child: Align(
+                                                            alignment: Alignment.centerLeft,
+                                                            child: Column(
+                                                              mainAxisAlignment: MainAxisAlignment.center,
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text(
+                                                                  sabor.nome,
+                                                                  /*  style: TextStyle(fontWeight: FontWeight.bold), */
+                                                                ),
+                                                                if(sabor.observacaoEscrita.isNotEmpty)
+                                                                Text(
+                                                                  sabor.observacaoEscrita,
+                                                                  style: TextStyle(fontSize: 10),
+                                                                ),
+                                                              ],
                                                             ),
-                                                            if(borda.observacaoEscrita.isNotEmpty)
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                        
+                                  SizedBox(width: 6),
+                              
+                                  // COLUNA BORDAS
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        // Cabeçalho
+                                        Container(
+                                          width: double.infinity,
+                                          padding: EdgeInsets.symmetric(vertical: 8),
+                                          color: colorScheme.primary,
+                                          child: Text(
+                                            'BORDAS',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                              
+                                        // Lista de bordas
+                                        Expanded(
+                                          child: listaBordasSelecionadas.isEmpty
+                                            ? SizedBox()
+                                            : ListView.builder(
+                                                itemCount: listaBordasSelecionadas.length,
+                                                itemBuilder: (context, index) {
+                                                  final borda = listaBordasSelecionadas[index];
+                                                  final double quantidadeTotalBordas = listaBordasSelecionadas.fold(
+                                                    0,
+                                                    (total, produto) => total + produto.quantidade,
+                                                  );
+                                                  return Card(
+                                                    margin: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                                    child: Padding(
+                                                      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                                      child: Padding(
+                                                        padding: EdgeInsets.all(2.0),
+                                                        child: Row(
+                                                          children: [
+                                                            GestureDetector(
+                                                            onTap: () async {
+                                                              if(borda.quantidade <= 1){
+                                                                shownDialogErrorTwoBottom(
+                                                                  context: context,
+                                                                  title: "Excluir ${borda.nome}?",
+                                                                  message: "Deseja descartar ${borda.nome} do pedido?",
+                                                                  icon: Icons.shopping_cart,
+                                                                  onConfirm: () async {
+                                                                    removerProdutoLista(
+                                                                      borda.numero,
+                                                                      borda.preco,
+                                                                      1,
+                                                                      borda.observacaoEscrita,
+                                                                      'B', // ou 'B'
+                                                                    );
+                                                                    setState(() {
+                                                                      configurarPizza = true;
+                                                                      aparecerSaboresBordas = true;
+                                                                    });
+                                                                  },
+                                                                  onCancel: () async {
+                                                                    setState(() {
+                                                                      configurarPizza = true;
+                                                                      aparecerSaboresBordas = true;
+                                                                    });
+                                                                  },
+                                                                );
+                                                              } else {
+                                                                removerProdutoLista(
+                                                                  borda.numero,
+                                                                  borda.preco,
+                                                                  1,
+                                                                  borda.observacaoEscrita,
+                                                                  'B', // ou 'B'
+                                                                );
+                                                                setState(() {
+                                                                  configurarPizza = true;
+                                                                  aparecerSaboresBordas = true;
+                                                                });
+                                                              }
+                                                            },
+                                                            child: Icon(
+                                                              Icons.delete, 
+                                                              size: 18,
+                                                              color: colorScheme.error,
+                                                            ),
+                                                          ),
                                                             Text(
-                                                              borda.observacaoEscrita,
-                                                              style: TextStyle(fontSize: 10),
+                                                              formatarFracaoQuantidade(
+                                                                quantidadeItem: borda.quantidade,
+                                                                quantidadeTotal: quantidadeTotalBordas,
+                                                              ),
+                                                              style: TextStyle(fontWeight: FontWeight.bold),
+                                                            ),
+                                                            SizedBox(width: 4),
+                                                            Expanded(
+                                                              child: Column(
+                                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: [
+                                                                  Text(
+                                                                    borda.nome,
+                                                                    style: TextStyle(fontSize: 14),
+                                                                  ),
+                                                                  if(borda.observacaoEscrita.isNotEmpty)
+                                                                  Text(
+                                                                    borda.observacaoEscrita,
+                                                                    style: TextStyle(fontSize: 10),
+                                                                  ),
+                                                                ],
+                                                              ),
                                                             ),
                                                           ],
                                                         ),
                                                       ),
-                                                    ],
-                                                  ),
-                                                ),
+                                                    ),
+                                                  );
+                                                },
                                               ),
-                                            );
-                                          },
-                                        ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
                       ),
                     ],
                   ),
-                /*   if (showKeyboardNumero)
-                  // if(nunca)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: configurarPizza ? MediaQuery.of(context).size.height * 0.40 : MediaQuery.of(context).size.height * 0.40,
-                      width: MediaQuery.of(context).size.width,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                        ),
                       ),
-                      child: Column(
-                        children: [
-                          // GRID DO TECLADO
-                          Expanded(
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final int crossAxisCount = 3;
-                                final int itemCount = 12; // agora vai até 10 somente
-                                final double spacing = 8.0;
-      
-                                final int rows = (itemCount / crossAxisCount).ceil();
-      
-                                final double cellWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
-                                final double cellHeight = (constraints.maxHeight - (spacing * (rows - 1))) / rows;
-                                final double childAspectRatio = cellWidth / cellHeight;
-      
-                                return GridView.builder(
-                                  padding: const EdgeInsets.all(12),
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: itemCount,
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: crossAxisCount,
-                                        mainAxisSpacing: spacing,
-                                        crossAxisSpacing: spacing,
-                                        childAspectRatio: childAspectRatio,
-                                      ),
+
+                      if(modoTouch && !aparecerLista)
+                      Expanded(
+                        child: LayoutBuilder(
+                        builder: (context, boxConstraints) {
+                          // Largura proporcional: grupos ~20%, produtos o restante
+                          final double totalWidth = boxConstraints.maxWidth;
+                          final double gruposWidth = (totalWidth * 0.20).clamp(80.0, 220.0);
+                          final double totalHeight = boxConstraints.maxHeight;
+                          final double gruposHeight = (totalHeight * 0.05).clamp(80.0, 220.0);
+                          final double alturaItemGrupo = (boxConstraints.maxHeight * 0.08).clamp(55.0, 80.0);
+                          return Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // COLUNA DE GRUPOS (largura proporcional ~20%)
+                            if(funcoesController.listaGrupo.length > 1)
+                            SizedBox(
+                              width: gruposWidth,
+                              height: gruposHeight,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: ListView.builder(
+                                  itemCount: funcoesController.listaGruposPizza.length,
                                   itemBuilder: (context, index) {
-                                    if (index == 9) {
-                                      return ElevatedButton(
-                                        onPressed: _apagarNumero,
-                                        style: ElevatedButton.styleFrom(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.zero,
+                                    final grupo = funcoesController.listaGruposPizza[index];
+                                    final selecionado = grupoSelecionadoNoTouch == grupo['numero'].toString();
+                                    return GestureDetector(
+                                      onTap: () {
+                                        _guardarUltimoGrupoPosicao(index);
+                                        setState(() {
+                                          grupoSelecionadoNoTouch = grupo['numero'].toString();
+                                          listaSaboresPrecoPizzaDentroDoTamanhoNoGrupo = produtosPorGrupo(grupoSelecionadoNoTouch);
+                                        });
+                                      },
+                                      child: Container(
+                                        height: alturaItemGrupo,
+                                        margin: EdgeInsets.only(
+                                          top: 6,
+                                          left: 6,
+                                          right: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: selecionado
+                                              ? colorScheme.primary
+                                              : colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                                            child: Text(
+                                              grupo['nome'],
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: selecionado
+                                                    ? colorScheme.onPrimary
+                                                    : colorScheme.onSurface,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            ),
                                           ),
-                                          padding: EdgeInsets.zero,
-                                          backgroundColor: colorScheme.onPrimary,
-                                        ),
-                                        child: Icon(
-                                          Icons.backspace,
-                                          size: 32,
-                                          color: colorScheme.primary,
-                                        ),
-                                      );
-                                    } else if (index == 10) {
-                                      return ElevatedButton(
-                                        onPressed: () => _adicionarNumero("0"),
-                                        style: ElevatedButton.styleFrom(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.zero,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                        ),
-                                        child: const Text(
-                                          "0",
-                                          style: TextStyle(fontSize: 28),
-                                        ),
-                                      );
-                                    } else if (index == 11) {
-                                      // Botão para fechar teclado
-                                      return ElevatedButton(
-                                        onPressed: _confirmar,
-                                        style: ElevatedButton.styleFrom(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.zero,
-                                          ),
-                                          padding: EdgeInsets
-                                              .zero, // Remove o padding fixo
-                                          backgroundColor: colorScheme.primary,
-                                        ),
-                                        child: Icon(
-                                          Icons.keyboard_return,
-                                          size: 32, // ícone maior
-                                          color: colorScheme.onPrimary,
-                                        ),
-                                      );
-                                    }
-      
-                                    final numero = (index + 1).toString();
-                                    return ElevatedButton(
-                                      onPressed: () => _adicionarNumero(numero),
-                                      style: ElevatedButton.styleFrom(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.zero,
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          numero,
-                                          style: TextStyle(fontSize: 28),
                                         ),
                                       ),
                                     );
                                   },
-                                );
-                              },
-                            ),
-                          ),
-      
-                          // BOTÃO FECHAR TECLADO
-                          Container(
-                            width: double.infinity,
-                            height: 60,
-                            padding: EdgeInsets.only(
-                              bottom: 8,
-                              top: 8,
-                              right: 12,
-                              left: 12,
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  showKeyboardNumero = false;
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(0),
                                 ),
                               ),
-                              child: Icon(
-                                Icons.keyboard_arrow_down_outlined,
-                                size: 32, // ícone maior
-                                color: colorScheme.onPrimary,
+                            ),
+
+                            SizedBox(width: 8),
+
+                            // ÁREA DE PRODUTOS (Expanded — ocupa todo o restante)
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Número de colunas adaptável à largura disponível
+                                    const double itemMinWidth = 110.0;
+                                    final int cols = (constraints.maxWidth / itemMinWidth).floor().clamp(2, 8);
+                                    final bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+                                    // Fonte fixa na vertical
+                                    final double fontSize = isLandscape ? (constraints.maxWidth * 0.018).clamp(10.0, 20.0) : 14.0;
+                                    return GridView.builder(
+                                  padding: const EdgeInsets.all(8),
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: cols,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                    childAspectRatio: 1.5,
+                                  ),
+                                  itemCount: listaSaboresPrecoPizzaDentroDoTamanhoNoGrupo.length,
+                                  itemBuilder: (context, index) {
+                                    final sabor = listaSaboresPrecoPizzaDentroDoTamanhoNoGrupo[index];
+                                    final numero = sabor['NumeroSabor'];
+                                    final nome = sabor['Sabor'];
+                                    final valor = sabor['Preco_Final'];
+                                    final id = sabor['IdSabor'];
+
+                                    return GestureDetector(
+                                      onTap: () async {
+                                        aparecerLista = false;
+                                        if(valor == '0.00'){
+                                          showErrorDialog(
+                                            context: context,
+                                            title: "Sabor indisponível",
+                                            message: "O sabor $nome não está disponível para o tamanho selecionado",
+                                            icon: Icons.error,
+                                            onConfirm: () async {
+                                              setState(() {
+                                                mostrarGrupos = false;
+                                                mostrarSabores = true;
+                                              });
+                                            },
+                                          );
+                                        } else {
+                                          await funcaoConfigurarPizza(numero, nome, valor, id);
+                                          setState(() {
+                                            aparecerLista = false;
+                                            configurarPizza = true;
+                                            terminarPizza = false;
+                                            showKeyboardAlfa = false;
+                                            aparecerSaboresBordas = true;
+                                            sairModoTouch();
+                                            Future.delayed(Duration(milliseconds: 300), () {
+                                              if (quantidadePizzaBordaSelecionadoFocus.canRequestFocus) {
+                                                quantidadePizzaBordaSelecionadoFocus.requestFocus();
+                                              }
+                                            });
+                                          });
+                                        }
+                                      },
+                                      // Visual do card de produto
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            // Nome ocupa todo o espaço restante
+                                            Expanded(
+                                              child: Center(
+                                                child: AutoSizeText(
+                                                  nome,
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 3,
+                                                  minFontSize: 8,
+                                                  maxFontSize: isLandscape ? 12 : 14,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: isLandscape ? 12 : 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ), 
+                                                ),
+                                              ),
+                                            ),
+
+                                            // Preço
+                                            Align(
+                                              alignment: Alignment.bottomRight,
+                                              child: Container(
+                                                margin: EdgeInsets.only(right: 4, bottom: 4),
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 0,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: valor != "0.00"
+                                                      ? colorScheme.primary.withOpacity(0.8)
+                                                      : colorScheme.scrim,
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: valor != "0.00"
+                                              ? Text(
+                                                  "R\$ ${(double.tryParse(valor.toString()) ?? 0).toStringAsFixed(2)}",
+                                                  style: TextStyle(
+                                                    color: colorScheme.onPrimary,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: isLandscape ? 10 : 15,
+                                                  ),
+                                                )
+                                              : Icon(
+                                                  Icons.local_pizza,
+                                                  size: isLandscape ? 12 : 20,
+                                                  color: colorScheme.onPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      
+                                    );
+                                  },
+                                );
+                                }
                               ),
                             ),
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
+                        );
+                        }
+                        ),
                       ),
-                    ),
-                  ), */
+                      /* Expanded(
+                        flex: 1,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Container(
+                              color: Colors.amber,
+                            ),
+                          )
+                      ) */
+                    ],
+                  ),
+                
                   // if (showKeyboardAlfa)
                   if(nunca)
                   Positioned(
