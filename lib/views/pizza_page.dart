@@ -32,6 +32,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   final String tamanhoSelecionado = Get.arguments['tamanhoSelecionado'];
   final String comandaDoPedido = Get.arguments['comanda'];
   final String mesaDoPedido = Get.arguments['mesa'];
+  final String numeroDoPedidoArgs = Get.arguments['numeroDoPedido'];
 
   // edição de pizza
   final int index = Get.arguments['index'];
@@ -2534,7 +2535,15 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                         child: GestureDetector(
                           onTap: () {
                             if(configurarPizza){
-                              Get.back();
+                              /* Get.back(); */
+                              Get.toNamed('/garcom',
+                                preventDuplicates: false,
+                                arguments: {
+                                  'numeropedido': numeroDoPedidoArgs,
+                                  'comanda': comandaDoPedido,
+                                  'mesa': mesaDoPedido
+                                },
+                              );
                             } else if (terminarPizza){
                               setState(() {
                                 terminarPizza = false;
@@ -2545,7 +2554,15 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                 showKeyboardNumero = false;
                               });
                             } else {
-                              Get.back();
+                              Get.toNamed('/garcom',
+                                preventDuplicates: false,
+                                arguments: {
+                                  'numeropedido': numeroDoPedidoArgs,
+                                  'comanda': comandaDoPedido,
+                                  'mesa': mesaDoPedido
+                                },
+                              );
+                              /* Get.back(); */
                             }
                           },
                           child: Icon(
@@ -2621,8 +2638,17 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                       adicionais: adicionais,
                                     );
                                   }
+
+                                  Get.toNamed('/garcom',
+                                    preventDuplicates: false,
+                                    arguments: {
+                                      'numeropedido': numeroDoPedidoArgs,
+                                      'comanda': comandaDoPedido,
+                                      'mesa': mesaDoPedido
+                                    },
+                                  );
                                 
-                                  Get.back();
+                                  /* Get.back(); */
                                   return;
                                 }
       

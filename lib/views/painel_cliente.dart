@@ -36,6 +36,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
   List<dynamic> listaPedidosProntos = [];
   List<dynamic> listaPedidosSelecionados = [];
   List<dynamic> impressorasSelecionadas = [];
+  List<dynamic> impressorasSelecionadasNome = [];
 
   /// Flag de controle: evita chamadas duplicadas ao window_manager.
   /// false = interface visível | true = fullscreen ativo
@@ -54,24 +55,12 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
   @override
   void initState() {
     super.initState();
-    // Observa mudanças de ciclo de vida do app (ex.: foco ganho/perdido)
-    if(Platform.isWindows){
-      WidgetsBinding.instance.addObserver(this);
-    }
 
-    // Busca inicial dos dados
-    if(Platform.isWindows){
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _buscarEOrganizar();
-      });
-    }else{
-      _buscarEOrganizar();
-    }
+    _inicializarTudo();
 
     // Atualização periódica de dados a cada 5 segundos
     _timerDados = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      await painelController.buscarPedidosDelivery();
-      organizarListas();
+      await carregarLista();
     });
 
     painelController.estaNoPainelCozinha.value = false;
@@ -82,16 +71,80 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     }
 
     carregarConfiguracaoSom();
-    carregarLista();
+  }
+
+  Future<void> _inicializarTudo() async {
+    if(Platform.isWindows){
+      WidgetsBinding.instance.addObserver(this);
+    }
+    await _carregarConfiguracaoImpressoras();
+    _carregarConfiguracaoImpressorasNome();
   }
 
   Future<void> carregarLista() async {
+    listaPedidosSelecionados.clear();
     if(impressorasSelecionadas.isEmpty){
       listaPedidosSelecionados = await painelClienteController.buscarPedidosSemImpressora();
     } else {
-      listaPedidosSelecionados = await painelClienteController.buscarPedidosComImpressora(impressorasSelecionadas.map((e) => e['numero']).join(','));
+      for(var impressora in impressorasSelecionadas){
+        listaPedidosSelecionados.addAll(await painelClienteController.buscarPedidosComImpressora(impressora['numero']));
+      }
     }
     organizarListas();
+  }
+
+  Future<void> _salvarConfiguracaoImpressoras() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> listaImpressoras = [];
+    for(var impressora in impressorasSelecionadas){
+      listaImpressoras.add(impressora['numero']);
+    }
+    await prefs.setStringList('impressorasSelecionadas', listaImpressoras);
+  }
+
+  Future<void> _carregarConfiguracaoImpressoras() async {
+    // Garante que o controller tenha buscado as impressoras disponíveis primeiro
+    await painelClienteController.buscarImpressoras();
+    
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? listaImpressoras = prefs.getStringList('impressorasSelecionadas');
+    if(listaImpressoras != null){
+      impressorasSelecionadas.clear();
+      for(var numero in listaImpressoras){
+        try {
+          var impSelecionada = painelClienteController.impressoras.firstWhere((element) => element['numero'] == numero);
+          impressorasSelecionadas.add(impSelecionada);
+        } catch(e) {
+          // Ignora se a impressora não for mais encontrada
+        }
+      }
+    }
+    carregarLista();
+  }
+
+  Future<void> _salvarConfiguracaoImpressorasNome() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> listaImpressorasNome = [];
+    for(var impressora in impressorasSelecionadasNome){
+      listaImpressorasNome.add(impressora);
+    }
+    await prefs.setStringList('impressorasSelecionadasNome', listaImpressorasNome);
+  }
+
+  Future<void> _carregarConfiguracaoImpressorasNome() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? listaImpressorasNome = prefs.getStringList('impressorasSelecionadasNome');
+    if(listaImpressorasNome != null){
+      impressorasSelecionadasNome.clear();
+      for(var nome in listaImpressorasNome){
+        try {
+          var impSelecionada = painelClienteController.impressoras.firstWhere((element) => element['nome'] == nome);
+          impressorasSelecionadasNome.add(impSelecionada['nome']);
+        } catch(e) {
+          // Ignora se a impressora não for mais encontrada
+        }
+      }
+    }
   }
 
   Future<void> popupSelecaoImpressora() async {
@@ -101,9 +154,10 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
         return AlertDialog(
           title: Center(
             child: Text(
-              'Selecione as impressoras', 
+              textAlign: TextAlign.center,
+              'Selecione as impressoras:', 
               style: TextStyle(
-                fontSize: 15
+                fontSize: 22
               ),
             ),
           ),
@@ -115,18 +169,25 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                 child: ListView.builder(
                   itemCount: painelClienteController.impressoras.length,
                   itemBuilder: (context, index) {
-                    final impressora =
-                        painelClienteController.impressoras[index];
+                    final impressora = painelClienteController.impressoras[index];
 
                     return CheckboxListTile(
-                      title: Text(impressora['nome']),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(
+                        impressora['nome'],
+                        style: TextStyle(
+                          fontSize: 15
+                        ),
+                      ),
                       value: impressorasSelecionadas.contains(impressora),
                       onChanged: (value) {
                         setStateDialog(() {
                           if (value == true) {
                             impressorasSelecionadas.add(impressora);
+                            impressorasSelecionadasNome.add(impressora['nome']);
                           } else {
                             impressorasSelecionadas.remove(impressora);
+                            impressorasSelecionadasNome.remove(impressora['nome']);
                           }
                         });
                       },
@@ -141,10 +202,14 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
               width: double.infinity,
               child: TextButton(
                 onPressed: () { 
+                  _salvarConfiguracaoImpressoras();
+                  _carregarConfiguracaoImpressoras();
+                  _salvarConfiguracaoImpressorasNome();
+                  _carregarConfiguracaoImpressorasNome();
                   carregarLista();
                   Navigator.pop(context);
                 },
-                child: Text('Fechar'),
+                child: Text('Salvar'),
               ),
             ),
           ],
@@ -293,7 +358,7 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
 
   // Dados
   Future<void> _buscarEOrganizar() async {
-    await painelController.buscarPedidosDelivery();
+    await carregarLista();
     organizarListas();
   }
 
@@ -301,13 +366,19 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
     if (!mounted) return;
     listaPedidosEmPreparo.clear();
     listaPedidosProntos.clear();
+    
     setState(() {
       if (listaPedidosSelecionados.isNotEmpty) {
+        final Set<String> idsProcessados = {};
         for (var pedido in listaPedidosSelecionados) {
-          if (pedido['statuspainel'] == '1') {
-            listaPedidosEmPreparo.add(pedido);
-          } else if (pedido['statuspainel'] == '2') {
-            listaPedidosProntos.add(pedido);
+          final String? id = pedido['numeropedido']?.toString();
+          if (id != null && !idsProcessados.contains(id)) {
+            idsProcessados.add(id);
+            if (pedido['statuspainel'] == '1') {
+              listaPedidosEmPreparo.add(pedido);
+            } else if (pedido['statuspainel'] == '2') {
+              listaPedidosProntos.add(pedido);
+            }
           }
         }
       }
@@ -1117,14 +1188,34 @@ class _PainelClienteState extends State<PainelCliente> with WidgetsBindingObserv
                         onTap: () {
                           popupSelecaoImpressora();
                         },
-                        child: Text(
-                          'ACOMPANHE SEU PEDIDO',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.montserrat(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: appBarLetterSpacing,
-                            fontSize: appBarFontSize,
+                        child: Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                'ACOMPANHE SEU PEDIDO',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: appBarLetterSpacing,
+                                  fontSize: appBarFontSize,
+                                ),
+                              ),
+                              if(impressorasSelecionadasNome.isNotEmpty)
+                              Text(
+                                '${impressorasSelecionadasNome.join(", ")}',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: appBarLetterSpacing,
+                                  fontSize: appBarFontSize * 0.7,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

@@ -896,6 +896,7 @@ class GarcomPageState extends State<GarcomPage>
           'produtoSelecionado': produto,
           'index': index,
           'editar': true,
+          'numeroDoPedido': numeroDoPedido,
         },
       )?.then((_) {
         if (mounted) {
@@ -3421,6 +3422,7 @@ class GarcomPageState extends State<GarcomPage>
                                         'mesa': mesaController.text,
                                         'index': index,
                                         'editar': false,
+                                        'numeroDoPedido': numeroDoPedido,
                                       },
                                     )?.then((_) {
                                       if (mounted) {
@@ -10188,6 +10190,7 @@ class GarcomPageState extends State<GarcomPage>
                                           'mesa': mesaController.text,
                                           'index': index,
                                           'editar': false,
+                                          'numeroDoPedido': numeroDoPedido,
                                         },
                                       )?.then((_) {
                                         if (mounted) {
@@ -11305,6 +11308,7 @@ class GarcomPageState extends State<GarcomPage>
                                         'mesa': mesaController.text,
                                         'index': index,
                                         'editar': false,
+                                        'numeroDoPedido': numeroDoPedido,
                                       },
                                     )?.then((_) {
                                       if (mounted) {
