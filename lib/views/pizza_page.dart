@@ -2360,83 +2360,112 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
     return LayoutBuilder(
       builder: (context, constraints) {
         final tamanho = min(
-          (constraints.maxWidth) * 0.6,
-          (constraints.maxHeight) * 0.6,
+          (constraints.maxWidth),
+          (constraints.maxHeight),
         );
 
-        return Center(
-          child: SizedBox(
-            width: tamanho,
-            height: tamanho,
-            child: Stack(
-              alignment: Alignment.center,
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Padding 
+            if(sabores.isNotEmpty)
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // BORDA - ANEL EXTERNO
-                if (bordas.isNotEmpty)
-                  SizedBox(
-                    width: tamanho,
-                    height: tamanho,
-                    child: PieChart(
-                      PieChartData(
-                        startDegreeOffset: -90,
-                        sectionsSpace: 1,
-                        centerSpaceRadius: tamanho * 0.32,
-                        sections: itemPizzaGraficoController.criarSecoes(
-                          bordas,
-                          tamanho * 0.47,
-                          mostrarTexto: false,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // SABORES - PARTE INTERNA
-                if (sabores.isNotEmpty)
-                  SizedBox(
-                    width: tamanho * 0.80,
-                    height: tamanho * 0.80,
-                    child: PieChart(
-                      PieChartData(
-                        startDegreeOffset: -90,
-                        sectionsSpace: 2,
-                        centerSpaceRadius: tamanho * 0.16,
-                        sections: itemPizzaGraficoController.criarSecoes(
-                          sabores,
-                          tamanho * 0.40,
-                          mostrarTexto: false,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                /* // CENTRO
-                Container(
-                  width: tamanho * 0.30,
-                  height: tamanho * 0.30,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface,
-                    boxShadow: const [
-                      BoxShadow(
-                        blurRadius: 5,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'PIZZA',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ), */
+                Text("Sabores", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),),
               ],
             ),
-          ),
+
+            // Grafico 
+            Center(
+              child: SizedBox(
+                width: tamanho,
+                height: tamanho,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // BORDA - ANEL EXTERNO
+                    if (bordas.isNotEmpty)
+                    SizedBox(
+                      width: tamanho,
+                      height: tamanho,
+                      child: PieChart(
+                        PieChartData(
+                          startDegreeOffset: 180,
+                          sectionsSpace: 1,
+                          /* centerSpaceRadius: tamanho * 0.32, */
+                          centerSpaceRadius: 0,
+                          sections: itemPizzaGraficoController.criarSecoes(
+                            bordas,
+                            tamanho * 0.47,
+                            mostrarTexto: true,
+                          ),
+                        ),
+                      ),
+                    ),
+            
+                    // SABORES - PARTE INTERNA
+                    if (sabores.isNotEmpty)
+                    SizedBox(
+                      width: tamanho * 0.80,
+                      height: tamanho * 0.80,
+                      child: PieChart(
+                        PieChartData(
+                          startDegreeOffset: -90,
+                          sectionsSpace: 2,
+                          // centerSpaceRadius: tamanho * 0.16,
+                          centerSpaceRadius: 0,
+                          sections: itemPizzaGraficoController.criarSecoes(
+                            sabores,
+                            tamanho * 0.40,
+                            mostrarTexto: false,
+                          ),
+                        ),
+                      ),
+                    ),
+            
+                    /* // CENTRO
+                    Container(
+                      width: tamanho * 0.30,
+                      height: tamanho * 0.30,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surface,
+                        boxShadow: const [
+                          BoxShadow(
+                            blurRadius: 5,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'PIZZA',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ), */
+                  ],
+                ),
+              ),
+            ),
+
+            // Padding 
+            if(bordas.isNotEmpty)
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text("Bordas", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),)
+              ],
+            ),
+          ],
         );
       },
     );
@@ -3843,6 +3872,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                               ),
                             ),
                             // GRAFICO PIZZA
+                            if(configurarPizza && modoCarrinho)
                             Expanded(
                               flex: 1,
                               child: Padding(

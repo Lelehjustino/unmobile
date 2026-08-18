@@ -42,6 +42,7 @@ class ItemPizzaGrafico {
       final percentual = (item.quantidade! / total) * 100;
       final nome = item.nome;
       final cor = item.id == 'P' ? _obterCorPizza(index): _obterCorBorda(index);
+      final corTexto = item.id == 'P' ? Colors.black : Colors.black;
 
       return PieChartSectionData(
         value: item.quantidade!,
@@ -51,7 +52,7 @@ class ItemPizzaGrafico {
             ? '${nome}'
             : '',
         titleStyle: TextStyle(
-          color: Colors.white,
+          color: corTexto,
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),

@@ -889,6 +889,9 @@ class CheckinPageState extends State<CheckinPage>
     int fim = 0;
     bool hojeEhFeriado = await buscarFeriado();
 
+    observacoesFuncaoFiltrada.clear();
+    adicionaisFuncaoFiltrada.clear();
+
     if (hojeEhFeriado){
       inicio = 7;
       fim = 8;
@@ -918,45 +921,92 @@ class CheckinPageState extends State<CheckinPage>
       fim = 7;
     }
     for(var i = 0; i < observacoesEadicionaisFuncao.length; i++){
-      if (hojeEhFeriado) {
-        final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
-        final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
+      if((observacoesEadicionaisFuncao[i]['diasDaSemanaObs'].toString().substring(inicio, fim) == '1')){
+        if (hojeEhFeriado) {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioObs'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimObs'].toString();
 
-        final horaInicio = int.parse(inicioObs.substring(0, 2));
-        final minutoInicio = int.parse(inicioObs.substring(3, 5));
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
 
-        final horaFim = int.parse(fimObs.substring(0, 2));
-        final minutoFim = int.parse(fimObs.substring(3, 5));
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
 
-        final inicioHorario = horaInicio * 60 + minutoInicio;
-        final fimHorario = horaFim * 60 + minutoFim;
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
 
-        final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
 
-        if (agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario) {
-          adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          if (agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario) {
+            observacoesFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
+        } else {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioObs'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimObs'].toString();
+
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
+
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
+
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+          if(agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario){
+            observacoesFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
         }
-      } else {
-        final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
-        final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
+      }
 
-        final horaInicio = int.parse(inicioObs.substring(0, 2));
-        final minutoInicio = int.parse(inicioObs.substring(3, 5));
+      /* if(observacoesEadicionaisFuncao[i]['diasDaSemanaObs'].toString().substring(7, 8) == '1' && hojeEhFeriado){
+        observacoesFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+      } */
+      
+      if((observacoesEadicionaisFuncao[i]['diasDaSemanaAdd'].toString().substring(inicio, fim) == '1')){
+        if (hojeEhFeriado) {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
 
-        final horaFim = int.parse(fimObs.substring(0, 2));
-        final minutoFim = int.parse(fimObs.substring(3, 5));
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
 
-        final inicioHorario = horaInicio * 60 + minutoInicio;
-        final fimHorario = horaFim * 60 + minutoFim;
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
 
-        final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
 
-        if(agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario){
-          adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+          if (agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario) {
+            adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
+        } else {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
+
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
+
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
+
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+          if(agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario){
+            adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
         }
       }
     }
   }
+
 
   // Função verificação produto
   verificacaoProduto(String numeroComanda, String numeroproduto_FK) async {
