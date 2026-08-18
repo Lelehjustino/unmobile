@@ -24,8 +24,8 @@ class NotesPage extends StatefulWidget {
 class NotesPageState extends State<NotesPage> {
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
-  final FuncoesController funcoesController = Get.put(FuncoesController());
-   final painelController = Get.put(PainelController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
+   final painelController = Get.find<PainelController>();
 
   final TextEditingController nomeClienteController = TextEditingController();
   final TextEditingController quantidadeController = TextEditingController();

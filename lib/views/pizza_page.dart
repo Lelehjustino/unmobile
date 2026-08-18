@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -9,10 +10,12 @@ import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
+import 'package:un_recepcao/models/itemPizzaGrafico.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/widgets/side_nav.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get/get.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class PizzaPage extends StatefulWidget {
   const PizzaPage({super.key});
@@ -33,6 +36,12 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   final String comandaDoPedido = Get.arguments['comanda'];
   final String mesaDoPedido = Get.arguments['mesa'];
   final String numeroDoPedidoArgs = Get.arguments['numeroDoPedido'];
+
+  final String clienteIdArgs = Get.arguments['clienteId'] ?? '';
+  final String clienteNomeArgs = Get.arguments['clienteNome'] ?? '';
+  final String clienteCpfArgs = Get.arguments['clienteCpf'] ?? '';
+  final String clienteTelefoneArgs = Get.arguments['clienteTelefone'] ?? '';
+  final String clienteDataNascimentoArgs = Get.arguments['clienteDataNascimento'] ?? '';
 
   // edição de pizza
   final int index = Get.arguments['index'];
@@ -164,8 +173,9 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   bool podeTrocarTamanho = false;
   String numeroProdutoTamanhoPizza = "";
 
-  final FuncoesController funcoesController = Get.put(FuncoesController());
-  final PainelController painelController = Get.put(PainelController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
+  final PainelController painelController = Get.find<PainelController>();
+  final ItemPizzaGrafico itemPizzaGraficoController = Get.find<ItemPizzaGrafico>();
 
   bool editarPizza = false;
 
@@ -237,6 +247,9 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
     Future.delayed(Duration(milliseconds: 300), () {
       verificarEdicao();
     });
+
+    itemPizzaGraficoController.listaSabores.clear();
+    itemPizzaGraficoController.listaBordas.clear();
 
   }
 
@@ -333,6 +346,34 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
         aparecerSaboresBordas = true;
       }
     });
+  }
+
+  void _atualizarGrafico() {
+    // 1) Limpa o que já existe
+    itemPizzaGraficoController.listaSabores.clear();
+    itemPizzaGraficoController.listaBordas.clear();
+
+    // 2) Adiciona os sabores selecionados
+    for (var sabor in listaSaboresSelecionados) {
+      itemPizzaGraficoController.listaSabores.add(
+        ItemPizzaGrafico(
+          nome: sabor.nome,
+          quantidade: sabor.quantidade.toDouble(),
+          id: sabor.id,
+        ),
+      );
+    }
+
+    // 3) Adiciona as bordas selecionadas
+    for (var borda in listaBordasSelecionadas) {
+      itemPizzaGraficoController.listaBordas.add(
+        ItemPizzaGrafico(
+          nome: borda.nome,
+          quantidade: borda.quantidade.toDouble(),
+          id: borda.id,
+        ),
+      );
+    }
   }
 
   void limparView() {
@@ -2309,6 +2350,98 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
     );
   }
 
+  Widget _buildPizzaVisual({
+    required List<ItemPizzaGrafico> sabores,
+    required List<ItemPizzaGrafico> bordas,
+  }) {
+    if (sabores.isEmpty && bordas.isEmpty) {
+      return Container();
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tamanho = min(
+          (constraints.maxWidth) * 0.6,
+          (constraints.maxHeight) * 0.6,
+        );
+
+        return Center(
+          child: SizedBox(
+            width: tamanho,
+            height: tamanho,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // BORDA - ANEL EXTERNO
+                if (bordas.isNotEmpty)
+                  SizedBox(
+                    width: tamanho,
+                    height: tamanho,
+                    child: PieChart(
+                      PieChartData(
+                        startDegreeOffset: -90,
+                        sectionsSpace: 1,
+                        centerSpaceRadius: tamanho * 0.32,
+                        sections: itemPizzaGraficoController.criarSecoes(
+                          bordas,
+                          tamanho * 0.47,
+                          mostrarTexto: false,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // SABORES - PARTE INTERNA
+                if (sabores.isNotEmpty)
+                  SizedBox(
+                    width: tamanho * 0.80,
+                    height: tamanho * 0.80,
+                    child: PieChart(
+                      PieChartData(
+                        startDegreeOffset: -90,
+                        sectionsSpace: 2,
+                        centerSpaceRadius: tamanho * 0.16,
+                        sections: itemPizzaGraficoController.criarSecoes(
+                          sabores,
+                          tamanho * 0.40,
+                          mostrarTexto: false,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                /* // CENTRO
+                Container(
+                  width: tamanho * 0.30,
+                  height: tamanho * 0.30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface,
+                    boxShadow: const [
+                      BoxShadow(
+                        blurRadius: 5,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'PIZZA',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ), */
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Dialogo de erro um botão -- vermelho
   Future<void> showErrorDialog({
     required BuildContext context,
@@ -2535,13 +2668,16 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                         child: GestureDetector(
                           onTap: () {
                             if(configurarPizza){
-                              /* Get.back(); */
-                              Get.toNamed('/garcom',
-                                preventDuplicates: false,
+                              Get.offAllNamed('/garcom',
                                 arguments: {
                                   'numeropedido': numeroDoPedidoArgs,
                                   'comanda': comandaDoPedido,
-                                  'mesa': mesaDoPedido
+                                  'mesa': mesaDoPedido,
+                                  'clienteId': clienteIdArgs,
+                                  'clienteNome': clienteNomeArgs,
+                                  'clienteCpf': clienteCpfArgs,
+                                  'clienteTelefone': clienteTelefoneArgs,
+                                  'clienteDataNascimento': clienteDataNascimentoArgs,
                                 },
                               );
                             } else if (terminarPizza){
@@ -2554,15 +2690,18 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                 showKeyboardNumero = false;
                               });
                             } else {
-                              Get.toNamed('/garcom',
-                                preventDuplicates: false,
+                              Get.offAllNamed('/garcom',
                                 arguments: {
                                   'numeropedido': numeroDoPedidoArgs,
                                   'comanda': comandaDoPedido,
-                                  'mesa': mesaDoPedido
+                                  'mesa': mesaDoPedido,
+                                  'clienteId': clienteIdArgs,
+                                  'clienteNome': clienteNomeArgs,
+                                  'clienteCpf': clienteCpfArgs,
+                                  'clienteTelefone': clienteTelefoneArgs,
+                                  'clienteDataNascimento': clienteDataNascimentoArgs,
                                 },
                               );
-                              /* Get.back(); */
                             }
                           },
                           child: Icon(
@@ -2639,16 +2778,18 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                     );
                                   }
 
-                                  Get.toNamed('/garcom',
-                                    preventDuplicates: false,
+                                  Get.offAllNamed('/garcom',
                                     arguments: {
                                       'numeropedido': numeroDoPedidoArgs,
                                       'comanda': comandaDoPedido,
-                                      'mesa': mesaDoPedido
+                                      'mesa': mesaDoPedido,
+                                      'clienteId': clienteIdArgs,
+                                      'clienteNome': clienteNomeArgs,
+                                      'clienteCpf': clienteCpfArgs,
+                                      'clienteTelefone': clienteTelefoneArgs,
+                                      'clienteDataNascimento': clienteDataNascimentoArgs,
                                     },
                                   );
-                                
-                                  /* Get.back(); */
                                   return;
                                 }
       
@@ -3180,17 +3321,6 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                       await buscarSaboresPrecoPizzaDentroDoTamanho(numeroTamanhoPizza);
                                     }
                                     setState(() {
-                                      // aqui eu apenas adicionoas o sabor ou borda a lista de itens
-                                      // se tiver algum item em ambas as listas, aparece o botão em cima 
-                                      /* configurarPizza = true;
-                                      aparecerCardapio = true;
-                                      aparecerSaboresBordas = true; */
-      
-                                      /* Future.delayed(Duration(milliseconds: 300), () {
-                                        if (cardapioFocus.canRequestFocus) {
-                                          cardapioFocus.requestFocus();
-                                        }
-                                      }); */
       
                                       campoAtivo = 'cardapioController';
                                       aparecerLista = false;
@@ -3203,6 +3333,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                     });
                                   }
                                 }
+                                _atualizarGrafico();
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.tertiary,
@@ -3334,7 +3465,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                 // Lista de sabores e bordas selecionadas 
                 if(aparecerSaboresBordas && (modoCarrinho || terminarPizza))
                 Expanded(
-                  child: Row(
+                  child: Column(
                     children: [
                       Expanded(
                         flex: 1,
@@ -3374,14 +3505,14 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                 (total, produto) => total + produto.quantidade,
                                               );
                                               return Card(
-                                                margin: EdgeInsets.symmetric(
-                                                    horizontal: 6, vertical: 4),
+                                                margin: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                                                 child: Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      vertical: 8, horizontal: 8),
+                                                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                                                   child: Padding(
                                                     padding: EdgeInsets.all(2.0),
                                                     child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
                                                       children: [
                                                         GestureDetector(
                                                           onTap: () async {
@@ -3398,12 +3529,13 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                                     sabor.preco,
                                                                     1,
                                                                     sabor.observacaoEscrita,
-                                                                    'P', // ou 'B'
+                                                                    sabor.id // ou 'B'
                                                                   );
                                                                   setState(() {
                                                                     configurarPizza = true;
                                                                     aparecerSaboresBordas = true;
                                                                   });
+                                                                  _atualizarGrafico();
                                                                 },
                                                                 onCancel: () async {
                                                                   setState(() {
@@ -3418,16 +3550,17 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                                 sabor.preco,
                                                                 1,
                                                                 sabor.observacaoEscrita,
-                                                                'P', // ou 'B'
+                                                                sabor.id
                                                               );
                                                               setState(() {
                                                                 configurarPizza = true;
                                                                 aparecerSaboresBordas = true;
                                                               });
                                                             }
+                                                            _atualizarGrafico();
                                                           },
                                                           child: Icon(
-                                                            Icons.delete, 
+                                                            Icons.remove, 
                                                             size: 18,
                                                             color: colorScheme.error,
                                                           ),
@@ -3469,6 +3602,36 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                                 ),
                                                               ],
                                                             ),
+                                                          ),
+                                                        ),
+                                                        GestureDetector(
+                                                          onTap: () async {
+                                                            final produtoNome = sabor.nome;
+                                                            final produtoValor = sabor.preco;
+                                                            final produtoNumero = sabor.numero;
+                                                            final produtoQuantidade = 1.0;
+                                                            final observacaoEscrita = sabor.observacaoEscrita;
+                                                            if(produtoNome != ""){
+                                                              await adicionarProdutoLista(
+                                                                produtoNome,
+                                                                produtoValor,
+                                                                produtoNumero,
+                                                                produtoQuantidade,
+                                                                observacaoEscrita,
+                                                                sabor.id
+                                                              );
+                                                              // await buscarSaboresPrecoPizzaDentroDoTamanho(numeroTamanhoPizza);
+                                                              setState(() {
+                                                                configurarPizza = true;
+                                                                aparecerSaboresBordas = true;
+                                                              });
+                                                              _atualizarGrafico();
+                                                            }
+                                                          },
+                                                          child: Icon(
+                                                            Icons.add, 
+                                                            size: 18,
+                                                            color: colorScheme.primary,
                                                           ),
                                                         ),
                                                       ],
@@ -3523,6 +3686,8 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                       child: Padding(
                                                         padding: EdgeInsets.all(2.0),
                                                         child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                          crossAxisAlignment: CrossAxisAlignment.center,
                                                           children: [
                                                             GestureDetector(
                                                             onTap: () async {
@@ -3544,6 +3709,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                                       configurarPizza = true;
                                                                       aparecerSaboresBordas = true;
                                                                     });
+                                                                    _atualizarGrafico();
                                                                   },
                                                                   onCancel: () async {
                                                                     setState(() {
@@ -3565,9 +3731,10 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                                   aparecerSaboresBordas = true;
                                                                 });
                                                               }
+                                                              _atualizarGrafico();
                                                             },
                                                             child: Icon(
-                                                              Icons.delete, 
+                                                              Icons.remove, 
                                                               size: 18,
                                                               color: colorScheme.error,
                                                             ),
@@ -3580,7 +3747,40 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                               style: TextStyle(fontWeight: FontWeight.bold),
                                                             ),
                                                             SizedBox(width: 4),
-                                                            Expanded(
+
+                                                            // SEM OBSERVAÇÃO
+                                                            if (borda.observacaoEscrita.isEmpty)
+                                                            Flexible(
+                                                              child: Text(
+                                                                borda.nome,
+                                                              ),
+                                                            ),
+
+                                                            SizedBox(width: 4),
+
+                                                            // COM OBSERVAÇÃO
+                                                            if (borda.observacaoEscrita.isNotEmpty)
+                                                              Expanded(
+                                                                child: Align(
+                                                                  alignment: Alignment.centerLeft,
+                                                                  child: Column(
+                                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                                    children: [
+                                                                      Text(
+                                                                        borda.nome,
+                                                                      ),
+                                                                      Text(
+                                                                        borda.observacaoEscrita,
+                                                                        style: const TextStyle(
+                                                                          fontSize: 10,
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                           /*  Expanded(
                                                               child: Column(
                                                                 mainAxisAlignment: MainAxisAlignment.center,
                                                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -3596,7 +3796,37 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                                                   ),
                                                                 ],
                                                               ),
+                                                            ), */
+                                                            GestureDetector(
+                                                            onTap: () async {
+                                                              final produtoNome = borda.nome;
+                                                              final produtoValor = borda.preco;
+                                                              final produtoNumero = borda.numero;
+                                                              final produtoQuantidade = 1.0;
+                                                              final observacaoEscrita = borda.observacaoEscrita;
+                                                              if(produtoNome != ""){
+                                                                await adicionarProdutoLista(
+                                                                  produtoNome,
+                                                                  produtoValor,
+                                                                  produtoNumero,
+                                                                  produtoQuantidade,
+                                                                  observacaoEscrita,
+                                                                  'B'
+                                                                );
+                                                                // await buscarSaboresPrecoPizzaDentroDoTamanho(numeroTamanhoPizza);
+                                                                setState(() {
+                                                                  configurarPizza = true;
+                                                                  aparecerSaboresBordas = true;
+                                                                });
+                                                              }
+                                                              _atualizarGrafico();
+                                                            },
+                                                            child: Icon(
+                                                              Icons.add, 
+                                                              size: 18,
+                                                              color: colorScheme.primary,
                                                             ),
+                                                          ),
                                                           ],
                                                         ),
                                                       ),
@@ -3611,9 +3841,19 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                   ],
                                 ),
                               ),
-                      ),
-                    ],
-                  ),
+                            ),
+                            // GRAFICO PIZZA
+                            Expanded(
+                              flex: 1,
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Container(
+                                  child: _buildPizzaVisual(bordas: itemPizzaGraficoController.listaBordas, sabores: itemPizzaGraficoController.listaSabores),
+                                ),
+                              )
+                            ),
+                          ],
+                        ),
                       ),
 
                       if(modoTouch && !aparecerLista)

@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:un_recepcao/models/itemPizzaGrafico.dart';
 import 'package:un_recepcao/services/remote_config_service.dart';
 import 'package:un_recepcao/views/cupom_avulso_page.dart';
 import 'package:un_recepcao/views/fechar_page.dart';
@@ -9,7 +10,9 @@ import 'package:un_recepcao/views/fechar_page.dart';
 import 'firebase_options.dart';
 
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
+import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/garcom_controller.dart';
+import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/controllers/zerar_atendimento.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
 import 'package:un_recepcao/controllers/connectivity_controller.dart';
@@ -58,6 +61,11 @@ void main() async {
   Get.put(ComandaCarrinhoController(), permanent: true);
   Get.put(ZerarAtendimentoController(), permanent: true);
   Get.put(GarcomController(), permanent: true);
+  // Registrados como permanent: onInit() e carregarTudo() são chamados apenas uma vez.
+  // Todas as views devem usar Get.find<FuncoesController>() — nunca Get.put().
+  Get.put(FuncoesController(), permanent: true);
+  Get.put(PainelController(), permanent: true);
+  Get.put(ItemPizzaGrafico(), permanent: true);
 
   ServicoNotificacao.configurarAudio();
 

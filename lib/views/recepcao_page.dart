@@ -59,8 +59,8 @@ class RecepcaoPage extends StatefulWidget {
 
 class RecepcaoPageState extends State<RecepcaoPage> {
   String versaoAplicacao = FuncoesController().versaoDoApp;
-  final funcoesController = Get.put(FuncoesController());
-  final painelController = Get.put(PainelController());
+  final funcoesController = Get.find<FuncoesController>();
+  final painelController = Get.find<PainelController>();
   // final pedidosController = Get.put(PedidosController());
 
   final ScrollController _scrollController = ScrollController();

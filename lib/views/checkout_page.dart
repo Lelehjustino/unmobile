@@ -25,7 +25,7 @@ class CheckoutPageState extends State<CheckoutPage>
     with SingleTickerProviderStateMixin {
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
   
   final TextEditingController comandaController = TextEditingController();
   final FocusNode comandaFocus = FocusNode();

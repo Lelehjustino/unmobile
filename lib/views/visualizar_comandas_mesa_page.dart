@@ -26,7 +26,7 @@ class _VisualizarComandasMesaPageState extends State<VisualizarComandasMesaPage>
   final String? mesaSelecionada = Get.arguments['mesa'];
   final int? indexMesa = Get.arguments['indexMesa'];
 
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
   String versaoAplicacao = FuncoesController().versaoDoApp;
 
   bool aparecerNote = false;

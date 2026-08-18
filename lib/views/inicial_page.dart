@@ -30,7 +30,7 @@ class InicialPage extends StatefulWidget {
 }
 
 class InicialPageState extends State<InicialPage> {
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
   late String versaoAplicacao = funcoesController.versaoDoApp;
   
   // Controller reativo para o fluxo de entrarAutomaticamente

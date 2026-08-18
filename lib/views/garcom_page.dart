@@ -30,6 +30,19 @@ import 'package:un_recepcao/widgets/side_nav.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get/get.dart';
 
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}
+
 // Modelo auxiliar somente usado para montar pizza
 class PartesPizza {
   List<String> sabores;
@@ -302,7 +315,7 @@ class GarcomPageState extends State<GarcomPage>
 
   // Variável cliqueiFazerPedido foi removida a favor do estado global no FuncoesController
 
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
 
   bool cliqueiFazerPedido = false;
 
@@ -358,7 +371,7 @@ class GarcomPageState extends State<GarcomPage>
   bool cpfErro = false;
   bool nomeErro = false;
 
-  bool clienteJaCadastrado = false;
+  RxBool clienteJaCadastrado = false.obs;
   int numeroCliente = 0;
   String numeroClienteString = "0";
 
@@ -373,6 +386,10 @@ class GarcomPageState extends State<GarcomPage>
   bool cliqueiSelecionarGarcom = false;
 
   bool clienteJaExisteComanda = false;
+
+  bool volteiPizza = false;
+
+  bool clienteCadastradoVisual = false;
 
   // A máscara permite 10 ou 11 dígitos para o número (com DDD)
   final _maskFormatter = MaskTextInputFormatter(
@@ -393,7 +410,7 @@ class GarcomPageState extends State<GarcomPage>
     canRequestFocus: true,
   );
  
-  final painelController = Get.put(PainelController());
+  final painelController = Get.find<PainelController>();
 
   bool cliqueiSenha = false;
 
@@ -528,14 +545,28 @@ class GarcomPageState extends State<GarcomPage>
         telefoneClienteDialogoController.text = valor2;
         cpfClienteDialogoController.text = valor3;
         dataNascimentoClienteDialogoController.text = dataFormatada;
+        
+        setState(() {
+          clienteJaCadastrado.value = true;
+          clienteCadastradoVisual = true;
+        });
+
         await atualizarValores(setStatePopup, valor1, valor2, valor3, dataFormatada);
         return true;
       } else {
         numeroClienteString = "0";
+        setState(() {
+          clienteJaCadastrado.value = false;
+          clienteCadastradoVisual = false;
+        });
         return false;
       }
     } catch (e) {
       numeroClienteString = "0";
+      setState(() {
+        clienteJaCadastrado.value = false;
+        clienteCadastradoVisual = false;
+      });
       return false;
     }
   }
@@ -715,15 +746,31 @@ class GarcomPageState extends State<GarcomPage>
         if (!mounted) return;
         dataNascimentoClienteDialogoController.text = dataFormatada;
         nomeClienteDialogoController.text = nome;
-        clienteJaCadastrado = true;
+        setState(() {
+          clienteJaCadastrado.value = true;
+          clienteCadastradoVisual = true;
+        });
+        if (estadoPopupCadastro != null) {
+          estadoPopupCadastro!(() {
+            clienteCadastradoVisual = true;
+          });
+        }
        
       } else {
         if (!mounted) return;
-        clienteJaCadastrado = false;
+        setState(() {
+          clienteJaCadastrado.value = false;
+          clienteCadastradoVisual = false;
+        });
+        if (estadoPopupCadastro != null) {
+          estadoPopupCadastro!(() {
+            clienteCadastradoVisual = false;
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
-      clienteJaCadastrado = false;
+      clienteJaCadastrado.value = false;
     }
   }
 
@@ -761,19 +808,37 @@ class GarcomPageState extends State<GarcomPage>
         setState(() {
           dataNascimentoClienteDialogoController.text = dataFormatada;
           nomeClienteDialogoController.text = nome;
-          clienteJaCadastrado = true;
+          clienteJaCadastrado.value = true;
+          clienteCadastradoVisual = true;
         });
+        if (estadoPopupCadastro != null) {
+          estadoPopupCadastro!(() {
+            clienteCadastradoVisual = true;
+          });
+        }
       } else {
         if (!mounted) return;
         setState(() {
-          clienteJaCadastrado = false;
+          clienteJaCadastrado.value = false;
+          clienteCadastradoVisual = false;
         });
+        if (estadoPopupCadastro != null) {
+          estadoPopupCadastro!(() {
+            clienteCadastradoVisual = false;
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        clienteJaCadastrado = false;
+        clienteJaCadastrado.value = false;
+        clienteCadastradoVisual = false;
       });
+      if (estadoPopupCadastro != null) {
+        estadoPopupCadastro!(() {
+          clienteCadastradoVisual = false;
+        });
+      }
     }
   }
 
@@ -886,9 +951,9 @@ class GarcomPageState extends State<GarcomPage>
 
     // Produto do tipo pizza
     else if (idFuncao == 'PZ') {
-      Get.toNamed(
+      Get.offAllNamed(
         '/pizza',
-        preventDuplicates: false,
+        // preventDuplicates: false,
         arguments: {
           'tamanhoSelecionado': nomeFuncao,
           'comanda': comandaController.text,
@@ -897,6 +962,10 @@ class GarcomPageState extends State<GarcomPage>
           'index': index,
           'editar': true,
           'numeroDoPedido': numeroDoPedido,
+          'clienteNome': nomeClienteDialogoController.text,
+          'clienteCpf': cpfClienteDialogoController.text,
+          'clienteTelefone': telefoneClienteDialogoController.text,
+          'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
         },
       )?.then((_) {
         if (mounted) {
@@ -1190,6 +1259,12 @@ class GarcomPageState extends State<GarcomPage>
       String mesaDoPedido = Get.arguments['mesa'] ?? '';
       String numeropedido = Get.arguments['numeropedido'] ?? '0';
 
+      String clienteId = Get.arguments['clienteId'] ?? '';
+      String clienteNome = Get.arguments['clienteNome'] ?? '';
+      String clienteCpf = Get.arguments['clienteDocumento'] ?? '';
+      String clienteTelefone = Get.arguments['clienteTelefone'] ?? '';
+      String clienteDataNascimento = Get.arguments['clienteDataNascimento'] ?? '';
+
       if (mesaDoPedido == "0" || mesaDoPedido == '0') {
         mesaDoPedido = "";
       }
@@ -1205,6 +1280,37 @@ class GarcomPageState extends State<GarcomPage>
       if(comandaDoPedido == ""){
         comandaDoPedido = carrinhoController.numeroComanda.value;
       }
+
+      if(clienteId == ""){
+        clienteId = carrinhoController.clienteId.value;
+      }
+
+      if(clienteNome == ""){
+        clienteNome = carrinhoController.clienteNome.value;
+      }
+
+      if(clienteCpf == ""){
+        clienteCpf = carrinhoController.clienteCpf.value;
+      }
+
+      if(clienteTelefone == ""){
+        clienteTelefone = carrinhoController.clienteTelefone.value;
+      }
+
+      if(clienteDataNascimento == ""){
+        clienteDataNascimento = carrinhoController.clienteDataNascimento.value;
+      }
+
+      carrinhoController.clienteId.value = clienteId;
+      carrinhoController.clienteNome.value = clienteNome;
+      carrinhoController.clienteCpf.value = clienteCpf;
+      carrinhoController.clienteTelefone.value = clienteTelefone;
+      carrinhoController.clienteDataNascimento.value = clienteDataNascimento;
+
+      nomeClienteDialogoController.text = clienteNome;
+      telefoneClienteDialogoController.text = clienteTelefone;
+      cpfClienteDialogoController.text = clienteCpf;
+      dataNascimentoClienteDialogoController.text = clienteDataNascimento;
 
       // await buscarTipoPedido();
 
@@ -1231,7 +1337,10 @@ class GarcomPageState extends State<GarcomPage>
         }
       }
 
+      informacoesCliente();
+
       setState(() {
+        volteiPizza = true;
         aparecerCarrinho = true;
         aparecerCardapio = true;
         showKeyboardAlfa = false;
@@ -1261,6 +1370,12 @@ class GarcomPageState extends State<GarcomPage>
         String comandaDoPedido = carrinhoController.numeroComanda.value;
         String mesaDoPedido = carrinhoController.numeroMesa.value;
         String numeropedido = "";
+
+        String clienteId = carrinhoController.clienteId.value;
+        String clienteNome = carrinhoController.clienteNome.value;
+        String clienteCpf = carrinhoController.clienteCpf.value;
+        String clienteTelefone = carrinhoController.clienteTelefone.value;
+        String clienteDataNascimento = carrinhoController.clienteDataNascimento.value;
         
         if (funcoesController.logicaPorComanda.value ||
             funcoesController.logicaPorComandaNaMesa.value) {
@@ -1287,6 +1402,17 @@ class GarcomPageState extends State<GarcomPage>
           comandaDoPedido = carrinhoController.numeroComanda.value;
         }
 
+        carrinhoController.clienteId.value = clienteId;
+        carrinhoController.clienteNome.value = clienteNome;
+        carrinhoController.clienteCpf.value = clienteCpf;
+        carrinhoController.clienteTelefone.value = clienteTelefone;
+        carrinhoController.clienteDataNascimento.value = clienteDataNascimento;
+
+        nomeClienteDialogoController.text = clienteNome;
+        telefoneClienteDialogoController.text = clienteTelefone;
+        cpfClienteDialogoController.text = clienteCpf;
+        dataNascimentoClienteDialogoController.text = clienteDataNascimento;
+
         // await buscarTipoPedido();
 
         if (numeropedido == "0") {
@@ -1312,7 +1438,10 @@ class GarcomPageState extends State<GarcomPage>
           }
         }
 
+        informacoesCliente();
+
         setState(() {
+          volteiPizza = true;
           aparecerCarrinho = true;
           aparecerCardapio = true;
           showKeyboardAlfa = false;
@@ -2296,6 +2425,7 @@ class GarcomPageState extends State<GarcomPage>
     quantidadesAdicionais.clear();
     quantidadesObservacoes.clear();
 
+    volteiPizza = false;
     carrinhoController.numeroComanda.value = "";
     carrinhoController.numeroMesa.value = "";
     carrinhoController.numeroPedido.value = "";
@@ -2480,7 +2610,7 @@ class GarcomPageState extends State<GarcomPage>
 
     cadastrarCliente = false;
     querCadastrarCliente = false;
-    clienteJaCadastrado = false;
+    clienteJaCadastrado.value = false;
     nomeValido = false;
     telefoneValido = false;
     cpfValido = false;
@@ -3414,8 +3544,8 @@ class GarcomPageState extends State<GarcomPage>
                                   } // Se o produto for do tipo pizza
                                   else if (produto['produto_id'] == 'PZ') {
                                     Navigator.pop(context);
-                                    Get.toNamed('/pizza',
-                                      preventDuplicates: false,
+                                    Get.offAllNamed('/pizza',
+                                      // preventDuplicates: false,
                                       arguments: {
                                         'tamanhoSelecionado': produto['produto_nome'],
                                         'comanda': comandaController.text,
@@ -3423,6 +3553,10 @@ class GarcomPageState extends State<GarcomPage>
                                         'index': index,
                                         'editar': false,
                                         'numeroDoPedido': numeroDoPedido,
+                                        'clienteNome': nomeClienteDialogoController.text,
+                                        'clienteCpf': cpfClienteDialogoController.text,
+                                        'clienteTelefone': telefoneClienteDialogoController.text,
+                                        'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
                                       },
                                     )?.then((_) {
                                       if (mounted) {
@@ -3564,7 +3698,9 @@ class GarcomPageState extends State<GarcomPage>
     showModalAdicionaisObservacoes(
       context,
       numeroDoProdutoSelecionadoFuncao,
-      funcoesController.listaAdicionaisObservacoes, 
+      funcoesController.listaAdicionaisObservacoesFiltrada, 
+      funcoesController.adicionaisFuncaoFiltrada,
+      funcoesController.observacoesFuncaoFiltrada,
       nomeFuncao,
       valorFuncao,
       numeroFuncao,
@@ -3579,6 +3715,8 @@ class GarcomPageState extends State<GarcomPage>
     BuildContext context,
     String numeroProduto,
     List<dynamic> listaCompleta,
+    List<dynamic> listaAdicionais,
+    List<dynamic> listaObservacoes,
     String produtoNome,
     String produtoValor,
     String produtoNumero,
@@ -3587,32 +3725,36 @@ class GarcomPageState extends State<GarcomPage>
   ) {
     arrastei = true;
     // Vendo de qual produto que são as observações e os adicionais
-    final itensProduto = listaCompleta
-        .where(
-          (e) => e['numeroproduto'].toString() == numeroProduto,
-        ) // Mantém só os itens onde o numeroproduto é igual ao produto clicado
-        .toList();
+    final itensProduto = listaCompleta.where((e) => e['numeroproduto'].toString() == numeroProduto).toList();
+
+    final itensAdicionais = listaAdicionais.where((e) => e['numeroproduto'].toString() == numeroProduto).toList();
+
+    final itensObservacoes = listaObservacoes.where((e) => e['numeroproduto'].toString() == numeroProduto).toList();
 
     // Colocando os adicionais e observações do produto em uma outra lista
     listaAdicionaisObservacoesDoProduto = itensProduto;
 
-    // Separando observações
-    listaAdicionaisDoProduto = itensProduto
-        .where((e) => e['numeroadicional'].toString() != '0')
-        .map((e) {
-          e['selecionado'] = false; // para controlar o ckeck box
-          return e;
-        })
-        .toList();
+    // Separando observações (adicionais) garantindo que sejam únicos por ID
+    final mapAdicionais = <String, dynamic>{};
+    for (var e in itensAdicionais.where((e) => e['numeroadicional'].toString() != '0')) {
+      mapAdicionais[e['numeroadicional'].toString()] = e;
+    }
+    listaAdicionaisDoProduto = mapAdicionais.values.map((e) {
+      final novoItem = Map<String, dynamic>.from(e as Map);
+      novoItem['selecionado'] = false; // para controlar o ckeck box
+      return novoItem;
+    }).toList();
 
-    // Separando adicionais
-    listaObservacaoesDoProduto = itensProduto
-        .where((e) => e['nomeobservacao'].toString() != '0')
-        .map((e) {
-          e['selecionado'] = false; // para controlar o ckeck box
-          return e;
-        })
-        .toList();
+    // Separando adicionais (observações) garantindo que sejam únicos por ID
+    final mapObservacoes = <String, dynamic>{};
+    for (var e in itensObservacoes.where((e) => e['nomeobservacao'].toString() != '0')) {
+      mapObservacoes[e['numeroobservacao'].toString()] = e;
+    }
+    listaObservacaoesDoProduto = mapObservacoes.values.map((e) {
+      final novoItem = Map<String, dynamic>.from(e as Map);
+      novoItem['selecionado'] = false; // para controlar o ckeck box
+      return novoItem;
+    }).toList();
     double quantidadeInicial = produtoQuantidade;
 
     quantidadeProdutoSelecionadoController.text = produtoKilo
@@ -6127,12 +6269,7 @@ class GarcomPageState extends State<GarcomPage>
 
       if (funcoesController.logicaPorComanda.value) {
         await _fluxoComanda();
-        clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
-        if(garcomController.forcarCadastroCliente.value){
-          if(garcomController.cadastroCliente.value){
-            popupCadastrarCliente();
-          }
-        }
+        aparecerPopUpCliente();
         return;
       }
     } finally {
@@ -6184,6 +6321,19 @@ class GarcomPageState extends State<GarcomPage>
     });
   }
 
+  void aparecerPopUpCliente() async {
+    clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+    if(garcomController.forcarCadastroCliente.value){
+      if(garcomController.cadastroCliente.value && !clienteJaExisteComanda){
+        popupCadastrarCliente();
+      }
+    }
+  }
+
+  void informacoesCliente() async {
+    clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
+  }
+
   // Função para lógica comanda na mesa
   Future<void> _fluxoComandaNaMesa() async {
     if (vinculandoMesa) {
@@ -6200,6 +6350,7 @@ class GarcomPageState extends State<GarcomPage>
 
     if(comandaValida){
       carrinhoController.numeroComanda.value = comandaController.text;
+      informacoesCliente();
     }
 
     if (!comandaValida) {
@@ -6219,12 +6370,7 @@ class GarcomPageState extends State<GarcomPage>
     if (mesaVinculada) {
       carrinhoController.numeroMesa.value = mesaController.text;
       _irParaCardapio();
-      clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
-      if(garcomController.forcarCadastroCliente.value){
-        if(garcomController.cadastroCliente.value){
-          popupCadastrarCliente();
-        }
-      }
+      aparecerPopUpCliente();
       return;
     }
   }
@@ -6248,6 +6394,7 @@ class GarcomPageState extends State<GarcomPage>
         }); */
         // carregarUltimaConfiguracao();
       });
+      informacoesCliente();
       entrarModoTouch();
       _selecionarPrimeiroGrupo();
       return;
@@ -6313,12 +6460,7 @@ class GarcomPageState extends State<GarcomPage>
             });
           }
           if(aparecer){
-            clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
-            if(garcomController.forcarCadastroCliente.value){
-              if(garcomController.cadastroCliente.value){
-                popupCadastrarCliente();
-              }
-            }
+            aparecerPopUpCliente();
           }
         },
         onCancel: () async {
@@ -6335,12 +6477,7 @@ class GarcomPageState extends State<GarcomPage>
             mesaController.text = numeroMesaEmUso;
           }
           if(aparecer){
-            clienteJaExisteComanda = await buscarInformacoesClientePedidoAberto(numeropedido_FK, estadoPopupCadastro ?? setState);
-            if(garcomController.forcarCadastroCliente.value){
-              if(garcomController.cadastroCliente.value){
-                popupCadastrarCliente();
-              }
-            }
+            aparecerPopUpCliente();
           }
         },
       );
@@ -6905,9 +7042,12 @@ class GarcomPageState extends State<GarcomPage>
     FocusNode? focusNode,
     ValueChanged<String>? onSubmitted, // Callback ao submeter o texto
   }) {
-    void handleConfirm(BuildContext ctx) {
+    Future<void> handleConfirm(BuildContext ctx) async {
       Navigator.of(ctx).pop();
-      if (onConfirm != null) onConfirm();
+
+      if (onConfirm != null) {
+        onConfirm();
+      }
     }
 
     return showDialog(
@@ -6995,7 +7135,8 @@ class GarcomPageState extends State<GarcomPage>
                                   showCursor: true,
                                   focusNode: focusNode,
                                   onSubmitted: (value) async {
-                                    if (mesaController.text.isEmpty) {
+                                    await handleConfirm(ctx);
+                                    /* if (mesaController.text.isEmpty) {
                                       await verificarSeTemConta(comandaController.text);
                                       mesaController.clear();
                                       comandaController.text = numeroComandaEmUso;
@@ -7017,7 +7158,7 @@ class GarcomPageState extends State<GarcomPage>
                                         });
                                       }
                                     }
-                                    Navigator.pop(ctx);
+                                    Navigator.pop(ctx); */
                                   },
                                   autofocus: focusNode == null ? true : false,
                                   textAlign: TextAlign.center,
@@ -7204,6 +7345,7 @@ class GarcomPageState extends State<GarcomPage>
 
   Future<void> popupCadastrarCliente() {
     // ── Snapshot dos dados originais ao abrir o popup ──────────────────────
+    clienteCadastradoVisual = clienteJaCadastrado.value;
     _snapshotNome = nomeClienteDialogoController.text;
     _snapshotTelefone = telefoneClienteDialogoController.text;
     _snapshotCpf = cpfClienteDialogoController.text;
@@ -7339,6 +7481,25 @@ class GarcomPageState extends State<GarcomPage>
                                 inputFormatters: [_maskFormatter],
                                 onChanged: (value) {
                                   validarTelefoneDialogo(value);
+                                  if(!telefoneValido){
+                                    nomeClienteDialogoController.clear();
+                                    nomeClienteDialogoController.text = "";
+                                    dataNascimentoClienteDialogoController.clear();
+                                    dataNascimentoClienteDialogoController.text = "";
+                                    clienteCadastradoVisual = false;
+                                  }
+                                  if(telefoneValido && nomeClienteDialogoController.text.isEmpty){
+                                    Future.delayed(Duration(milliseconds: 300), () {
+                                      if (nomeClienteDialogoFocus.canRequestFocus) {
+                                        nomeClienteDialogoFocus.requestFocus();
+                                      }
+                                    });
+                                    clienteCadastradoVisual = false;
+                                  }
+
+                                  if(telefoneValido && nomeClienteDialogoController.text.isNotEmpty){
+                                    clienteCadastradoVisual = true;
+                                  }
                                   setStatePopup(() {});
                                 },
                                 mostrarErro: telefoneErro
@@ -7361,6 +7522,25 @@ class GarcomPageState extends State<GarcomPage>
                                 paddingInterno: paddingInterno,
                                 onChanged: (value) {
                                   validarCpfDialogo(value);
+                                  if(!cpfValido){
+                                    nomeClienteDialogoController.clear();
+                                    nomeClienteDialogoController.text = "";
+                                    dataNascimentoClienteDialogoController.clear();
+                                    dataNascimentoClienteDialogoController.text = "";
+                                    clienteCadastradoVisual = false;
+                                  }
+                                  if(cpfValido && nomeClienteDialogoController.text.isEmpty){
+                                    Future.delayed(Duration(milliseconds: 300), () {
+                                      if (nomeClienteDialogoFocus.canRequestFocus) {
+                                        nomeClienteDialogoFocus.requestFocus();
+                                      }
+                                    });
+                                    clienteCadastradoVisual = false;
+                                  }
+
+                                  if(cpfValido && nomeClienteDialogoController.text.isNotEmpty){
+                                    clienteCadastradoVisual = true;
+                                  }
                                   setStatePopup(() {});
                                 },
                                 inputFormatters: [
@@ -7380,7 +7560,7 @@ class GarcomPageState extends State<GarcomPage>
                                 context: context,
                                 controller: nomeClienteDialogoController,
                                 currentFocus: nomeClienteDialogoFocus,
-                                nextFocus: telefoneClienteDialogoFocus,
+                                nextFocus: dataNascimentoClienteDialogoFocus,
                                 hintText: 'Nome do cliente',
                                 textCapitalization: TextCapitalization.words,
                                 tamanhoFonte: tamanhoFonte,
@@ -7394,6 +7574,7 @@ class GarcomPageState extends State<GarcomPage>
                                   FilteringTextInputFormatter.allow(
                                     RegExp(r'[a-zA-ZÀ-ÿ\s]'),
                                   ),
+                                  UpperCaseTextFormatter(),
                                 ],
                                 mostrarErro: nomeErro
                               ),
@@ -7467,9 +7648,10 @@ class GarcomPageState extends State<GarcomPage>
                                 children: [
                                   // Botão Cancelar
                                   Expanded(
+                                    flex: 1,
                                     child: ElevatedButton(
                                       onPressed: () {
-                                        if(!clienteJaExisteComanda){
+                                        if(!clienteJaExisteComanda && !volteiPizza){
                                           nomeClienteDialogoController.clear();
                                           telefoneClienteDialogoController.clear();
                                           cpfClienteDialogoController.clear();
@@ -7500,6 +7682,7 @@ class GarcomPageState extends State<GarcomPage>
                                   SizedBox(width: 10),
                                   // Botão Confirmar
                                   Expanded(
+                                    flex: 1,
                                     child: ElevatedButton(
                                       onPressed: () async {
                                         final String nomeAtual = nomeClienteDialogoController.text;
@@ -7535,10 +7718,10 @@ class GarcomPageState extends State<GarcomPage>
 
                                           // ── Cenário 2: chave de busca mudou com cliente já carregado
                                           //              → nova busca / troca de cliente ───────────────
-                                          if (clienteJaCadastrado && chaveBuscaMudou) {
+                                          if (clienteJaCadastrado.value && chaveBuscaMudou) {
                                             // Limpar cliente atual
                                             setState(() {
-                                              clienteJaCadastrado = false;
+                                              clienteJaCadastrado.value = false;
                                               numeroCliente = 0;
                                               numeroClienteString = '0';
                                             });
@@ -7550,7 +7733,7 @@ class GarcomPageState extends State<GarcomPage>
                                               await buscarPorCpf(cpfAtual);
                                             }
 
-                                            if (clienteJaCadastrado) {
+                                            if (clienteJaCadastrado.value) {
                                               // Encontrou outro cliente: apenas atualizar o ID
                                               String? idClienteStr;
                                               if (garcomController.tipoCadastroClienteTelefone.value) {
@@ -7590,7 +7773,7 @@ class GarcomPageState extends State<GarcomPage>
                                           validarCampos();
                                           verCadastroCliente();
                                           if(querCadastrarCliente && cadastrarCliente){
-                                            if(!clienteJaCadastrado){
+                                            if(!clienteJaCadastrado.value){
                                               // Novo cliente
                                               int idClienteRetornado = await garcomController.abrirCliente(
                                                 nomeAtual,
@@ -7672,14 +7855,14 @@ class GarcomPageState extends State<GarcomPage>
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(8),
                                         ),
-                                        padding: const EdgeInsets.symmetric(
+                                        padding: EdgeInsets.symmetric(
                                           horizontal: 26,
                                           vertical: 20,
                                         ),
-                                        backgroundColor: Theme.of(ctx).colorScheme.primary,
+                                        backgroundColor: clienteCadastradoVisual ? Theme.of(ctx).colorScheme.primary : Theme.of(ctx).colorScheme.shadow,
                                       ),
                                       child: Text(
-                                        "SIM",
+                                        clienteCadastradoVisual ? "VINCULAR" : "CADASTRAR",
                                         style: TextStyle(
                                           color: Theme.of(ctx).colorScheme.onPrimary,
                                         ),
@@ -10001,7 +10184,7 @@ class GarcomPageState extends State<GarcomPage>
                                       SizedBox(
                                         width: 50, // largura máxima do nome
                                         child: Text(
-                                          nomeClienteDialogoController.text,
+                                          nomeClienteDialogoController.text.toUpperCase(),
                                           softWrap: true,
                                           maxLines: 1,
                                           textAlign: TextAlign.center,
@@ -10182,8 +10365,8 @@ class GarcomPageState extends State<GarcomPage>
                                       }
                                     } else if (produto['produto_id'] == 'PZ') {
                                       Navigator.pop(context);
-                                      Get.toNamed('/pizza',
-                                        preventDuplicates: false,
+                                      Get.offAllNamed('/pizza',
+                                        // preventDuplicates: false,
                                         arguments: {
                                           'tamanhoSelecionado': produto['produto_nome'],
                                           'comanda': comandaController.text,
@@ -10191,6 +10374,11 @@ class GarcomPageState extends State<GarcomPage>
                                           'index': index,
                                           'editar': false,
                                           'numeroDoPedido': numeroDoPedido,
+                                          'clienteId': carrinhoController.clienteId.value,
+                                          'clienteNome': nomeClienteDialogoController.text,
+                                          'clienteCpf': cpfClienteDialogoController.text,
+                                          'clienteTelefone': telefoneClienteDialogoController.text,
+                                          'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
                                         },
                                       )?.then((_) {
                                         if (mounted) {
@@ -11300,8 +11488,8 @@ class GarcomPageState extends State<GarcomPage>
                                   }
                                   // Se o produto for do tipo pizza
                                   else if (produto['produto_id'] == 'PZ') {
-                                    Get.toNamed('/pizza',
-                                      preventDuplicates: false,
+                                    Get.offAllNamed('/pizza',
+                                      // preventDuplicates: false,
                                       arguments: {
                                         'tamanhoSelecionado': produto['produto_nome'],
                                         'comanda': comandaController.text,
@@ -11309,6 +11497,11 @@ class GarcomPageState extends State<GarcomPage>
                                         'index': index,
                                         'editar': false,
                                         'numeroDoPedido': numeroDoPedido,
+                                        'clienteId': carrinhoController.clienteId.value,
+                                        'clienteNome': nomeClienteDialogoController.text,
+                                        'clienteCpf': cpfClienteDialogoController.text,
+                                        'clienteTelefone': telefoneClienteDialogoController.text,
+                                        'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
                                       },
                                     )?.then((_) {
                                       if (mounted) {

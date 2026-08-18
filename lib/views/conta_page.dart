@@ -28,7 +28,7 @@ class ContaPageState extends State<ContaPage>
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
 
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
 
   // Variáveis para receber e ajeitar args
   String numeropedido = Get.arguments['numeropedido'];
@@ -155,7 +155,7 @@ class ContaPageState extends State<ContaPage>
   //List<dynamic> listaFormasDePagamento = [];
   bool cliqueiPagarPedido = false;
 
-  final painelController = Get.put(PainelController());
+  final painelController = Get.find<PainelController>();
 
  /*  String numeroTurnoCaixa = "";
   String statusCaixa = "";

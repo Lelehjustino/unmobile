@@ -22,7 +22,7 @@ class PainelCozinha extends StatefulWidget {
 class _PainelCozinhaState extends State<PainelCozinha> {
   final numeroController = TextEditingController();
   final nomeController = TextEditingController();
-  final funcoesController = Get.put(FuncoesController());
+  final funcoesController = Get.find<FuncoesController>();
   String nomeTerminalEstatico = "";
   String numeroTerminalEstatico = "";
   String _horaAtual = '';
@@ -31,7 +31,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
 
   // List<dynamic> listaPedidos = []; // select ser em painel controller 
 
-  final painelController = Get.put(PainelController());
+  final painelController = Get.find<PainelController>();
   List<dynamic> gruposQuantidade = [];
   List<dynamic> outrosPedidos = [];
 

@@ -36,7 +36,7 @@ class ConfiguracoesPage extends StatefulWidget {
 class ConfiguracoesPageState extends State<ConfiguracoesPage>
     with WidgetsBindingObserver {
   String versaoAplicacao = FuncoesController().versaoDoApp;
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
 
   final TextEditingController senhaController = TextEditingController();
   final FocusNode senhaFocusNode = FocusNode();
@@ -1976,15 +1976,19 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         padding: EdgeInsets.all(8.0),
         child: Column(
           children: [
-            Center(
-              child: Text(
-                'Configurações de rede:',
-                style: TextStyle(
-                  color: colorScheme.onSecondary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                  Text(
+                    'Configurações de rede:',
+                    style: TextStyle(
+                      color: colorScheme.onSecondary,
+                      fontSize: 15,
+                    // fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
+              ]
             ),
             SizedBox(height: 4),
             Padding(
@@ -2202,15 +2206,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                   child: Column(
                     children: [
                       // modos, notes, recepcao (sem alterações lógicas — já protegidas)
-                      Center(
-                        child: Text(
-                          'Configurações de modo e mapa:',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Configurações de modo e mapa:',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (modos.isEmpty)
@@ -2220,7 +2231,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2251,15 +2262,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ),
                       SizedBox(height: 7),
-                      Center(
-                        child: Text(
-                          'Configurações notes:',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Configurações notes:',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (notes.isEmpty)
@@ -2269,7 +2287,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2299,15 +2317,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                      Center(
-                        child: Text(
-                          'Configurações de recepção:',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Configurações de recepção:',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (recepcao.isEmpty)
@@ -2317,7 +2342,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2349,15 +2374,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                      Center(
-                        child: Text(
-                          'Configurações check-in e check-out:',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Configurações check-in e check-out:',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (check.isEmpty)
@@ -2367,7 +2399,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2399,15 +2431,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                      Center(
-                        child: Text(
-                          'Configurações garçom:',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Configurações garçom:',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (garcom.isEmpty)
@@ -2417,7 +2456,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2452,15 +2491,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
                       SizedBox(height: 4),
 
-                      Center(
-                        child: Text(
-                          'Cadastro cliente(Abertura comanda):',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Cadastro cliente(Abertura comanda):',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (cadastroCliente.isEmpty)
@@ -2470,7 +2516,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2501,7 +2547,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                       SizedBox(height: 4),
                       if (cadastroClienteSelecionados.isNotEmpty)
                         Padding(
-                          padding: EdgeInsets.only(right: 150, left: 20),
+                          padding: EdgeInsets.only(right: 8, left: 20),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2533,7 +2579,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ),
                         if (cadastroClienteSelecionados.isNotEmpty)
                         Padding(
-                          padding: EdgeInsets.only(right: 150, left: 20),
+                          padding: EdgeInsets.only(right: 8, left: 20),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2564,15 +2610,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ),
 
-                      Center(
-                        child: Text(
-                          'Configuração dos painéis:',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Configuração dos painéis:',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (paineis.isEmpty)
@@ -2582,7 +2635,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2633,7 +2686,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -2664,15 +2717,22 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ), */
 
-                      Center(
-                        child: Text(
-                          'Configuração de rota inicial:',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Configuração de rota inicial:',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 4),
                       if (paineis.isEmpty)
@@ -2682,7 +2742,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         )
                       else
                         Padding(
-                          padding: EdgeInsets.only(right: 150),
+                          padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),

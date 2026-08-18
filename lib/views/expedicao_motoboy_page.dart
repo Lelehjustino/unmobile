@@ -28,8 +28,8 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
   final CarrinhoController carrinhoController = Get.find<CarrinhoController>();
   final ComandaCarrinhoController comandaCarrinhoController = Get.find<ComandaCarrinhoController>();
   String versaoAplicacao = FuncoesController().versaoDoApp;
-  final FuncoesController funcoesController = Get.put(FuncoesController());
-  final PainelController painelController = Get.put(PainelController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
+  final PainelController painelController = Get.find<PainelController>();
 
   List<dynamic> listaPedidos = [];
   List<dynamic> listaPedidosSelecionados = [];

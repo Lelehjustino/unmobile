@@ -27,8 +27,8 @@ class InformacoesPedidoPageState extends State<InformacoesPedidoPage>
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
 
-  final FuncoesController funcoesController = Get.put(FuncoesController());
-  final PainelController painelController = Get.put(PainelController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
+  final PainelController painelController = Get.find<PainelController>();
 
   // Variáveis para receber e ajeitar args
   String numeropedido = Get.arguments['numeropedido'];

@@ -4,6 +4,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:un_recepcao/data/data_class.dart';
+import 'package:world_holidays/world_holidays.dart';
 // importar final FuncoesController funcoesController = Get.put(FuncoesController());
 class FuncoesController extends GetxController {
   // --- Controle de Atendimento (Fazer Pedido) ---
@@ -11,7 +12,7 @@ class FuncoesController extends GetxController {
   String atendimentoAtual = "";
   String nomeTraidpoint = "";
   
-  String versaoDoApp = "1.9.22";
+  String versaoDoApp = "Teste 1.0.0";
 
   // Controlar o aparecimento do botão pagar
   RxBool aparecerBotaoPagar = false.obs;
@@ -100,6 +101,7 @@ class FuncoesController extends GetxController {
 
     // adicionaisObservacoesProdutos
     RxList<dynamic> listaAdicionaisObservacoes = <dynamic>[].obs;
+    RxList<dynamic> listaAdicionaisObservacoesFiltrada = <dynamic>[].obs;
 
     // buscarTipoPedido
     RxString tipoDoPedido = ''.obs;
@@ -148,6 +150,9 @@ class FuncoesController extends GetxController {
     RxList<dynamic> listaFavoritos = <dynamic>[].obs;
     RxList<dynamic> listaAdicionaisObservacoesFavoritos = <dynamic>[].obs;
     RxList<dynamic> listaImpressoras = <dynamic>[].obs;
+
+    RxList<dynamic> observacoesFuncaoFiltrada = <dynamic>[].obs;
+    RxList<dynamic> adicionaisFuncaoFiltrada = <dynamic>[].obs;
 
     @override
     void onInit() {
@@ -202,24 +207,202 @@ class FuncoesController extends GetxController {
     // Função que retorna adicionais e observações dos produtos
     Future<void> adicionaisObservacoesProdutos() async {
       try {
+
         /* String dadosJson = await Connection().select(
-          "SELECT numeroproduto_FK AS numeroproduto, if(numeroobservacao_FK = '0','0',(SELECT observacao FROM observacoes WHERE numero=numeroobservacao_FK)) AS nomeobservacao, numeroprodutoadicional_FK AS numeroadicional, if(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero=numeroprodutoadicional_FK)) AS nomeadicional, numeroobservacao_FK as numeroobservacao FROM observacoesadicionaisprodutos ORDER BY numeroproduto_FK;",
+          "SELECT numeroproduto_FK AS numeroproduto, if(numeroobservacao_FK = '0','0',(SELECT observacao FROM observacoes WHERE numero=numeroobservacao_FK)) AS nomeobservacao, numeroprodutoadicional_FK AS numeroadicional, if(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero=numeroprodutoadicional_FK)) AS nomeadicional, numeroobservacao_FK as numeroobservacao FROM observacoesadicionaisprodutos ORDER BY nomeadicional, nomeobservacao;",
         ); */
 
         String dadosJson = await Connection().select(
-          "SELECT numeroproduto_FK AS numeroproduto, if(numeroobservacao_FK = '0','0',(SELECT observacao FROM observacoes WHERE numero=numeroobservacao_FK)) AS nomeobservacao, numeroprodutoadicional_FK AS numeroadicional, if(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero=numeroprodutoadicional_FK)) AS nomeadicional, numeroobservacao_FK as numeroobservacao FROM observacoesadicionaisprodutos ORDER BY nomeadicional, nomeobservacao;",
+          """
+          SELECT
+            numeroproduto_FK AS numeroproduto,
+
+            numeroobservacao_FK AS numeroobservacao,
+            IF(numeroobservacao_FK = '0', '0', (SELECT observacao FROM observacoes WHERE numero = numeroobservacao_FK)) AS nomeobservacao,
+            diasdasemana_obs AS diasDaSemanaObs,
+            horainicio_obs AS inicioObs,
+            horatermino_obs AS fimObs,
+
+            numeroprodutoadicional_FK AS numeroadicional,
+            IF(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero = numeroprodutoadicional_FK)) AS nomeadicional,
+            diasdasemana_adc AS diasDaSemanaAdd,
+            horainicio_adc AS inicioAdd,
+            horatermino_adc AS fimAdd,
+            valor_adc AS valorAdicional
+
+          FROM observacoesadicionaisprodutos
+          ORDER BY nomeadicional, nomeobservacao;
+          """,
         );
 
         List<dynamic> lista = jsonDecode(dadosJson);
         // print(lista);
       if (lista.isNotEmpty) {
         listaAdicionaisObservacoes.assignAll(lista);
+        await filtrarAdicionaisObservacoes(lista);
       } else {
         listaAdicionaisObservacoes.assignAll([]);
+        listaAdicionaisObservacoesFiltrada.assignAll([]);
       }
     } catch (e) {
       print("Erro ao carregar adicionais: $e");
       listaAdicionaisObservacoes.assignAll([]);
+      listaAdicionaisObservacoesFiltrada.assignAll([]);
+    }
+  }
+
+  Future<bool> buscarFeriado() async {
+    final worldHolidays = WorldHolidays();
+    final hoje = DateTime.now();
+
+    bool ehFeriadoBase = false;
+
+    try {
+      await worldHolidays.getHolidays('BR');
+
+      final ehFeriadoNacional = worldHolidays.isHoliday('BR', hoje);
+
+      String dadosJson = await Connection().select(
+        "SELECT DATA FROM feriados;",
+      );
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+
+      final dataHoje = hoje.toIso8601String().substring(0, 10);
+
+      ehFeriadoBase = lista.any((item) => item['DATA'] == dataHoje);
+
+      bool ehFeriado = true;
+
+      if(!ehFeriadoNacional && !ehFeriadoBase){
+        ehFeriado = false;
+      }
+
+      return ehFeriado;
+    } catch (e) {
+      print("Erro ao carregar buscarFeriado: $e");
+      return ehFeriadoBase;
+    }
+  }
+
+  Future<void> filtrarAdicionaisObservacoes(List<dynamic> observacoesEadicionaisFuncao) async {
+    List<dynamic> observacoesEadicionaisFuncaoFiltrada = [];
+    int inicio = 0;
+    int fim = 0;
+    bool hojeEhFeriado = await buscarFeriado();
+
+    if (hojeEhFeriado){
+      inicio = 7;
+      fim = 8;
+    }else if(DateTime.now().weekday == 1){
+      inicio = 0;
+      fim = 1;
+    }else if(DateTime.now().weekday == 2){
+      inicio = 1;
+      fim = 2;
+    }else if(DateTime.now().weekday == 3){
+      inicio = 2;
+      fim = 3;
+    }else if(DateTime.now().weekday == 4){
+      inicio = 3;
+      fim = 4;
+    }else if(DateTime.now().weekday == 5){
+      inicio = 4;
+      fim = 5;
+    }else if(DateTime.now().weekday == 6){
+      inicio = 5;
+      fim = 6;
+    }else if(DateTime.now().weekday == 7){
+      inicio = 6;
+      fim = 7;
+    }else if(DateTime.now().weekday == 0){
+      inicio = 6;
+      fim = 7;
+    }
+    for(var i = 0; i < observacoesEadicionaisFuncao.length; i++){
+      if((observacoesEadicionaisFuncao[i]['diasDaSemanaObs'].toString().substring(inicio, fim) == '1')){
+        if (hojeEhFeriado) {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioObs'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimObs'].toString();
+
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
+
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
+
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+          if (agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario) {
+            observacoesFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
+        } else {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioObs'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimObs'].toString();
+
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
+
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
+
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+          if(agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario){
+            observacoesFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
+        }
+      }
+
+      /* if(observacoesEadicionaisFuncao[i]['diasDaSemanaObs'].toString().substring(7, 8) == '1' && hojeEhFeriado){
+        observacoesFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+      } */
+      
+      if((observacoesEadicionaisFuncao[i]['diasDaSemanaAdd'].toString().substring(inicio, fim) == '1')){
+        if (hojeEhFeriado) {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
+
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
+
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
+
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+          if (agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario) {
+            adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
+        } else {
+          final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
+          final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
+
+          final horaInicio = int.parse(inicioObs.substring(0, 2));
+          final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+          final horaFim = int.parse(fimObs.substring(0, 2));
+          final minutoFim = int.parse(fimObs.substring(3, 5));
+
+          final inicioHorario = horaInicio * 60 + minutoInicio;
+          final fimHorario = horaFim * 60 + minutoFim;
+
+          final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+          if(agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario){
+            adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+          }
+        }
+      }
     }
   }
 

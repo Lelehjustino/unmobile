@@ -13,6 +13,7 @@ import 'package:un_recepcao/views/recepcao_page.dart';
 import 'package:un_recepcao/widgets/side_nav.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get/get.dart';
+import 'package:world_holidays/world_holidays.dart';
 
 class CheckinPage extends StatefulWidget {
   const CheckinPage({super.key});
@@ -23,7 +24,7 @@ class CheckinPage extends StatefulWidget {
 
 class CheckinPageState extends State<CheckinPage>
     with SingleTickerProviderStateMixin {
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
   String versaoAplicacao = FuncoesController().versaoDoApp;
   final TextEditingController comandaController = TextEditingController();
   final FocusNode comandaFocus = FocusNode();
@@ -104,6 +105,9 @@ class CheckinPageState extends State<CheckinPage>
 
   bool cliqueiFora = true;
   bool loadingConfirmar = false;
+
+  List<dynamic> observacoesFuncaoFiltrada = [];
+  List<dynamic> adicionaisFuncaoFiltrada = [];
 
   @override
   void initState() {
@@ -189,13 +193,15 @@ class CheckinPageState extends State<CheckinPage>
     if(temProdutoNaComanda){
       // fluxo quando tem produto na comanda
       List<dynamic> observacoesEadicionaisFuncao = await buscarObservacoesEadicionais(produtoEncontradoFK);
+      await filtrarAdicionaisObservacoes(observacoesEadicionaisFuncao);
       // verifica se tem observacoes e adicionais 
-      if(observacoesEadicionaisFuncao.isNotEmpty){
+      if(observacoesFuncaoFiltrada.isNotEmpty || adicionaisFuncaoFiltrada.isNotEmpty){
         // abrir o seletor de observacoes e adicionais
         showModalAdicionaisObservacoes(
           context,
           produtoEncontradoFK,
-          observacoesEadicionaisFuncao,
+          observacoesFuncaoFiltrada,
+          adicionaisFuncaoFiltrada,
           numeroComanda,
           numeroUsuario,
           numeroDaLicencaSelecionada,
@@ -843,6 +849,115 @@ class CheckinPageState extends State<CheckinPage>
     return valor;
   }
 
+  Future<bool> buscarFeriado() async {
+    final worldHolidays = WorldHolidays();
+    final hoje = DateTime.now();
+
+    bool ehFeriadoBase = false;
+
+    try {
+      await worldHolidays.getHolidays('BR');
+
+      final ehFeriadoNacional = worldHolidays.isHoliday('BR', hoje);
+
+      String dadosJson = await Connection().select(
+        "SELECT DATA FROM feriados;",
+      );
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+
+      final dataHoje = hoje.toIso8601String().substring(0, 10);
+
+      ehFeriadoBase = lista.any((item) => item['DATA'] == dataHoje);
+
+      bool ehFeriado = true;
+
+      if(!ehFeriadoNacional && !ehFeriadoBase){
+        ehFeriado = false;
+      }
+
+      return ehFeriado;
+    } catch (e) {
+      print("Erro ao carregar buscarFeriado: $e");
+      return ehFeriadoBase;
+    }
+  }
+
+  Future<void> filtrarAdicionaisObservacoes(List<dynamic> observacoesEadicionaisFuncao) async {
+    List<dynamic> observacoesEadicionaisFuncaoFiltrada = [];
+    int inicio = 0;
+    int fim = 0;
+    bool hojeEhFeriado = await buscarFeriado();
+
+    if (hojeEhFeriado){
+      inicio = 7;
+      fim = 8;
+    }else if(DateTime.now().weekday == 1){
+      inicio = 0;
+      fim = 1;
+    }else if(DateTime.now().weekday == 2){
+      inicio = 1;
+      fim = 2;
+    }else if(DateTime.now().weekday == 3){
+      inicio = 2;
+      fim = 3;
+    }else if(DateTime.now().weekday == 4){
+      inicio = 3;
+      fim = 4;
+    }else if(DateTime.now().weekday == 5){
+      inicio = 4;
+      fim = 5;
+    }else if(DateTime.now().weekday == 6){
+      inicio = 5;
+      fim = 6;
+    }else if(DateTime.now().weekday == 7){
+      inicio = 6;
+      fim = 7;
+    }else if(DateTime.now().weekday == 0){
+      inicio = 6;
+      fim = 7;
+    }
+    for(var i = 0; i < observacoesEadicionaisFuncao.length; i++){
+      if (hojeEhFeriado) {
+        final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
+        final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
+
+        final horaInicio = int.parse(inicioObs.substring(0, 2));
+        final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+        final horaFim = int.parse(fimObs.substring(0, 2));
+        final minutoFim = int.parse(fimObs.substring(3, 5));
+
+        final inicioHorario = horaInicio * 60 + minutoInicio;
+        final fimHorario = horaFim * 60 + minutoFim;
+
+        final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+        if (agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario) {
+          adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+        }
+      } else {
+        final inicioObs = observacoesEadicionaisFuncao[i]['inicioAdd'].toString();
+        final fimObs = observacoesEadicionaisFuncao[i]['fimAdd'].toString();
+
+        final horaInicio = int.parse(inicioObs.substring(0, 2));
+        final minutoInicio = int.parse(inicioObs.substring(3, 5));
+
+        final horaFim = int.parse(fimObs.substring(0, 2));
+        final minutoFim = int.parse(fimObs.substring(3, 5));
+
+        final inicioHorario = horaInicio * 60 + minutoInicio;
+        final fimHorario = horaFim * 60 + minutoFim;
+
+        final agoraMinutos = DateTime.now().hour * 60 + DateTime.now().minute;
+
+        if(agoraMinutos >= inicioHorario && agoraMinutos <= fimHorario){
+          adicionaisFuncaoFiltrada.add(observacoesEadicionaisFuncao[i]);
+        }
+      }
+    }
+  }
+
   // Função verificação produto
   verificacaoProduto(String numeroComanda, String numeroproduto_FK) async {
     configuracaoProdutoNaComanda(numeroComanda);
@@ -854,13 +969,15 @@ class CheckinPageState extends State<CheckinPage>
     } else {
       // select de observacoes e adicionais 
       List<dynamic> observacoesEadicionaisFuncao = await buscarObservacoesEadicionais(numeroproduto_FK);
+      await filtrarAdicionaisObservacoes(observacoesEadicionaisFuncao);
       // verifica se tem observacoes e adicionais 
-      if(observacoesEadicionaisFuncao.isNotEmpty){
+      if(observacoesFuncaoFiltrada.isNotEmpty || adicionaisFuncaoFiltrada.isNotEmpty){
         // abrir o seletor de observacoes e adicionais
         showModalAdicionaisObservacoes(
           context,
           numeroproduto_FK,
-          observacoesEadicionaisFuncao,
+          observacoesFuncaoFiltrada,
+          adicionaisFuncaoFiltrada,
           numeroComanda,
           numeroUsuario,
           numeroDaLicencaSelecionada,
@@ -899,13 +1016,23 @@ class CheckinPageState extends State<CheckinPage>
     try {
       String dadosJson = await Connection().select(
         """
-          SELECT 
-          numeroproduto_FK AS numeroproduto, 
-          IF(numeroobservacao_FK = '0', '0', (SELECT observacao FROM observacoes WHERE numero = numeroobservacao_FK)) AS nomeobservacao, 
-          numeroprodutoadicional_FK AS numeroadicional, 
-          IF(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero = numeroprodutoadicional_FK)) AS nomeadicional, 
-          numeroobservacao_FK AS numeroobservacao 
-          FROM observacoesadicionaisprodutos 
+          SELECT
+            numeroproduto_FK AS numeroproduto,
+
+            numeroobservacao_FK AS numeroobservacao,
+            IF(numeroobservacao_FK = '0', '0', (SELECT observacao FROM observacoes WHERE numero = numeroobservacao_FK)) AS nomeobservacao,
+            diasdasemana_obs AS diasDaSemanaObs,
+            horainicio_obs AS inicioObs,
+            horatermino_obs AS fimObs,
+
+            numeroprodutoadicional_FK AS numeroadicional,
+            IF(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero = numeroprodutoadicional_FK)) AS nomeadicional,
+            diasdasemana_adc AS diasDaSemanaAdd,
+            horainicio_adc AS inicioAdd,
+            horatermino_adc AS fimAdd,
+            valor_adc AS valorAdicional
+
+        FROM observacoesadicionaisprodutos
           WHERE numeroproduto_FK = $numeroProduto 
           ORDER BY numeroproduto_FK;  
         """,
@@ -1421,7 +1548,8 @@ class CheckinPageState extends State<CheckinPage>
   void showModalAdicionaisObservacoes(
     BuildContext context,
     String numeroProduto,
-    List<dynamic> listaCompleta,
+    List<dynamic> observacoesFuncao,
+    List<dynamic> adicionaisFuncao,
     String numeroComandaFuncao,
     String numeroUsuarioFuncao,
     String numeroDaLicencaSelecionadaFuncao,
@@ -1458,7 +1586,7 @@ class CheckinPageState extends State<CheckinPage>
                   ),
 
                   // MENSAGEM SE A LISTA ESTIVER VAZIA
-                  if (listaCompleta.isEmpty)
+                  if (observacoesFuncao.isEmpty && adicionaisFuncao.isEmpty)
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
@@ -1473,7 +1601,7 @@ class CheckinPageState extends State<CheckinPage>
                   Expanded(
                     child: ListView(
                       children: [
-                        if (listaCompleta.isNotEmpty)
+                        if (observacoesFuncao.isNotEmpty || adicionaisFuncao.isNotEmpty)
                           const Center(
                             child: Padding(
                               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1490,7 +1618,7 @@ class CheckinPageState extends State<CheckinPage>
                             const larguraMinimaCard = 100.0;
                             final crossAxisCount = (constraints.maxWidth / larguraMinimaCard).floor().clamp(1, 8);
 
-                            final listaObservacoes = listaCompleta.where((item) {
+                            final listaObservacoes = observacoesFuncao.where((item) {
                               return item['numeroobservacao'].toString() != "0" && item['nomeobservacao'].toString() != "0";
                             }).toList();
 
