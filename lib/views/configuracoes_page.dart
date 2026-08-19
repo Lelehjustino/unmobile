@@ -9,6 +9,7 @@ import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:pinput/pinput.dart';
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/navegacao_inteligente.dart';
+import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
@@ -39,6 +40,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   final FuncoesController funcoesController = Get.find<FuncoesController>();
 
   final TextEditingController senhaController = TextEditingController();
+  final FooterButtonsController footerButtonsController = Get.find<FooterButtonsController>();
   final FocusNode senhaFocusNode = FocusNode();
   String erro = "";
   bool isloadingSenha = true;
@@ -53,11 +55,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   String nomeEmpresa = '';
   bool isloading = false;
   bool isLoadingSalvar = false;
-  // final variaveis = Get.find<VariaveisController>();
-
-  /* List<dynamic> listaAdicionaisObservacoesDoProduto = [];
-  List<dynamic> listaAdicionaisDoProduto = [];
-  List<dynamic> listaObservacaoesDoProduto =[]; */
 
   // Flags / Sets
   List<String> recepcao = ['Recepção'];
@@ -218,7 +215,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _carregarNote();
     _carregarRecepcao();
     _carregargarcom();
-    _carregarchecks();
+    carregarchecks();
     _loadNomeEmpresa();
     pegarServidorAntigo();
     pegarRotaAntiga();
@@ -808,7 +805,55 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   }
 
   // Carregar check
-  Future<void> _carregarchecks() async {
+  Future<void> carregarchecks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final checkJson = prefs.getString('check_padrao');
+
+    if (checkJson != null) {
+      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
+      /* final checksSalvos = List<String>.from(jsonDecode(checkJson));
+
+      final bool checkInPreenchido = checksSalvos.length <= 0 || checksSalvos[0].trim().isNotEmpty;
+
+      final bool checkOutPreenchido = checksSalvos.length <= 1 || checksSalvos[1].trim().isNotEmpty; */
+
+      if (checksSalvos.contains("0") && !checksSalvos.contains("1")) {
+          aparecerCheckIn = true;
+          aparecerCheckOut = false;
+      } else if (checksSalvos.contains("1") && !checksSalvos.contains("0")) {
+          aparecerCheckIn = false;
+          aparecerCheckOut = true;
+      } else if (!checksSalvos.contains("0") && !checksSalvos.contains("1")) {
+          aparecerCheckIn = false;
+          aparecerCheckOut = false;
+      } else if (checksSalvos.contains("0") && checksSalvos.contains("1")) {
+          aparecerCheckIn = true;
+          aparecerCheckOut = true;
+      } else {
+          aparecerCheckIn = false;
+          aparecerCheckOut = false;
+      }
+
+      /* if (checkInPreenchido && !checkOutPreenchido) {
+        aparecerCheckIn.value = true;
+        aparecerCheckOut.value = false;
+      } else if (!checkInPreenchido && checkOutPreenchido) {
+        aparecerCheckIn.value = false;
+        aparecerCheckOut.value = true;
+      } else if (!checkInPreenchido && !checkOutPreenchido) {
+        aparecerCheckIn.value = false;
+        aparecerCheckOut.value = false;
+      } else {
+        aparecerCheckIn.value = true;
+        aparecerCheckOut.value = true;
+      } */
+    } else {
+        // Se não tiver nada salvo, define padrão
+        aparecerCheckIn = false;
+        aparecerCheckOut = false;
+    }
+  }
+  /* Future<void> _carregarchecks() async {
     final prefs = await SharedPreferences.getInstance();
     final checkJson = prefs.getString('check_padrao');
 
@@ -852,7 +897,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         aparecerCheckOut = false;
       });
     }
-  }
+  } */
 
   // Carregar garçom
   Future<void> _carregargarcom() async {
@@ -864,7 +909,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       // A chave usada na UI é 'Modo Garçom'.
       // Se está no set → garçom ativo; se não está → garçom inativo.
       setState(() {
-        aparecerGarcom = garcomSalvos.contains('Modo Garçom');
+        aparecerGarcom = garcomSalvos.contains('0');
       });
       // debugPrint('[_carregargarcom] garcomSalvos=$garcomSalvos → aparecerGarcom=$aparecerGarcom');
     } else {
@@ -911,7 +956,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     if (recepcaoJson != null) {
       final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
 
-      if (recepcaosSalvos.contains('Recepção')) {
+      if (recepcaosSalvos.contains('0')) {
         // se recepcao selecionado
         setState(() {
           aparecerRecepcao = true;
@@ -1157,19 +1202,19 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         rotasSelecionadas = Set<String>.from(rotasSalvas);
       });
 
-      if (rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Expedição motoboy")) {
+      if (rotasSalvas.contains("0") && !rotasSalvas.contains("1") && !rotasSalvas.contains("2")) {
         setState(() {
           rotaHome = true;
           rotaPainelCliente = false;
           rotaExpedicaoMotoboy = false;
         });
-      } else if (rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição motoboy")) {
+      } else if (rotasSalvas.contains("1") && !rotasSalvas.contains("0") && !rotasSalvas.contains("2")) {
         setState(() {
           rotaHome = false;
           rotaPainelCliente = true;
           rotaExpedicaoMotoboy = false;
         });
-      }else if (!rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && rotasSalvas.contains("Expedição motoboy")){
+      }else if (!rotasSalvas.contains("0") && !rotasSalvas.contains("1") && rotasSalvas.contains("2")){
         setState(() {
           rotaHome = false;
           rotaPainelCliente = false;
@@ -1240,18 +1285,18 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     if (painelJson != null) {
       final painelSalvos = Set<String>.from(jsonDecode(painelJson));
 
-      if (painelSalvos.contains("KDS")) {
+      if (painelSalvos.contains("0")) {
         // home
         setState(() {
           aparecerKDS = true;
         });
-      } else if (painelSalvos.contains("Expedição cliente")) {
+      } else if (painelSalvos.contains("1")) {
         // painel cliente
         setState(() {
           aparecerExpedicaoCliente = true;
           
         });
-      } else if (painelSalvos.contains("Expedição motoboy")) {
+      } else if (painelSalvos.contains("2")) {
         // painel cliente
         setState(() {
           aparecerExpedicaoMotoboy = true;
@@ -1297,7 +1342,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     // Recepção
     await _carregarRecepcao();
     // Check-in / Check-out
-    await _carregarchecks();
+    await carregarchecks();
     // Garçom
     await _carregargarcom();
     // KDS // Expedição cliente // Expedição motoboy
@@ -2294,22 +2339,26 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: notes.length,
                             itemBuilder: (context, index) {
                               String modo = notes[index];
-                              bool isChecked = notesSelecionados.contains(modo);
+                              final String indexStr = index.toString();
+                              bool isChecked = notesSelecionados.contains(indexStr);
                               return CheckboxListTile(
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
                                 title: Text(modo),
                                 value: isChecked,
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
                                       if (notesSelecionados.length <= 2)
-                                        notesSelecionados.add(modo);
+                                        notesSelecionados.add(indexStr); // só pode ter até duas opções selecionadas na lista
+                                        if (modo == '0') {
+                                          notesSelecionados.add('0');
+                                        } 
                                     } else {
-                                      notesSelecionados.remove(modo);
+                                      notesSelecionados.remove(indexStr);
+                                      if (modo == '0') {
+                                        notesSelecionados.remove('0');
+                                      } 
                                     }
                                   });
                                 },
@@ -2349,12 +2398,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: recepcao.length,
                             itemBuilder: (context, index) {
                               String modo = recepcao[index];
-                              bool isChecked = recepcaoSelecionados.contains(
-                                modo,
-                              );
+                              String indexStr = index.toString();
+                              bool isChecked = recepcaoSelecionados.contains(indexStr);
                               return CheckboxListTile(
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
+                                controlAffinity: ListTileControlAffinity.leading,
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16.0,
                                 ),
@@ -2363,10 +2410,16 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
-                                      if (recepcaoSelecionados.length <= 2)
-                                        recepcaoSelecionados.add(modo);
+                                    if (recepcaoSelecionados.length <= 2)
+                                      recepcaoSelecionados.add(indexStr); // só pode ter até duas opções selecionadas na lista
+                                      if (modo == '0') {
+                                        recepcaoSelecionados.add('0');
+                                      } 
                                     } else {
-                                      recepcaoSelecionados.remove(modo);
+                                      recepcaoSelecionados.remove(indexStr);
+                                      if (modo == '0') {
+                                        recepcaoSelecionados.remove('0');
+                                      } 
                                     }
                                   });
                                 },
@@ -2406,24 +2459,33 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: check.length,
                             itemBuilder: (context, index) {
                               String modo = check[index];
-                              bool isChecked = checkSelecionados.contains(modo);
+                              String indexStr = index.toString();
+                              
+                              final bool isChecked = checkSelecionados.contains(indexStr);
                               return CheckboxListTile(
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
                                 title: Text(modo),
                                 value: isChecked,
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
                                       if (checkSelecionados.length <= 2)
-                                        checkSelecionados.add(
-                                          modo,
-                                        ); // só pode ter até duas opções selecionadas na lista
+                                        checkSelecionados.add(indexStr); // só pode ter até duas opções selecionadas na lista
+                                        if (modo == '0') {
+                                          checkSelecionados.add('0');
+                                        } 
+                                        if (modo == '1') {
+                                          checkSelecionados.add('1');
+                                        }
                                     } else {
-                                      checkSelecionados.remove(modo);
+                                      checkSelecionados.remove(indexStr);
+                                      if (modo == '0') {
+                                        checkSelecionados.remove('0');
+                                      } 
+                                      if (modo == '1') {
+                                        checkSelecionados.remove('1');
+                                      }
                                     }
                                   });
                                 },
@@ -2463,24 +2525,26 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: garcom.length,
                             itemBuilder: (context, index) {
                               String modo = garcom[index];
-                              bool isChecked = garcomSelecionados.contains(
-                                modo,
-                              );
+                              String indexStr = index.toString();
+                              bool isChecked = garcomSelecionados.contains(indexStr);
                               return CheckboxListTile(
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
                                 title: Text(modo),
                                 value: isChecked,
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
                                       if (garcomSelecionados.length <= 2)
-                                        garcomSelecionados.add(modo);
+                                        garcomSelecionados.add(indexStr);
+                                        if (modo == '0') {
+                                          garcomSelecionados.add('0');
+                                        } 
                                     } else {
-                                      garcomSelecionados.remove(modo);
+                                      garcomSelecionados.remove(indexStr);
+                                      if (modo == '0') {
+                                        garcomSelecionados.remove('0');
+                                      }
                                     }
                                   });
                                 },
@@ -2523,7 +2587,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: cadastroCliente.length,
                             itemBuilder: (context, index) {
                               String modo = cadastroCliente[index];
-                              bool isChecked = cadastroClienteSelecionados.contains(modo);
+                              String indexStr = index.toString();
+                              bool isChecked = cadastroClienteSelecionados.contains(indexStr);
+
                               return CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 contentPadding: EdgeInsets.symmetric(
@@ -2534,9 +2600,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
-                                      cadastroClienteSelecionados.add(modo);
+                                      cadastroClienteSelecionados.add(indexStr);
                                     } else {
-                                      cadastroClienteSelecionados.remove(modo);
+                                      cadastroClienteSelecionados.remove(indexStr);
                                     }
                                   });
                                 },
@@ -2554,7 +2620,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: tipoCadastroCliente.length,
                             itemBuilder: (context, index) {
                               String modo = tipoCadastroCliente[index];
-                              bool isChecked = tipoCadastroClienteSelecionados.contains(modo);
+                              String indexStr = index.toString();
+                              bool isChecked = tipoCadastroClienteSelecionados.contains(indexStr);
                               return CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 activeColor: colorScheme.secondary,
@@ -2567,9 +2634,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                   setState(() {
                                     if (value == true) {
                                       tipoCadastroClienteSelecionados.clear();
-                                      tipoCadastroClienteSelecionados.add(modo);
+                                      tipoCadastroClienteSelecionados.add(indexStr);
                                     } else {
-                                      tipoCadastroClienteSelecionados.remove(modo);
+                                      tipoCadastroClienteSelecionados.remove(indexStr);
                                     }
                                   });
                                 },
@@ -2586,7 +2653,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: forcarCadastroCliente.length,
                             itemBuilder: (context, index) {
                               String modo = forcarCadastroCliente[index];
-                              bool isChecked = forcarCadastroClienteSelecionados.contains(modo);
+                              String indexStr = index.toString();
+                              bool isChecked = forcarCadastroClienteSelecionados.contains(indexStr);
                               return CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 activeColor: colorScheme.tertiary,
@@ -2599,9 +2667,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                   setState(() {
                                     if (value == true) {
                                       forcarCadastroClienteSelecionados.clear();
-                                      forcarCadastroClienteSelecionados.add(modo);
+                                      forcarCadastroClienteSelecionados.add(indexStr);
                                     } else {
-                                      forcarCadastroClienteSelecionados.remove(modo);
+                                      forcarCadastroClienteSelecionados.remove(indexStr);
                                     }
                                   });
                                 },
@@ -2642,8 +2710,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: paineis.length,
                             itemBuilder: (context, index) {
                               String modo = paineis[index];
+                              String indexStr = index.toString();
                               bool isChecked = paineisSelecionados.contains(
-                                modo,
+                                indexStr,
                               );
                               return CheckboxListTile(
                                 controlAffinity:
@@ -2656,10 +2725,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
-                                      if (paineisSelecionados.length <= 3)
-                                        paineisSelecionados.add(modo);
+                                        paineisSelecionados.add(indexStr);
                                     } else {
-                                      paineisSelecionados.remove(modo);
+                                      paineisSelecionados.remove(indexStr);
                                     }
                                   });
                                 },
@@ -2749,7 +2817,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             itemCount: rotas.length,
                             itemBuilder: (context, index) {
                               String modo = rotas[index];
-                              bool isChecked = rotasSelecionadas.contains(modo);
+                              String indexStr = index.toString();
+                              bool isChecked = rotasSelecionadas.contains(indexStr);
+                              
                               return CheckboxListTile(
                                 controlAffinity:
                                     ListTileControlAffinity.leading,
@@ -2762,9 +2832,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                   setState(() {
                                     if (value == true) {
                                       rotasSelecionadas.clear();
-                                      rotasSelecionadas.add(modo);
+                                      rotasSelecionadas.add(indexStr);
                                     } else {
-                                      rotasSelecionadas.remove(modo);
+                                      rotasSelecionadas.remove(indexStr);
                                     }
                                   });
                                 },
@@ -2834,6 +2904,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                 }
                                 // Servidor não mudou: navega com booleanos já atualizados
                                 await navegar();
+                                footerButtonsController.carregarConfiguracoes();
                                 carrinhoController.carrinho.clear();
                               }
                             }

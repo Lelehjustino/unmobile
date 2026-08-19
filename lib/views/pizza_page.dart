@@ -2362,9 +2362,9 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
         final tamanho = min(
           (constraints.maxWidth),
           (constraints.maxHeight),
-        );
+        ) * 0.7;
 
-        return Row(
+        /* return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -2400,7 +2400,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                           sections: itemPizzaGraficoController.criarSecoes(
                             bordas,
                             tamanho * 0.47,
-                            mostrarTexto: true,
+                            mostrarTexto: false,
                           ),
                         ),
                       ),
@@ -2464,6 +2464,166 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
               children: [
                 Text("Bordas", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),)
               ],
+            ),
+          ],
+        ); */
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // LEGENDA
+           /*  if (sabores.isNotEmpty || bordas.isNotEmpty)
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (sabores.isNotEmpty) ...[
+                      Text(
+                        'Sabores',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 6),
+
+                      ...sabores.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+
+                        final cor = itemPizzaGraficoController.obterCorPizza(index);
+
+                        return Padding(
+                          padding: EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: cor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Expanded(
+                                  child: Text(
+                                    item.nome ?? '',
+                                    maxLines: 2,
+                                    style: const TextStyle(fontSize: 11),
+                                    // overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+
+                    if (bordas.isNotEmpty) ...[
+                      SizedBox(height: 10),
+
+                      Text(
+                        'Bordas',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 6),
+
+                      ...bordas.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+
+                        final cor = itemPizzaGraficoController.obterCorBorda(index);
+
+                        return Padding(
+                          padding: EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: cor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Expanded(
+                                  child: Text(
+                                    item.nome ?? '',
+                                    maxLines: 2,
+                                    style: TextStyle(fontSize: 11),
+                                    // overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ), */
+
+            // GRÁFICO
+            SizedBox(
+              width: tamanho,
+              height: tamanho,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  // BORDA - ANEL EXTERNO
+                  if (bordas.isNotEmpty)
+                    SizedBox(
+                      width: tamanho,
+                      height: tamanho,
+                      child: PieChart(
+                        PieChartData(
+                          startDegreeOffset: 180,
+                          sectionsSpace: 1,
+                          // centerSpaceRadius: 0,
+                          centerSpaceRadius: tamanho * 0.32,
+                          sections: itemPizzaGraficoController.criarSecoes(
+                            bordas,
+                            /* tamanho * 0.47, */
+                            tamanho * 0.15,
+                            mostrarTexto: true,
+                            textoForaDoGrafico: true,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // SABORES - PARTE INTERNA
+                  if (sabores.isNotEmpty)
+                    SizedBox(
+                      width: tamanho * 0.80,
+                      height: tamanho * 0.80,
+                      child: PieChart(
+                        PieChartData(
+                          startDegreeOffset: -90,
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 0,
+                          sections: itemPizzaGraficoController.criarSecoes(
+                            sabores,
+                            tamanho * 0.40,
+                            mostrarTexto: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         );

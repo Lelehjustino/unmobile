@@ -8,7 +8,9 @@ import 'package:get/get_instance/src/extension_instance.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
+import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
+import 'package:un_recepcao/models/monitor.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/configuracoes_page.dart';
@@ -29,22 +31,10 @@ class SideNav extends StatefulWidget {
 
 class SideNavState extends State<SideNav> {
   String? selectedModo;
-  bool aparecerCheckIn = false;
-  bool aparecerCheckOut = false;
-  bool aparecerMapa = false;
-  bool aparecerGarcom = false;
-  bool aparecerRecepcao = false;
-  bool aparecerNote = false;
-  bool aparecerKDS = false;
-  bool aparecerPedidos = false;
-  bool aparecerExpedicaoMotoboy = false;
-  bool rotaHome = true;
-  bool rotaPainelCliente = false;
-  bool aparecerCupomAvulso = false;
-  bool rotaExpedicaoMotoboy = false;
 
   final FuncoesController funcoesController = Get.put(FuncoesController());
   final CarrinhoController carrinhoController = Get.find<CarrinhoController>();
+  final FooterButtonsController footerButtonsController = Get.put(FooterButtonsController());
 
   bool isloadingProdutos = false;
 
@@ -55,318 +45,26 @@ class SideNavState extends State<SideNav> {
   }
 
   // Carregar funções de navegação
-  void carregarNavegacao() async {
-    await _carregarModos();
-    await _carregarchecks();
-    await _carregargarcom();
-    await _carregarRecepcao();
-    await _carregarNote();
-    await _carregarPaineis();
-    await carregarRota();
-    await _carregarCupomAvulso();
-  }
-
-  // Carregar cupom avulso
-  Future<void> _carregarCupomAvulso() async {
-    final prefs = await SharedPreferences.getInstance();
-    final valor = prefs.getString('cupom_avulso');
-
-    if (valor == null || valor.isEmpty) {
-      setState(() => aparecerCupomAvulso = false);
-      return;
-    }
-
-    Set<String> setLocal;
-
-    if (valor.startsWith('[')) {
-      setLocal = Set<String>.from(jsonDecode(valor));
-    } else {
-      setLocal = {valor};
-    }
-
-    setState(() {
-      aparecerCupomAvulso = setLocal.contains('Cupom Avulso');
-    });
-  }
-
-  // Carregar rota 
-  Future<void> carregarRota() async {
-    final prefs = await SharedPreferences.getInstance();
-    final rotaJson = prefs.getString('rota_padrao');
-
-    if (rotaJson != null) {
-      final rotasSalvos = Set<String>.from(jsonDecode(rotaJson));
-
-      if (rotasSalvos.contains("Home") && !rotasSalvos.contains("Expedição cliente") && !rotasSalvos.contains("Expedição motoboy")) {
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-          rotaExpedicaoMotoboy = false;
-        });
-      } else if (rotasSalvos.contains("Expedição cliente") && !rotasSalvos.contains("Home") && !rotasSalvos.contains("Expedição motoboy")) {
-        setState(() {
-          rotaHome = false;
-          rotaPainelCliente = true;
-          rotaExpedicaoMotoboy = false;
-        });
-      }else if (!rotasSalvos.contains("Expedição cliente") && !rotasSalvos.contains("Home") && rotasSalvos.contains("Expedição motoboy")){
-        setState(() {
-          rotaHome = false;
-          rotaPainelCliente = false;
-          rotaExpedicaoMotoboy = true;
-        });
-      } else {
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-          rotaExpedicaoMotoboy = false;
-        });
-      }
-    } else {
-      setState(() {
-        rotaHome = true;
-        rotaPainelCliente = false;
-        rotaExpedicaoMotoboy = false;
-      });
-    }
-  }
-
-  // Carregar paineis
-  Future<void> _carregarPaineis() async {
-    final prefs = await SharedPreferences.getInstance();
-    final painelJson = prefs.getString('painel_padrao');
-
-    if (painelJson != null) {
-      final paineisSalvos = Set<String>.from(jsonDecode(painelJson));
-
-      if (paineisSalvos.contains('KDS')) { // se KDS selecionado
-        setState(() {
-          aparecerKDS = true;
-        });
-      } else { // se KDS nao selecionado
-        setState(() {
-          aparecerKDS = false;
-        });
-      }
-
-      if (paineisSalvos.contains('Expedição cliente')) { // se Pedidos selecionado
-        setState(() {
-          aparecerPedidos = true;
-        });
-      } else { // se Pedidos nao selecionado
-        setState(() {
-          aparecerPedidos = false;
-        });
-      }
-
-      if (paineisSalvos.contains('Expedição motoboy')) { // se Expedição motoboy selecionado
-        setState(() {
-          aparecerExpedicaoMotoboy = true;
-        });
-      } else { // se Expedição motoboy nao selecionado
-        setState(() {
-          aparecerExpedicaoMotoboy = false;
-        });
-      }
-
-    } else { // configuração padrao 
-      setState(() {
-        aparecerKDS = false;
-        aparecerPedidos = false;
-        aparecerExpedicaoMotoboy = false;
-      });
-    }
-  }
-
-  // Carregar note
-  Future<void> _carregarNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final noteJson = prefs.getString('note_padrao');
-
-    if (noteJson != null) {
-      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
-
-      if (notesSalvos.contains('Notes')) { // se note selecionado
-        setState(() {
-          aparecerNote = true;
-        });
-      } else { // se note nao selecionado
-        setState(() {
-          aparecerNote = false;
-        });
-      }
-
-    } else { // configuração padrao 
-      setState(() {
-        aparecerNote = false;
-      });
-    }
-  }
-
-  // Carregar recepcao
-  Future<void> _carregarRecepcao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final recepcaoJson = prefs.getString('recepcao_padrao');
-
-    if (recepcaoJson != null) {
-      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
-
-      if (recepcaosSalvos.contains('Recepção')) { // se recepcao selecionado
-        setState(() {
-          aparecerRecepcao = true;
-        });
-      } else { // se recepcao nao selecionado
-        setState(() {
-          aparecerRecepcao = false;
-        });
-      }
-
-    } else { // configuração padrao 
-      setState(() {
-        aparecerRecepcao = false;
-      });
-    }
-  }
-
-  // Carregar Modos
-  Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-        setState(() {
-          aparecerMapa = true;
-        });
-      } else if (modosSalvos.contains("Mesa") && modosSalvos.contains("Comanda")) {
-        setState(() {
-          aparecerMapa = true;
-        });
-      } else if (!modosSalvos.contains("Mesa") && modosSalvos.contains("Comanda")) {
-        setState(() {
-          aparecerMapa = true;
-        });
-      } else if(!modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")){
-          setState(() {
-            aparecerMapa = false;
-          });
-      }
-      else {
-        setState(() {
-          aparecerMapa = false;
-        });
-      }
-
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerMapa = false;
-      });
-    }
-  }
-
-  // Carregar check 
-  Future<void> _carregarchecks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final checkJson = prefs.getString('check_padrao');
-
-    if (checkJson != null) {
-      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
-
-      if (checksSalvos.contains("Ckeck-in") && !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-out") && !checksSalvos.contains("Ckeck-in")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = true;
-        });
-      } else if (!checksSalvos.contains("Ckeck-in") && !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      } else if(checksSalvos.contains("Ckeck-in") && checksSalvos.contains("Check-out")){
-          setState(() {
-            aparecerCheckIn = true;
-            aparecerCheckOut = true;
-          });
-      }
-      else {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      }
-
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerCheckIn = true;
-        aparecerCheckOut = true;
-      });
-    }
-  }
-
-  // Carregar garçom
-  Future<void> _carregargarcom() async {
-    final prefs = await SharedPreferences.getInstance();
-    final garcomJson = prefs.getString('garcom_padrao');
-
-    if (garcomJson != null) {
-      final garcomSalvos = Set<String>.from(jsonDecode(garcomJson));
-
-      if (garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else if (!garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if(garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")){
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-      else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerGarcom = true;
-      });
-    }
+  void carregarNavegacao() {
+    footerButtonsController.carregarConfiguracoes();
   }
 
   // Função para navegar conforme navegação 
   void navegacao_inteligente() async {
-    if(rotaPainelCliente){
+    if(footerButtonsController.rotaPainelCliente.value){
       Get.toNamed('/painel_cliente');
     } else {
-      if(aparecerGarcom){
+      if(footerButtonsController.aparecerGarcom.value){
       Get.toNamed('/garcom');
-      } else if(aparecerCheckIn){
+      } else if(footerButtonsController.aparecerCheckIn.value){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckinPage()));
-      } else if(aparecerCheckOut){
+      } else if(footerButtonsController.aparecerCheckOut.value){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckoutPage()));
-      } else if (aparecerMapa){
+      } else if (footerButtonsController.aparecerMapa.value){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => MapaPage()));
-      } else if(aparecerRecepcao){
+      } else if(footerButtonsController.aparecerRecepcao.value){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecepcaoPage()));
-      } else if (aparecerNote){
+      } else if (footerButtonsController.aparecerNote.value){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => NotesPage()));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -395,7 +93,7 @@ class SideNavState extends State<SideNav> {
                 padding: EdgeInsets.zero,
                 children: [
                   // Icons.assignment
-                  if(rotaHome)
+                  if(footerButtonsController.rotaHome.value)
                   ListTile(
                     leading: Icon(
                       Icons.home,
@@ -418,7 +116,7 @@ class SideNavState extends State<SideNav> {
                       funcoesController.zerarAtendimento();
                     },
                   ),
-                  if((aparecerPedidos || rotaPainelCliente) && !rotaExpedicaoMotoboy)
+                  if((footerButtonsController.aparecerExpedicaoCliente.value || footerButtonsController.rotaPainelCliente.value) && !footerButtonsController.rotaPainelCliente.value)
                   ListTile(
                     leading: Icon(
                       Icons.person,
@@ -445,7 +143,7 @@ class SideNavState extends State<SideNav> {
                       }
                     },
                   ),
-                  if(aparecerKDS && rotaHome)
+                  if(footerButtonsController.aparecerKDS.value && footerButtonsController.rotaHome.value)
                   ListTile(
                     leading: Icon(
                       Icons.soup_kitchen,
@@ -468,7 +166,7 @@ class SideNavState extends State<SideNav> {
                       funcoesController.zerarAtendimento();
                     },
                   ),  
-                  if((aparecerExpedicaoMotoboy && rotaHome) || rotaExpedicaoMotoboy)
+                  if((footerButtonsController.aparecerExpedicaoMotoboy.value && footerButtonsController.rotaHome.value) || footerButtonsController.rotaExpedicaoMotoboy.value)
                   ListTile(
                     leading: Icon(
                       Icons.motorcycle,
@@ -491,7 +189,7 @@ class SideNavState extends State<SideNav> {
                       funcoesController.zerarAtendimento();
                     },
                   ), 
-                  if(rotaHome)
+                  if(footerButtonsController.rotaHome.value)
                   ListTile(
                     leading: Icon(
                       Icons.print,

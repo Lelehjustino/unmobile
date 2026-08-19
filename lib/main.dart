@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/models/itemPizzaGrafico.dart';
 import 'package:un_recepcao/services/remote_config_service.dart';
 import 'package:un_recepcao/views/cupom_avulso_page.dart';
@@ -66,6 +67,7 @@ void main() async {
   Get.put(FuncoesController(), permanent: true);
   Get.put(PainelController(), permanent: true);
   Get.put(ItemPizzaGrafico(), permanent: true);
+  Get.put(FooterButtonsController(), permanent: true);
 
   ServicoNotificacao.configurarAudio();
 

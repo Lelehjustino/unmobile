@@ -42,7 +42,7 @@ class GarcomController extends GetxController {
     if (recepcaoJson != null) {
       final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
 
-      if (recepcaosSalvos.contains('Forçar cadastro')) {
+      if (recepcaosSalvos.contains('0')) {
         // se recepcao selecionado
         forcarCadastroCliente.value = true;
       } else {
@@ -63,7 +63,7 @@ class GarcomController extends GetxController {
     if (recepcaoJson != null) {
       final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
 
-      if (recepcaosSalvos.contains('Cadastro Cliente')) {
+      if (recepcaosSalvos.contains('0')) {
         // se recepcao selecionado
         cadastroCliente.value = true;
       } else {
@@ -84,11 +84,11 @@ class GarcomController extends GetxController {
     if (recepcaoJson != null) {
       final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
 
-      if (recepcaosSalvos.contains('CPF') && !recepcaosSalvos.contains('Telefone')) {
+      if (recepcaosSalvos.contains('0') && !recepcaosSalvos.contains('1')) {
         // se recepcao selecionado
         tipoCadastroClienteCpf.value = true;
         tipoCadastroClienteTelefone.value = false;
-      } else if (!recepcaosSalvos.contains('CPF') && recepcaosSalvos.contains('Telefone')) {
+      } else if (!recepcaosSalvos.contains('0') && recepcaosSalvos.contains('1')) {
         // se recepcao nao selecionado
         tipoCadastroClienteCpf.value = false;
         tipoCadastroClienteTelefone.value = true;

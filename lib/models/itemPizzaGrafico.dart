@@ -23,6 +23,7 @@ class ItemPizzaGrafico {
     List<ItemPizzaGrafico> itens,
     double radius, {
     required bool mostrarTexto,
+    bool textoForaDoGrafico = false,
   }) {
     if (itens.isEmpty) {
       return [];
@@ -41,8 +42,8 @@ class ItemPizzaGrafico {
       final index = itens.indexOf(item);
       final percentual = (item.quantidade! / total) * 100;
       final nome = item.nome;
-      final cor = item.id == 'P' ? _obterCorPizza(index): _obterCorBorda(index);
-      final corTexto = item.id == 'P' ? Colors.black : Colors.black;
+      final cor = item.id == 'P' ? obterCorPizza(index): obterCorBorda(index);
+      final corTexto = textoForaDoGrafico ? cor : (item.id == 'P' ? Colors.white : Colors.black);
 
       return PieChartSectionData(
         value: item.quantidade!,
@@ -56,15 +57,16 @@ class ItemPizzaGrafico {
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
+        titlePositionPercentageOffset: textoForaDoGrafico ? (itens.length % 2 == 0 ? 1.5 : 2.5) : 0.5,
       );
     }).toList();
   }
 
-  Color _obterCorPizza(int index) {
+  Color obterCorPizza(int index) {
     return _coresPizzas[index % _coresPizzas.length];
   }
 
-  Color _obterCorBorda(int index) {
+  Color obterCorBorda(int index) {
     return _coresBordas[index % _coresBordas.length];
   }
 
@@ -74,11 +76,9 @@ class ItemPizzaGrafico {
     const Color.fromRGBO(255, 216, 99, 1),
     const Color.fromRGBO(1, 132, 152, 1),
     const Color.fromRGBO(243, 153, 48, 1),
-    const Color.fromARGB(255, 185, 93, 114),
   ];  
 
   final List<Color> _coresBordas = [
-    const Color.fromARGB(255, 185, 93, 114),
     const Color.fromRGBO(243, 153, 48, 1),
     const Color.fromRGBO(1, 132, 152, 1),
     const Color.fromRGBO(255, 216, 99, 1),

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
+import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/mapa_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
@@ -32,6 +33,7 @@ class MapaPageState extends State<MapaPage> {
   final FuncoesController funcoesController = Get.put(FuncoesController());
   final MapaController mapaController = Get.put(MapaController());
   final painelController = Get.put(PainelController());
+  final footerButtonsController = Get.find<FooterButtonsController>();
 
   final TextEditingController comandaController = TextEditingController();
   // final FocusNode _focusNode = FocusNode();
@@ -71,14 +73,6 @@ class MapaPageState extends State<MapaPage> {
 
   // Para fazer requisições em determinado tempo (1/3)
   Timer? _timerMesas;
-
-  bool aparecerNote = false;
-  bool aparecerCheckInOut = false;
-  bool aparecerRecepcao = false;
-  bool naoAparecerMapa = true;
-  bool aparecerCheckIn = false;
-  bool aparecerCheckOut = false;
-  bool aparecerGarcom = true;
 
   String nomeCliente = '';
   bool isLoadingRefresh = false;
@@ -120,16 +114,10 @@ class MapaPageState extends State<MapaPage> {
 
     _atualizarHora();
     _timer = Timer.periodic(Duration(seconds: 1), (_) => _atualizarHora());
-    
-    _carregarModo();
-    _carregarNote();
-    _carregarchecks();
-    _carregargarcom();
 
     carregarTodasAsComandas();
     carregarAsComandasAbertas();
     carregarAsComandasFechadas();
-    _carregarRecepcao();
     buscarTipoPedido();
     _loadNomeEmpresa();
     _loadNumeroLicenca();
@@ -542,220 +530,6 @@ class MapaPageState extends State<MapaPage> {
     // Para fazer requisições em determinado tempo (3/3)
     _timerMesas?.cancel();
     super.dispose();
-  }
-
-  // Carregar recepcao
-  Future<void> _carregarRecepcao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final recepcaoJson = prefs.getString('recepcao_padrao');
-
-    if (recepcaoJson != null) {
-      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
-
-      if (recepcaosSalvos.contains('Recepção')) {
-        // se recepcao selecionado
-        setState(() {
-          aparecerRecepcao = true;
-        });
-      } else {
-        // se recepcao nao selecionado
-        setState(() {
-          aparecerRecepcao = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerRecepcao = false;
-      });
-    }
-  }
-
-  // Carregar modo
-  Future<void> _carregarModo() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      setState(() {
-        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
-
-        if (funcoesController.logicaPorComanda.value){
-          if (modosSalvos.contains("Comanda")) {
-            mostrarMesas = false;
-            mostrarMesaseComandas = true;
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            mostrarMesas = false;
-            mostrarMesaseComandas = false;
-            aparecerCheckInOut = false;
-            naoAparecerMapa = true;
-          }
-        }
-
-        if(funcoesController.logicaPorMesa.value){
-          if (modosSalvos.contains("Mesa")) {
-            mostrarMesas = true;
-            mostrarMesaseComandas = false;
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            mostrarMesas = false;
-            mostrarMesaseComandas = false;
-            aparecerCheckInOut = false;
-            naoAparecerMapa = true;
-          }
-        }
-
-        if(funcoesController.logicaPorComandaNaMesa.value){
-          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
-            mostrarMesas = false;
-            mostrarMesaseComandas = false;
-            aparecerCheckInOut = true;
-            naoAparecerMapa = false;
-          } else {
-            mostrarMesas = false;
-            mostrarMesaseComandas = false;
-            aparecerCheckInOut = true;
-            naoAparecerMapa = true;
-          }
-        }
-      });
-    } else {
-      setState(() {
-        mostrarMesas = false;
-        mostrarMesaseComandas = false;
-        aparecerCheckInOut = false;
-        naoAparecerMapa = true;
-      });
-    }
-  }
-
-  // Carregar check
-  Future<void> _carregarchecks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final checkJson = prefs.getString('check_padrao');
-    if (checkJson != null) {
-      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
-      if (checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Check-in")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = true;
-        });
-      } else if (!checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-in") &&
-          checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      } else {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      }
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerCheckIn = false;
-        aparecerCheckOut = false;
-      });
-    }
-  }
-
-  // Carregar garçom
-  Future<void> _carregargarcom() async {
-    final prefs = await SharedPreferences.getInstance();
-    final garcomJson = prefs.getString('garcom_padrao');
-
-    if (garcomJson != null) {
-      final garcomSalvos = Set<String>.from(jsonDecode(garcomJson));
-
-      if (garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-
-      /* if (garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else if (!garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if(garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")){
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-      else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } */
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerGarcom = true;
-      });
-    }
-  }
-
-  // Carregar note
-  Future<void> _carregarNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final noteJson = prefs.getString('note_padrao');
-
-    if (noteJson != null) {
-      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
-
-      if (notesSalvos.contains('Notes')) {
-        // se note selecionado
-        setState(() {
-          aparecerNote = true;
-        });
-      } else {
-        // se note nao selecionado
-        setState(() {
-          aparecerNote = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerNote = false;
-      });
-    }
   }
 
   // Carregar selects
@@ -2781,18 +2555,18 @@ class MapaPageState extends State<MapaPage> {
           // Barra inferior com botões quadrados
           _showKeyboardNome
           ? Padding(
-              padding: aparecerNote ? EdgeInsets.only(top: 5.0, bottom: 0.0, left: 10.0, right: 10.0) : EdgeInsets.only(top: 5.0, bottom: 0.0, left: 15.0, right: 15.0),
+              padding: footerButtonsController.aparecerNote.value ? EdgeInsets.only(top: 5.0, bottom: 0.0, left: 10.0, right: 10.0) : EdgeInsets.only(top: 5.0, bottom: 0.0, left: 15.0, right: 15.0),
               child: Row(),
             )
           :
             // Barra inferior com botões quadrados
             Padding(
-              padding: aparecerNote ? EdgeInsets.only(top: 5.0, bottom: 15.0) : EdgeInsets.only(top: 5.0, bottom: 15.0),
+              padding: footerButtonsController.aparecerNote.value ? EdgeInsets.only(top: 5.0, bottom: 15.0) : EdgeInsets.only(top: 5.0, bottom: 15.0),
               child: Row(
                 children: [
                   SizedBox(width: 4),
                   // Botão Check In
-                  if (aparecerCheckIn)
+                  if (footerButtonsController.aparecerCheckIn.value)
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 4.0),
@@ -2846,7 +2620,7 @@ class MapaPageState extends State<MapaPage> {
                   // if (aparecerCheckOut) SizedBox(width: 8),
 
                   // Botão Check Out
-                  if (aparecerCheckOut)
+                  if (footerButtonsController.aparecerCheckOut.value)
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 4.0),
@@ -2910,7 +2684,7 @@ class MapaPageState extends State<MapaPage> {
                     ),
 
                   // if (aparecerNote) SizedBox(width: 8),
-                  if (aparecerNote)
+                  if (footerButtonsController.aparecerNote.value)
                     // Botão Notes
                     Expanded(
                       child: Padding(
@@ -2977,7 +2751,7 @@ class MapaPageState extends State<MapaPage> {
                       ),
                     ),
                   // if (aparecerRecepcao) SizedBox(width: 8),
-                  if (aparecerRecepcao)
+                  if (footerButtonsController.aparecerRecepcao.value)
                     // Botão Recepção
                     Expanded(
                       child: Padding(
@@ -3045,7 +2819,7 @@ class MapaPageState extends State<MapaPage> {
                     ),
                   // if (aparecerCheckInOut || !naoAparecerMapa)
                   //   SizedBox(width: 8),
-                  if (!naoAparecerMapa)
+                  if (footerButtonsController.aparecerMapa.value)
                     // Botão Mapa de Mesas
                     Expanded(
                       child: Padding(
@@ -3111,7 +2885,7 @@ class MapaPageState extends State<MapaPage> {
                       ),
                     ),
                   // if (aparecerGarcom) SizedBox(width: 8),
-                  if (aparecerGarcom)
+                  if (footerButtonsController.aparecerGarcom.value)
                     // Botão Garçom
                     Expanded(
                       child: Padding(

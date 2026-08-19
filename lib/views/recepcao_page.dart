@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
+import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/controllers/views/pedidos_controller.dart';
@@ -61,6 +62,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
   String versaoAplicacao = FuncoesController().versaoDoApp;
   final funcoesController = Get.find<FuncoesController>();
   final painelController = Get.find<PainelController>();
+  final footerButtonsController = Get.find<FooterButtonsController>();
   // final pedidosController = Get.put(PedidosController());
 
   final ScrollController _scrollController = ScrollController();
@@ -95,14 +97,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
   // Para fazer requisições em determinado tempo (1/3)
   Timer? _timerSelect;
-
-  bool aparecerCheckInOut = false;
-  bool aparecerRecepcao = false;
-  bool aparecerNote = false;
-  bool naoAparecerMapa = true;
-  bool aparecerCheckIn = false;
-  bool aparecerCheckOut = false;
-  bool aparecerGarcom = true;
 
   String tipoRegistro = 'CPF'; // Variável que define qual tipo de registro o cliente vai usar
   final TextEditingController nomeController = TextEditingController(); //
@@ -1594,14 +1588,9 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
     limparCampos();
     _carregarModo();
-    _carregarModos();
-    _carregarchecks();
-    _carregarRecepcao();
-    _carregarNote();
     listaAdicionais();
     carregarCidadeUf();
     carregarNomeEmpresa();
-    _carregargarcom();
     _loadNumeroLicenca();
     _loadGarcom();
     _getNumeroGarcom();
@@ -2832,265 +2821,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     }
   }
 
-  // Carregar note
-  Future<void> _carregarNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final noteJson = prefs.getString('note_padrao');
-
-    if (noteJson != null) {
-      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
-
-      if (notesSalvos.contains('Notes')) {
-        // se note selecionado
-        setState(() {
-          aparecerNote = true;
-        });
-      } else {
-        // se note nao selecionado
-        setState(() {
-          aparecerNote = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerNote = false;
-      });
-    }
-  }
-
-  // Carregar modo
-  Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      setState(() {
-        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
-
-        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
-        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = false;
-        } else if (modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = true;
-        } else {
-          aparecerCheckInOut = false;
-        }
-      });
-    } else {
-      setState(() {
-        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
-        naoAparecerMapa = true;
-        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo
-      });
-    }
-  }
-  /* Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-      setState(() {
-        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
-        if (funcoesController.logicaPorComanda.value){
-          if (modosSalvos.contains("Comanda")) {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = true;
-          }
-        }
-        if(funcoesController.logicaPorMesa.value){
-          if (modosSalvos.contains("Mesa")) {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = true;
-          }
-        }
-        if(funcoesController.logicaPorComandaNaMesa.value){
-          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = true;
-          }
-        }
-      });
-    } else {
-      setState(() {
-        aparecerCheckInOut = true;
-        naoAparecerMapa = true;
-      });
-    }
-  } */
-  /* Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      setState(() {
-        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
-
-        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
-        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = false;
-        } else if (modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = true;
-        } else {
-          aparecerCheckInOut = false;
-        }
-      });
-    } else {
-      setState(() {
-        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
-        naoAparecerMapa = true;
-        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo para esta variável se nada salvo
-      });
-    }
-  } */
-
-  // Carregar check
-  Future<void> _carregarchecks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final checkJson = prefs.getString('check_padrao');
-    if (checkJson != null) {
-      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
-      if (checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Check-in")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = true;
-        });
-      } else if (!checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-in") &&
-          checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      } else {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      }
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerCheckIn = true;
-        aparecerCheckOut = true;
-      });
-    }
-  }
-
-  // Carregar garçom
-  Future<void> _carregargarcom() async {
-    final prefs = await SharedPreferences.getInstance();
-    final garcomJson = prefs.getString('garcom_padrao');
-
-    if (garcomJson != null) {
-      final garcomSalvos = Set<String>.from(jsonDecode(garcomJson));
-
-      if (garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-
-      /* if (garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else if (!garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if(garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")){
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-      else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } */
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerGarcom = true;
-      });
-    }
-  }
-
-  // Carregar modo
-  // Future<void> _carregarModos() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final modoJson = prefs.getString('modo_padrao');
-
-  //   if (modoJson != null) {
-  //     final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-  //     if (modosSalvos.contains("Mesa") && modosSalvos.contains("Comanda")) {
-  //       setState(() {
-  //         aparecerCheckInOut = true;
-  //       });
-  //     } else if (modosSalvos.contains("Mesa") &&
-  //         !modosSalvos.contains("Comanda")) {
-  //       setState(() {
-  //         aparecerCheckInOut = false;
-  //       });
-  //     } else if (!modosSalvos.contains("Mesa") &&
-  //         modosSalvos.contains("Comanda")) {
-  //       setState(() {
-  //         aparecerCheckInOut = true;
-  //       });
-  //     } else {
-  //       setState(() {
-  //         aparecerCheckInOut = true;
-  //       });
-  //     }
-  //   } else {
-  //     setState(() {
-  //       // Se não tiver nada salvo, define padrão
-  //       aparecerCheckInOut = true;
-  //     });
-  //   }
-  // }
 
   // Função para carregar cidade e uf
   Future<void> carregarCidadeUf() async {
@@ -3159,33 +2889,6 @@ class RecepcaoPageState extends State<RecepcaoPage> {
     comandaController.dispose();
     adicionalController.dispose();
     super.dispose();
-  }
-
-  // Carregar recepcao
-  Future<void> _carregarRecepcao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final recepcaoJson = prefs.getString('recepcao_padrao');
-
-    if (recepcaoJson != null) {
-      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
-
-      if (recepcaosSalvos.contains('Recepção')) {
-        // se recepcao selecionado
-        setState(() {
-          aparecerRecepcao = true;
-        });
-      } else {
-        // se recepcao nao selecionado
-        setState(() {
-          aparecerRecepcao = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerRecepcao = false;
-      });
-    }
   }
 
   // PEGAR O MODO SALVO
@@ -3598,7 +3301,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                   Column(
                     children: [
                       Padding(
-                        padding: aparecerNote ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
+                        padding: footerButtonsController.aparecerNote.value ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
                             : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 15.0, right: 15.0,),
                         child: Form(
                           key: _formKey,
@@ -4961,19 +4664,9 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                   children: [
                     // if(mostrarBotoes)
                     Padding(
-                      padding: aparecerNote
-                          ? EdgeInsets.only(
-                              top: 5,
-                              bottom: 10,
-                              left: 10,
-                              right: 10,
-                            )
-                          : EdgeInsets.only(
-                              top: 5,
-                              bottom: 10,
-                              left: 15,
-                              right: 15,
-                            ),
+                      padding: footerButtonsController.aparecerNote.value
+                          ? EdgeInsets.only(top: 5, bottom: 10, left: 10, right: 10,)
+                          : EdgeInsets.only(top: 5, bottom: 10, left: 15, right: 15,),
                       child: SizedBox(width: double.infinity),
                     ),
 
@@ -4985,23 +4678,13 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                         child:
                             // Barra inferior com botões quadrados
                             Padding(
-                              padding: aparecerNote
-                                  ? EdgeInsets.only(
-                                      top: 5.0,
-                                      bottom: 15.0,
-                                      left: 10.0,
-                                      right: 10.0,
-                                    )
-                                  : EdgeInsets.only(
-                                      top: 5.0,
-                                      bottom: 15.0,
-                                      left: 15.0,
-                                      right: 15.0,
-                                    ),
+                              padding: footerButtonsController.aparecerNote.value
+                                  ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
+                                  : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 15.0, right: 15.0,),
                               child: Row(
                                 children: [
                                   // Botão Check In
-                                  if (aparecerCheckIn)
+                                  if (footerButtonsController.aparecerCheckIn.value)
                                     Expanded(
                                       child: Padding(
                                         padding: EdgeInsets.symmetric(
@@ -5012,25 +4695,12 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                             Navigator.push(
                                               context,
                                               PageRouteBuilder(
-                                                transitionDuration: Duration
-                                                    .zero, // sem duração
-                                                reverseTransitionDuration: Duration
-                                                    .zero, // sem duração ao voltar
-                                                pageBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                    ) => CheckinPage(),
-                                                transitionsBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                      child,
-                                                    ) {
-                                                      return child; // retorna direto, sem animação
-                                                    },
+                                                transitionDuration: Duration.zero, // sem duração
+                                                reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                                pageBuilder: (context, animation, secondaryAnimation) => CheckinPage(),
+                                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                    return child; // retorna direto, sem animação
+                                                },
                                               ),
                                             );
                                           },
@@ -5074,7 +4744,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                       ),
                                     ),
                                   // Botão Check Out
-                                  if (aparecerCheckOut)
+                                  if (footerButtonsController.aparecerCheckOut.value)
                                     Expanded(
                                       child: Padding(
                                         padding: EdgeInsets.symmetric(
@@ -5085,25 +4755,12 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                             Navigator.push(
                                               context,
                                               PageRouteBuilder(
-                                                transitionDuration: Duration
-                                                    .zero, // sem duração
-                                                reverseTransitionDuration: Duration
-                                                    .zero, // sem duração ao voltar
-                                                pageBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                    ) => CheckoutPage(),
-                                                transitionsBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                      child,
-                                                    ) {
-                                                      return child; // retorna direto, sem animação
-                                                    },
+                                                transitionDuration: Duration.zero, // sem duração
+                                                reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                                pageBuilder: (context, animation, secondaryAnimation) => CheckoutPage(),
+                                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                    return child; // retorna direto, sem animação
+                                                },
                                               ),
                                             );
                                           },
@@ -5146,7 +4803,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                         ),
                                       ),
                                     ),
-                                  if (aparecerNote)
+                                  if (footerButtonsController.aparecerNote.value)
                                     // Botão Notes
                                     Expanded(
                                       child: Padding(
@@ -5158,25 +4815,12 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                             Navigator.push(
                                               context,
                                               PageRouteBuilder(
-                                                transitionDuration: Duration
-                                                    .zero, // sem duração
-                                                reverseTransitionDuration: Duration
-                                                    .zero, // sem duração ao voltar
-                                                pageBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                    ) => NotesPage(),
-                                                transitionsBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                      child,
-                                                    ) {
-                                                      return child; // retorna direto, sem animação
-                                                    },
+                                                transitionDuration: Duration.zero, // sem duração
+                                                reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                                pageBuilder: (context, animation, secondaryAnimation) => NotesPage(),
+                                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                    return child; // retorna direto, sem animação
+                                                },
                                               ),
                                             );
                                           },
@@ -5219,7 +4863,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                         ),
                                       ),
                                     ),
-                                  if (aparecerRecepcao)
+                                  if (footerButtonsController.aparecerRecepcao.value)
                                     // Botão Recepção
                                     Expanded(
                                       child: Padding(
@@ -5231,25 +4875,12 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                             Navigator.push(
                                               context,
                                               PageRouteBuilder(
-                                                transitionDuration:
-                                                    Duration.zero,
-                                                reverseTransitionDuration:
-                                                    Duration.zero,
-                                                pageBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                    ) => RecepcaoPage(),
-                                                transitionsBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                      child,
-                                                    ) {
-                                                      return child;
-                                                    },
+                                                transitionDuration: Duration.zero,
+                                                reverseTransitionDuration: Duration.zero,
+                                                pageBuilder: (context, animation, secondaryAnimation) => RecepcaoPage(),
+                                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                    return child;
+                                                },
                                               ),
                                             );
                                           },
@@ -5296,7 +4927,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                     ),
                                   // if( aparecerCheckInOut || !naoAparecerMapa)
                                   // SizedBox(width: 8),
-                                  if (!naoAparecerMapa)
+                                  if (footerButtonsController.aparecerMapa.value)
                                     // Botão Mapa de Mesas
                                     Expanded(
                                       child: Padding(
@@ -5372,7 +5003,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                     ),
                                   // if(aparecerGarcom)
                                   // SizedBox(width: 8),
-                                  if (aparecerGarcom)
+                                  if (footerButtonsController.aparecerGarcom.value)
                                     // Botão Garçom
                                     Expanded(
                                       child: Padding(

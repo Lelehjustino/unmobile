@@ -14,6 +14,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:pinput/pinput.dart';
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
+import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
@@ -196,8 +197,6 @@ class GarcomPageState extends State<GarcomPage>
   String statusPedido = '';
   // String numeroDoProduto = '';
 
-  bool aparecerNote = false;
-
   // Variáveis dos grupos
   /* String numeroDoGrupo = "";
   String nomeDoGrupo = "";
@@ -231,12 +230,6 @@ class GarcomPageState extends State<GarcomPage>
 
   String comandaNumero = '';
   bool comandaRegistrada = false;
-  bool aparecerCheckInOut = false;
-  bool aparecerRecepcao = false;
-  bool naoAparecerMapa = true;
-  bool aparecerCheckIn = false;
-  bool aparecerCheckOut = false;
-  bool aparecerGarcom = true;
 
   bool cadastrarPorMesa = false;
   bool cadastrarPorComanda = true;
@@ -316,6 +309,7 @@ class GarcomPageState extends State<GarcomPage>
   // Variável cliqueiFazerPedido foi removida a favor do estado global no FuncoesController
 
   final FuncoesController funcoesController = Get.find<FuncoesController>();
+  final FooterButtonsController footerButtonsController = Get.find<FooterButtonsController>();
 
   bool cliqueiFazerPedido = false;
 
@@ -448,16 +442,11 @@ class GarcomPageState extends State<GarcomPage>
         });
       }
     });
-
-    _carregarNote();
     _carregarModo();
     _carregarServidor();
     _loadServidor();
     _loadComanda();
-    _carregarModos();
-    _carregarRecepcao();
     _loadGarcom();
-    _carregargarcom();
     _loadNumeroLicenca();
     _loadNomeEmpresa();
     listaProdutoFiltrada = funcoesController.listaProduto;
@@ -473,8 +462,6 @@ class GarcomPageState extends State<GarcomPage>
       chamarFocoInicial();
       carrinhoController.carrinho.clear();
     }
-
-    _carregarchecks();
 
     carregarUltimoAdicionalObservacaoSelecionado();
 
@@ -1151,14 +1138,6 @@ class GarcomPageState extends State<GarcomPage>
     observacaoProdutoSelecionadoFocus.unfocus();
     senhaFocus.unfocus();
     FocusScope.of(context).unfocus();
-  }
-
-  void initChecks() {
-    setState(() {
-      aparecerCheckInOut = false;
-      aparecerCheckIn = false;
-      aparecerCheckOut = false;
-    });
   }
 
   void iniciarComandaMesa() {
@@ -5630,212 +5609,6 @@ class GarcomPageState extends State<GarcomPage>
     );
   }
 
-  // Carregar modo
-  Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      setState(() {
-        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
-
-        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
-        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = false;
-        } else if (modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = true;
-        } else {
-          aparecerCheckInOut = false;
-        }
-      });
-    } else {
-      setState(() {
-        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
-        naoAparecerMapa = true;
-        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo
-      });
-    }
-  }
-  /* Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      setState(() {
-
-        if (funcoesController.logicaPorComanda.value){
-          if (modosSalvos.contains("Comanda")) {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            aparecerCheckInOut = true;
-            naoAparecerMapa = true;
-          }
-        }
-
-        if(funcoesController.logicaPorMesa.value){
-          if (modosSalvos.contains("Mesa")) {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            aparecerCheckInOut = true;
-            naoAparecerMapa = true;
-          }
-        }
-
-        if(funcoesController.logicaPorComandaNaMesa.value){
-          if (modosSalvos.contains("Comanda") || modosSalvos.contains("Mesa")) {
-            aparecerCheckInOut = false;
-            naoAparecerMapa = false;
-          } else {
-            aparecerCheckInOut = true;
-            naoAparecerMapa = true;
-          }
-        }
-      });
-    } else {
-      setState(() {
-        naoAparecerMapa = true;
-        aparecerCheckInOut = true;
-      });
-    }
-  } */
-
-  // Carregar check
-  Future<void> _carregarchecks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final checkJson = prefs.getString('check_padrao');
-
-    if (checkJson != null) {
-      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
-
-      if (checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Check-in")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = true;
-        });
-      } else if (!checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-in") &&
-          checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      } else {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      }
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerCheckIn = false;
-        aparecerCheckOut = false;
-      });
-    }
-  }
-
-  // Carregar garçom
-  Future<void> _carregargarcom() async {
-    final prefs = await SharedPreferences.getInstance();
-    final garcomJson = prefs.getString('garcom_padrao');
-
-    if (garcomJson != null) {
-      final garcomSalvos = Set<String>.from(jsonDecode(garcomJson));
-
-      if (garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerGarcom = true;
-      });
-    }
-  }
-
-  // Carregar note
-  Future<void> _carregarNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final noteJson = prefs.getString('note_padrao');
-
-    if (noteJson != null) {
-      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
-
-      if (notesSalvos.contains('Notes')) {
-        // se note selecionado
-        setState(() {
-          aparecerNote = true;
-        });
-      } else {
-        // se note nao selecionado
-        setState(() {
-          aparecerNote = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerNote = false;
-      });
-    }
-  }
-
-  // Carregar recepcao
-  Future<void> _carregarRecepcao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final recepcaoJson = prefs.getString('recepcao_padrao');
-
-    if (recepcaoJson != null) {
-      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
-
-      if (recepcaosSalvos.contains('Recepção')) {
-        // se recepcao selecionado
-        setState(() {
-          aparecerRecepcao = true;
-        });
-      } else {
-        // se recepcao nao selecionado
-        setState(() {
-          aparecerRecepcao = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerRecepcao = false;
-      });
-    }
-  }
-
   // Função para atualizar hora
   void _atualizarHora() {
     if (!mounted) return;
@@ -8650,7 +8423,6 @@ class GarcomPageState extends State<GarcomPage>
                                             setState(() {
                                               aparecerCardapio = false;
                                               aparecerCarrinho = false;
-                                              aparecerCheckOut = false;
                                               aparecerLista = false;
                                             });
 
@@ -11694,7 +11466,7 @@ class GarcomPageState extends State<GarcomPage>
             child: Container(
               color: Theme.of(context).colorScheme.surface,
               child: Padding(
-                padding: aparecerNote
+                padding: footerButtonsController.aparecerNote.value
                     ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
                     : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 5.0, right: 5.0),
                 child: Container(
@@ -11702,7 +11474,7 @@ class GarcomPageState extends State<GarcomPage>
                   child: Row(
                     children: [
                       // Botão Check In
-                      if (aparecerCheckIn)
+                      if (footerButtonsController.aparecerCheckIn.value)
                         Expanded(
                           child: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 4.0),
@@ -11809,7 +11581,7 @@ class GarcomPageState extends State<GarcomPage>
                       // if (aparecerCheckOut) SizedBox(width: 8),
                               
                       // Botão Check Out
-                      if (aparecerCheckOut)
+                      if (footerButtonsController.aparecerCheckOut.value)
                         Expanded(
                           child: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 4.0),
@@ -11914,7 +11686,7 @@ class GarcomPageState extends State<GarcomPage>
                         ),
                               
                       // if (aparecerNote) SizedBox(width: 8),
-                      if (aparecerNote)
+                      if (footerButtonsController.aparecerNote.value)
                         // Botão Notes
                         Expanded(
                           child: Padding(
@@ -12020,7 +11792,7 @@ class GarcomPageState extends State<GarcomPage>
                           ),
                         ),
                       // if (aparecerRecepcao) SizedBox(width: 8),
-                      if (aparecerRecepcao)
+                      if (footerButtonsController.aparecerRecepcao.value)
                         // Botão Recepção
                         Expanded(
                           child: Padding(
@@ -12126,7 +11898,7 @@ class GarcomPageState extends State<GarcomPage>
                           ),
                         ),
                       // if (!naoAparecerMapa) SizedBox(width: 8), 
-                      if (!naoAparecerMapa)
+                      if (footerButtonsController.aparecerMapa.value)
                         // Botão Mapa de Mesas
                         Expanded(
                           child: Padding(
@@ -12212,7 +11984,7 @@ class GarcomPageState extends State<GarcomPage>
                           ),
                         ),
                       // if (aparecerGarcom) SizedBox(width: 8),
-                      if (aparecerGarcom)
+                      if (footerButtonsController.aparecerGarcom.value)
                         // Botão Garçom
                         Expanded(
                           child: Padding(
