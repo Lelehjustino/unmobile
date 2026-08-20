@@ -143,7 +143,7 @@ class FooterButtonsController extends GetxController {
     if (modoJson != null) {
       final modosSalvos = Set<String>.from(jsonDecode(modoJson));
       // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-      aparecerMapa.value = (modosSalvos.contains("Mapa"));
+      aparecerMapa.value = (modosSalvos.contains("0"));
     } else {
       // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
       aparecerMapa.value = false;

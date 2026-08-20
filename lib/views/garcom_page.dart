@@ -9824,7 +9824,7 @@ class GarcomPageState extends State<GarcomPage>
                                     },
                                     child: Column(
                                       children: [
-                                        mesaController.text.isEmpty ?
+                                        (mesaController.text.isEmpty || mesaController.text == "0")?
                                         Stack(
                                           alignment: Alignment.center,
                                           children: [
@@ -9861,7 +9861,7 @@ class GarcomPageState extends State<GarcomPage>
                                             context,
                                           ).colorScheme.primary,
                                         ),
-                                        if(mesaController.text.isNotEmpty)
+                                        if(mesaController.text.isNotEmpty && mesaController.text != "0")
                                         SizedBox(
                                           width: 50,
                                           child: Text(
@@ -11418,13 +11418,10 @@ class GarcomPageState extends State<GarcomPage>
                   }
                   ),
                 ),
-                if(aparecerVendaTouch && !aparecerConfiguracaoProduto && aparecerCardapio)
+                /* if(aparecerVendaTouch && !aparecerConfiguracaoProduto && aparecerCardapio)
                 SizedBox(
                   height: MediaQuery.of(context).size.height * 0.12,
-                ),
-              
-                /* if ((!aparecerLista && carrinhoController.carrinho.isEmpty && !aparecerVendaTouch) || (aparecerConfiguracaoProduto) || (empurrarBotoes))
-                  Expanded(child: Container()),  */
+                ), */
               ],
             ),
           ),
@@ -11458,7 +11455,7 @@ class GarcomPageState extends State<GarcomPage>
             ),
           ), */
 
-          // Botoes de baixo
+          /* // Botoes de baixo
           Positioned(
             left: 0,
             right: 0,
@@ -12039,7 +12036,7 @@ class GarcomPageState extends State<GarcomPage>
                 ),
               ),
             ),
-          ),
+          ), */
         ],
         ), // fecha Stack
       ), // fecha AbsorbPointer

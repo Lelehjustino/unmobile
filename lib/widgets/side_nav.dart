@@ -14,9 +14,12 @@ import 'package:un_recepcao/models/monitor.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/configuracoes_page.dart';
+import 'package:un_recepcao/views/expedicao_motoboy_page.dart';
 import 'package:un_recepcao/views/garcom_page.dart' hide Padding;
 import 'package:un_recepcao/views/mapa_page.dart';
 import 'package:un_recepcao/views/notes_page.dart';
+import 'package:un_recepcao/views/painel_cliente.dart';
+import 'package:un_recepcao/views/painel_cozinha.dart';
 import 'package:un_recepcao/views/recepcao_page.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -77,6 +80,572 @@ class SideNavState extends State<SideNav> {
     } 
   }
 
+  void carrinhoCheio(Widget page){
+    shownDialogErrorTwoBottom(
+      context: context,
+      title: "Carrinho cheio!",
+      message: "Deseja descartar este pedido e continuar?",
+      icon: Icons.shopping_cart,
+      onConfirm: () async {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+        funcoesController.zerarAtendimento();
+        carrinhoController.zerarAtendimentoCarrinho();
+      },
+      onCancel: () async {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
+      },
+    );
+  }
+
+  // Dialogo com dois botões de erro
+  Future<void> shownDialogErrorTwoBottom({
+    required BuildContext context,
+    String title = 'Confirmação',
+    String? message,
+    IconData icon = Icons.home,
+    String cancelText = 'Não',
+    String confirmText = 'Sim',
+    VoidCallback? onConfirm,
+    VoidCallback? onCancel,
+    TextEditingController? textController,
+    FocusNode? focusNode,
+    ValueChanged<String>? onSubmitted, // Callback ao submeter o texto
+  }) {
+    return showDialog(
+      context: context,
+      barrierDismissible: false, // Não pode fechar tocando fora
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Ícone central
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(ctx).colorScheme.error.withOpacity(0.08),
+                  ),
+                  padding: EdgeInsets.all(12),
+                  child: Icon(
+                    icon,
+                    size: 40,
+                    color: Theme.of(ctx).colorScheme.error,
+                  ),
+                ),
+
+                SizedBox(height: 10),
+
+                // Título opcional
+                if (title.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      title,
+                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
+                // SizedBox(height: 5),
+
+                // Texto centralizado
+                if (message != null && message.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 10.0),
+                    child: Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 15,
+                        color: Theme.of(ctx).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+
+                // O SEU NOVO CAMPO DE TEXTO COM OS CONTROLADORES
+                if (textController !=
+                    null) // Só mostra o TextField se um controller for fornecido
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 15.0),
+                    child: TextField(
+                      keyboardType: TextInputType.number, // TECLADO NUMÉRICO
+                      controller: textController, // Usa o controller passado
+                      focusNode: focusNode, // Usa o focusNode passado
+                      onSubmitted: onSubmitted, // Usa o onSubmitted passado
+                      autofocus:
+                          focusNode ==
+                          true, // Autofoco padrão se não houver FocusNode
+                      textAlign:
+                          TextAlign.center, // Centraliza o texto e o ponteiro
+                      decoration: InputDecoration(
+                        hintText: 'Digite aqui...',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.all(12),
+                      ),
+                    ),
+                  ),
+
+                // Botões centralizados
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Botão Cancelar
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        if (onCancel != null) onCancel();
+                      },
+                      child: Text(
+                        cancelText.toUpperCase(),
+                        style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.onPrimary,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        backgroundColor: Theme.of(ctx).colorScheme.error,
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    // Botão Confirmar
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        if (onConfirm != null) onConfirm();
+                      },
+                      child: Text(
+                        confirmText.toUpperCase(),
+                        style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.onPrimary,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        backgroundColor: Theme.of(
+                          ctx,
+                        ).colorScheme.primary.withOpacity(0.05),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget checkInPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.login,
+        color: currentRoute == '/checkin'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Check-in",
+        style: TextStyle(
+          color: currentRoute == '/checkin'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/checkin',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(CheckinPage());
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckinPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget checkOutPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.logout,
+        color: currentRoute == '/checkout'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Check-out",
+        style: TextStyle(
+          color: currentRoute == '/checkout'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/checkout',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(CheckoutPage());
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckoutPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget notesPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+    leading: Icon(
+      Icons.note_add_sharp,
+      color: currentRoute == '/notes'
+          ? colorScheme.surface
+          : colorScheme.onSurface,
+    ),
+    title: Text(
+      "Notes",
+      style: TextStyle(
+        color: currentRoute == '/notes'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+    ),
+    selected: currentRoute == '/notes',
+    selectedTileColor: colorScheme.primary,
+    onTap: () {
+      if(carrinhoController.carrinho.isNotEmpty){
+        carrinhoCheio(NotesPage());
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => NotesPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget receptionPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.person,
+        color: currentRoute == '/recepcao'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Recepção",
+        style: TextStyle(
+          color: currentRoute == '/recepcao'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/recepcao',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(RecepcaoPage());
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecepcaoPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget mapPage(String? currentRoute, ColorScheme colorScheme){
+    return  ListTile(
+      leading: Icon(
+        Icons.map,
+        color: currentRoute == '/mapa'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Mapa",
+        style: TextStyle(
+          color: currentRoute == '/mapa'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/mapa',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(MapaPage());
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => MapaPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget vendasPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.table_restaurant,
+        color: currentRoute == '/garcom'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Vendas",
+        style: TextStyle(
+          color: currentRoute == '/garcom'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/garcom',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget expedicaoClientePage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.person,
+        color: currentRoute == '/painel_cliente'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Expedição Cliente",
+        style: TextStyle(
+          color: currentRoute == '/painel_cliente'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/painel_cliente',
+      selectedTileColor: colorScheme.primary,
+      onTap: () async {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(PainelCliente());
+        } else {
+          Get.toNamed('/painel_cliente');
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+          if (Platform.isWindows) {
+            await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+            await windowManager.setFullScreen(true);
+          }
+        }
+      },
+    );
+  }
+
+  Widget kdsPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.soup_kitchen,
+        color: currentRoute == '/painel_cozinha'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "KDS",
+        style: TextStyle(
+          color: currentRoute == '/painel_cozinha'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/painel_cozinha',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(PainelCozinha());
+        } else {
+          Get.toNamed('/painel_cozinha');
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget expedicaoMotoboyPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.motorcycle,
+        color: currentRoute == '/expedicao_motoboy'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Expedição Motoboy",
+        style: TextStyle(
+          color: currentRoute == '/expedicao_motoboy'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/expedicao_motoboy',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(ExpedicaoMotoboyPage());
+        } else {
+          Get.toNamed('/expedicao_motoboy');
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget cupomAvulsoPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.print,
+        color: currentRoute == '/cupom_avulso'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Cupom Avulso",
+        style: TextStyle(
+          color: currentRoute == '/cupom_avulso'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/cupom_avulso',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        Get.toNamed('/cupom_avulso');
+        funcoesController.zerarAtendimento();
+        carrinhoController.zerarAtendimentoCarrinho();
+      },
+    );
+  }
+
+  Widget configuracoesPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.settings,
+        color: currentRoute == '/configuracoes'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Configurações",
+        style: TextStyle(
+          color: currentRoute == '/configuracoes'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/configuracoes',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        if(carrinhoController.carrinho.isNotEmpty){
+          carrinhoCheio(ConfiguracoesPage());
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConfiguracoesPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget sairApp(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.logout,
+        color: currentRoute == '/configuracoes'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Sair do aplicativo",
+        style: TextStyle(
+          color: currentRoute == '/configuracoes'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/configuracoes',
+      selectedTileColor: colorScheme.primary,
+      // onTap: () {  // Fecha a aplicação
+      //   SystemNavigator.pop();
+      // },
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text("Confirmar saída"),
+              content: Text(
+                "Você tem certeza que quer sair da aplicação?",
+              ),
+              actions: <Widget>[
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          funcoesController.zerarAtendimento();
+                          carrinhoController.zerarAtendimentoCarrinho();
+                          SystemNavigator.pop(); // Fecha a aplicação
+                        },
+                        child: Text("Sim"),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Fecha o diálogo
+                        },
+                        child: Text("Não"),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String? currentRoute = ModalRoute.of(context)?.settings.name;
@@ -92,204 +661,40 @@ class SideNavState extends State<SideNav> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // Icons.assignment
-                  if(footerButtonsController.rotaHome.value)
-                  ListTile(
-                    leading: Icon(
-                      Icons.home,
-                      color: currentRoute == '/'
-                          ? colorScheme.surface
-                          : colorScheme.onSurface,
-                    ),
-                    title: Text(
-                      "Home",
-                      style: TextStyle(
-                        color: currentRoute == '/'
-                            ? colorScheme.surface
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    selected: currentRoute == '/',
-                    selectedTileColor: colorScheme.primary,
-                    onTap: () {
-                      navegacao_inteligente();
-                      funcoesController.zerarAtendimento();
-                    },
-                  ),
-                  if((footerButtonsController.aparecerExpedicaoCliente.value || footerButtonsController.rotaPainelCliente.value) && !footerButtonsController.rotaPainelCliente.value)
-                  ListTile(
-                    leading: Icon(
-                      Icons.person,
-                      color: currentRoute == '/painel_cliente'
-                          ? colorScheme.surface
-                          : colorScheme.onSurface,
-                    ),
-                    title: Text(
-                      "Expedição cliente",
-                      style: TextStyle(
-                        color: currentRoute == '/painel_cliente'
-                            ? colorScheme.surface
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    selected: currentRoute == '/painel_cliente',
-                    selectedTileColor: colorScheme.primary,
-                    onTap: () async {
-                      Get.toNamed('/painel_cliente');
-                      funcoesController.zerarAtendimento();
-                      if (Platform.isWindows) {
-                        await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-                        await windowManager.setFullScreen(true);
-                      }
-                    },
-                  ),
-                  if(footerButtonsController.aparecerKDS.value && footerButtonsController.rotaHome.value)
-                  ListTile(
-                    leading: Icon(
-                      Icons.soup_kitchen,
-                      color: currentRoute == '/painel_cozinha'
-                          ? colorScheme.surface
-                          : colorScheme.onSurface,
-                    ),
-                    title: Text(
-                      "KDS",
-                      style: TextStyle(
-                        color: currentRoute == '/painel_cozinha'
-                            ? colorScheme.surface
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    selected: currentRoute == '/painel_cozinha',
-                    selectedTileColor: colorScheme.primary,
-                    onTap: () {
-                      Get.toNamed('/painel_cozinha');
-                      funcoesController.zerarAtendimento();
-                    },
-                  ),  
-                  if((footerButtonsController.aparecerExpedicaoMotoboy.value && footerButtonsController.rotaHome.value) || footerButtonsController.rotaExpedicaoMotoboy.value)
-                  ListTile(
-                    leading: Icon(
-                      Icons.motorcycle,
-                      color: currentRoute == '/expedicao_motoboy'
-                          ? colorScheme.surface
-                          : colorScheme.onSurface,
-                    ),
-                    title: Text(
-                      "Expedição Motoboy",
-                      style: TextStyle(
-                        color: currentRoute == '/expedicao_motoboy'
-                            ? colorScheme.surface
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    selected: currentRoute == '/expedicao_motoboy',
-                    selectedTileColor: colorScheme.primary,
-                    onTap: () {
-                      Get.toNamed('/expedicao_motoboy');
-                      funcoesController.zerarAtendimento();
-                    },
-                  ), 
-                  if(footerButtonsController.rotaHome.value)
-                  ListTile(
-                    leading: Icon(
-                      Icons.print,
-                      color: currentRoute == '/cupom_avulso'
-                          ? colorScheme.surface
-                          : colorScheme.onSurface,
-                    ),
-                    title: Text(
-                      "Cupom Avulso",
-                      style: TextStyle(
-                        color: currentRoute == '/cupom_avulso'
-                            ? colorScheme.surface
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    selected: currentRoute == '/cupom_avulso',
-                    selectedTileColor: colorScheme.primary,
-                    onTap: () {
-                      Get.toNamed('/cupom_avulso');
-                      funcoesController.zerarAtendimento();
-                    },
-                  ), 
-                  ListTile(
-                    leading: Icon(
-                      Icons.settings,
-                      color: currentRoute == '/configuracoes'
-                          ? colorScheme.surface
-                          : colorScheme.onSurface,
-                    ),
-                    title: Text(
-                      "Configurações",
-                      style: TextStyle(
-                        color: currentRoute == '/configuracoes'
-                            ? colorScheme.surface
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    selected: currentRoute == '/configuracoes',
-                    selectedTileColor: colorScheme.primary,
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConfiguracoesPage()));
-                      funcoesController.zerarAtendimento();
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.logout,
-                      color: currentRoute == '/configuracoes'
-                          ? colorScheme.surface
-                          : colorScheme.onSurface,
-                    ),
-                    title: Text(
-                      "Sair do aplicativo",
-                      style: TextStyle(
-                        color: currentRoute == '/configuracoes'
-                            ? colorScheme.surface
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    selected: currentRoute == '/configuracoes',
-                    selectedTileColor: colorScheme.primary,
-                    // onTap: () {  // Fecha a aplicação
-                    //   SystemNavigator.pop();
-                    // },
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text("Confirmar saída"),
-                            content: Text(
-                              "Você tem certeza que quer sair da aplicação?",
-                            ),
-                            actions: <Widget>[
-                              Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () {
-                                        funcoesController.zerarAtendimento();
-                                        SystemNavigator.pop(); // Fecha a aplicação
-                                      },
-                                      child: Text("Sim"),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop(); // Fecha o diálogo
-                                      },
-                                      child: Text("Não"),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  ),
+            
+                  if (footerButtonsController.aparecerCheckIn.value && footerButtonsController.rotaHome.value)
+                  checkInPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.aparecerCheckOut.value && footerButtonsController.rotaHome.value)
+                  checkOutPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.rotaHome.value)
+                  cupomAvulsoPage(currentRoute, colorScheme),
+
+                  if ((footerButtonsController.aparecerExpedicaoCliente.value || footerButtonsController.rotaPainelCliente.value) &&(footerButtonsController.rotaHome.value || footerButtonsController.rotaPainelCliente.value))
+                  expedicaoClientePage(currentRoute, colorScheme),
+
+                  if ((footerButtonsController.aparecerExpedicaoMotoboy.value && footerButtonsController.rotaHome.value) || footerButtonsController.rotaExpedicaoMotoboy.value)
+                  expedicaoMotoboyPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.aparecerKDS.value && footerButtonsController.rotaHome.value)
+                  kdsPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.aparecerMapa.value && footerButtonsController.rotaHome.value)
+                  mapPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.aparecerNote.value && footerButtonsController.rotaHome.value)
+                  notesPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.aparecerRecepcao.value && footerButtonsController.rotaHome.value)
+                  receptionPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.aparecerGarcom.value && footerButtonsController.rotaHome.value)
+                  vendasPage(currentRoute, colorScheme),
+
+                  configuracoesPage(currentRoute, colorScheme),
+                  
+                  sairApp(currentRoute, colorScheme),
                 ],
               ),
             ),

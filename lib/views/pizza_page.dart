@@ -2362,7 +2362,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
         final tamanho = min(
           (constraints.maxWidth),
           (constraints.maxHeight),
-        ) * 0.7;
+        ) * 0.85;
 
         /* return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2589,7 +2589,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                       height: tamanho,
                       child: PieChart(
                         PieChartData(
-                          startDegreeOffset: 180,
+                          startDegreeOffset: 90,
                           sectionsSpace: 1,
                           // centerSpaceRadius: 0,
                           centerSpaceRadius: tamanho * 0.32,
@@ -4034,7 +4034,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                             // GRAFICO PIZZA
                             if(configurarPizza && modoCarrinho)
                             Expanded(
-                              flex: 1,
+                              flex: 2,
                               child: Padding(
                                 padding: EdgeInsets.all(8.0),
                                 child: Container(

@@ -50,14 +50,14 @@ class ItemPizzaGrafico {
         color: cor,
         radius: radius,
         title: mostrarTexto
-            ? '${nome}'
+            ? quebrarTexto(nome!, 5)
             : '',
         titleStyle: TextStyle(
           color: corTexto,
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
-        titlePositionPercentageOffset: textoForaDoGrafico ? (itens.length % 2 == 0 ? 1.5 : 2.5) : 0.5,
+        titlePositionPercentageOffset: textoForaDoGrafico ? (itens.length % 2 == 0 ? 1.7 : 1.7) : 0.5,
       );
     }).toList();
   }
@@ -85,4 +85,31 @@ class ItemPizzaGrafico {
     const Color.fromRGBO(173, 216, 208, 1.0),
     const Color.fromRGBO(87, 154, 146, 1),
   ];
+
+  String quebrarTexto(String texto, int maxCaracteres) {
+    final palavras = texto.split(' ');
+    final linhas = <String>[];
+    String linhaAtual = '';
+
+    for (final palavra in palavras) {
+      final teste = linhaAtual.isEmpty
+          ? palavra
+          : '$linhaAtual $palavra';
+
+      if (teste.length <= maxCaracteres) {
+        linhaAtual = teste;
+      } else {
+        if (linhaAtual.isNotEmpty) {
+          linhas.add(linhaAtual);
+        }
+        linhaAtual = palavra;
+      }
+    }
+
+    if (linhaAtual.isNotEmpty) {
+      linhas.add(linhaAtual);
+    }
+
+    return linhas.join('\n');
+  }
 }

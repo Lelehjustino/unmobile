@@ -4593,40 +4593,22 @@ class RecepcaoPageState extends State<RecepcaoPage> {
 
                                                           if (mounted) {
                                                             setState(() {
-                                                              isProcessing =
-                                                                  false;
-                                                              cliqueiRecepcao =
-                                                                  false;
-                                                              isLoading2 =
-                                                                  false;
+                                                              isProcessing = false;
+                                                              cliqueiRecepcao = false;
+                                                              isLoading2 = false;
                                                             });
                                                           }
                                                         },
                                                         style: IconButton.styleFrom(
                                                           backgroundColor:
-                                                              comandaController
-                                                                  .text
-                                                                  .isNotEmpty
+                                                              comandaController.text.isNotEmpty
                                                               ? isProcessing
-                                                                    ? Theme.of(
-                                                                        context,
-                                                                      ).colorScheme.surfaceDim
-                                                                    : Theme.of(
-                                                                        context,
-                                                                      ).colorScheme.scrim
-                                                              : Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .colorScheme
-                                                                    .surfaceDim,
-                                                          padding: EdgeInsets.all(
-                                                            22,
-                                                          ), // Ajuste este valor
+                                                                    ? Theme.of(context).colorScheme.surfaceDim
+                                                                    : Theme.of(context).colorScheme.scrim
+                                                              : Theme.of(context).colorScheme.surfaceDim,
+                                                          padding: EdgeInsets.all(22),
                                                           shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  10,
-                                                                ),
+                                                            borderRadius: BorderRadius.circular(10),
                                                           ),
                                                         ),
                                                       ),
@@ -4662,29 +4644,23 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                   mainAxisSize: MainAxisSize
                       .min, // importante para não ocupar a tela toda
                   children: [
-                    // if(mostrarBotoes)
-                    Padding(
-                      padding: footerButtonsController.aparecerNote.value
-                          ? EdgeInsets.only(top: 5, bottom: 10, left: 10, right: 10,)
-                          : EdgeInsets.only(top: 5, bottom: 10, left: 15, right: 15,),
-                      child: SizedBox(width: double.infinity),
-                    ),
 
                     // Barra inferior com botões quadrados
                     Container(
                       color: colorScheme.surface,
                       child: SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.14,
+                        height: MediaQuery.of(context).size.height * 0.10,
                         child:
                             // Barra inferior com botões quadrados
                             Padding(
-                              padding: footerButtonsController.aparecerNote.value
+                              padding: EdgeInsets.only(top: 0.0, bottom: 0.0, left: 0.0, right: 0.0,),
+                             /*  footerButtonsController.aparecerNote.value
                                   ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0,)
-                                  : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 15.0, right: 15.0,),
+                                  : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 15.0, right: 15.0,), */
                               child: Row(
                                 children: [
                                   // Botão Check In
-                                  if (footerButtonsController.aparecerCheckIn.value)
+                                  /* if (footerButtonsController.aparecerCheckIn.value)
                                     Expanded(
                                       child: Padding(
                                         padding: EdgeInsets.symmetric(
@@ -5054,7 +5030,7 @@ class RecepcaoPageState extends State<RecepcaoPage> {
                                           ),
                                         ),
                                       ),
-                                    ),
+                                    ), */
                                 ],
                               ),
                             ),

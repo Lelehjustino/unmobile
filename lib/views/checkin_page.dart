@@ -2073,7 +2073,7 @@ class CheckinPageState extends State<CheckinPage>
                 ),
                 SizedBox(height: 0),
 
-                // Barra inferior com botões quadrados
+                /* // Barra inferior com botões quadrados
                 Padding(
                   padding: aparecerNote
                       ? EdgeInsets.only(
@@ -2469,7 +2469,7 @@ class CheckinPageState extends State<CheckinPage>
                         ),
                     ],
                   ),
-                ),
+                ), */
               ],
             ),
           ),

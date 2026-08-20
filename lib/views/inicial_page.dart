@@ -10,6 +10,7 @@ import 'package:pinput/pinput.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:un_recepcao/controllers/connectivity_controller.dart';
 import 'package:un_recepcao/controllers/inicial_controller.dart';
+import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/zerar_atendimento.dart';
 import 'package:un_recepcao/data/data_class.dart';
@@ -31,6 +32,7 @@ class InicialPage extends StatefulWidget {
 
 class InicialPageState extends State<InicialPage> {
   final FuncoesController funcoesController = Get.find<FuncoesController>();
+  final FooterButtonsController footerButtonsController = Get.find<FooterButtonsController>();
   late String versaoAplicacao = funcoesController.versaoDoApp;
   
   // Controller reativo para o fluxo de entrarAutomaticamente
@@ -52,14 +54,6 @@ class InicialPageState extends State<InicialPage> {
   bool aberto = false;
   bool conta = false;
   bool servidorConectado = false;
-
-  bool aparecerNote = false;
-  bool aparecerCheckInOut = false;
-  bool aparecerRecepcao = false;
-  bool naoAparecerMapa = true;
-  bool aparecerCheckIn = false;
-  bool aparecerCheckOut = false;
-  bool aparecerGarcom = true;
 
   String nomeCliente = '';
   bool isLoadingRefresh = false;
@@ -119,15 +113,6 @@ class InicialPageState extends State<InicialPage> {
 
   bool aparecerModificarLicencaGarcom = false;
 
-  bool rotaHome = true;
-  bool rotaPainelCliente = false;
-  bool rotaExpedicaoMotoboy = false;
-
-  bool aparecerKDS = false;
-  bool aparecerExpedicaoCliente = false;
-  bool aparecerExpedicaoMotoboy = false;
-  bool aparecerCupomAvulso = false;
-
   Timer? _timerSenha;
 
   void _atualizarHora() {
@@ -156,14 +141,6 @@ class InicialPageState extends State<InicialPage> {
     pegarMobileId();
     _loadLicenca();
     _loadNumeroLicenca();
-    _carregarchecks();
-    _carregarModos();
-    _carregarNote();
-    _carregarRecepcao();
-    _carregargarcom();
-    carregarRota();
-    _loadPaineis();
-    _carregarCupomAvulso();
   }
 
   @override
@@ -173,135 +150,41 @@ class InicialPageState extends State<InicialPage> {
     super.dispose();
   }
 
-  Future<void> _carregarCupomAvulso() async {
-    final prefs = await SharedPreferences.getInstance();
-    final valor = prefs.getString('cupom_avulso');
-
-    if (valor == null || valor.isEmpty) {
-      setState(() => aparecerCupomAvulso = false);
-      return;
-    }
-
-    Set<String> setLocal;
-
-    if (valor.startsWith('[')) {
-      setLocal = Set<String>.from(jsonDecode(valor));
-    } else {
-      setLocal = {valor};
-    }
-
-    setState(() {
-      aparecerCupomAvulso = setLocal.contains('Cupom Avulso');
-    });
-  }
-
-  // Carregar rota
-  /* Future<void> carregarRota() async {
-    final prefs = await SharedPreferences.getInstance();
-    final rotaJson = prefs.getString('rota_padrao');
-
-    if (rotaJson != null) {
-      final rotasSalvos = Set<String>.from(jsonDecode(rotaJson));
-
-      if (rotasSalvos.contains("Home") &&
-          !rotasSalvos.contains("Expedição cliente")) {
-        // home
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-        });
-      } else if (rotasSalvos.contains("Expedição cliente") &&
-          !rotasSalvos.contains("Home")) {
-        // painel cliente
-        setState(() {
-          rotaHome = false;
-          rotaPainelCliente = true;
-        });
-      } else {
-        // home
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-        });
-      }
-    } else {
-      // home
-      setState(() {
-        rotaHome = true;
-        rotaPainelCliente = false;
-      });
-    }
-  } */
- Future<void> carregarRota() async {
-    final prefs = await SharedPreferences.getInstance();
-    final rotaJson = prefs.getString('rota_padrao');
-
-    if (rotaJson != null) {
-      final rotasSalvas = Set<String>.from(jsonDecode(rotaJson));
-
-      if (rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Expedição motoboy")) {
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-          rotaExpedicaoMotoboy = false;
-        });
-      } else if (rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && !rotasSalvas.contains("Expedição motoboy")) {
-        setState(() {
-          rotaHome = false;
-          rotaPainelCliente = true;
-          rotaExpedicaoMotoboy = false;
-        });
-      }else if (!rotasSalvas.contains("Expedição cliente") && !rotasSalvas.contains("Home") && rotasSalvas.contains("Expedição motoboy")){
-        setState(() {
-          rotaHome = false;
-          rotaPainelCliente = false;
-          rotaExpedicaoMotoboy = true;
-        });
-      } else {
-        setState(() {
-          rotaHome = true;
-          rotaPainelCliente = false;
-          rotaExpedicaoMotoboy = false;
-        });
-      }
-    }
-  }
-
   navegacao_inteligente() async {
     await _saveNumeroLicenca(numeroDaLicencaSelecionada);
     await _saveLicenca(nomeDaLicencaSelecionada);
-    if (rotaPainelCliente) {
+    if (footerButtonsController.rotaPainelCliente.value) {
       Get.toNamed('/painel_cliente');
-    } else if (rotaExpedicaoMotoboy) {
+    } else if (footerButtonsController.rotaExpedicaoMotoboy.value) {
       Get.toNamed('/expedicao_motoboy');
     } else {
-      if (aparecerCheckIn) {
+      if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
-      } else if (aparecerGarcom) {
+      } else if (footerButtonsController.aparecerGarcom.value) {
         Get.toNamed('/garcom');
-      } else if (aparecerCheckOut) {
+      } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
-      } else if (!naoAparecerMapa) {
+      } else if (!footerButtonsController.aparecerMapa.value) {
         Get.toNamed('/mapa');
-      } else if (aparecerRecepcao) {
+      } else if (footerButtonsController.aparecerRecepcao.value) {
         Get.toNamed('/recepcao');
-      } else if (aparecerNote) {
+      } else if (footerButtonsController.aparecerNote.value) {
         Get.toNamed('/notes');
       } 
       // expedicao cliente
-      else if(aparecerExpedicaoCliente){
+      else if(footerButtonsController.aparecerExpedicaoCliente.value){
         Get.toNamed('/painel_cliente');
       }
       // KDS
-      else if(aparecerKDS){
+      else if(footerButtonsController.aparecerKDS.value){
         Get.toNamed('/painel_cozinha');
       }
       // expedicao motoboy
-      else if(aparecerExpedicaoMotoboy){
+      else if(footerButtonsController.aparecerExpedicaoMotoboy.value){
         Get.toNamed('/expedicao_motoboy');
       } 
       // cupom avulso
-      else if(aparecerCupomAvulso){
+      else if(footerButtonsController.aparecerCupomAvulso.value){
         Get.toNamed('/cupom_avulso');
       }
       else {
@@ -380,46 +263,6 @@ class InicialPageState extends State<InicialPage> {
     } */
   }
 
-  // Carregar/Salvar garçom
-  Future<void> _loadPaineis() async {
-    final prefs = await SharedPreferences.getInstance();
-    final painelJson = prefs.getString('painel_padrao');
-
-    if (painelJson != null) {
-      final painelSalvos = Set<String>.from(jsonDecode(painelJson));
-
-      if (painelSalvos.contains("KDS")) {
-        // home
-        setState(() {
-          aparecerKDS = true;
-        });
-      } else if (painelSalvos.contains("Expedição cliente")) {
-        // painel cliente
-        setState(() {
-          aparecerExpedicaoCliente = true;
-          
-        });
-      } else if (painelSalvos.contains("Expedição motoboy")) {
-        // painel cliente
-        setState(() {
-          aparecerExpedicaoMotoboy = true;
-        });
-      }  else {
-        // home
-        setState(() {
-          aparecerExpedicaoCliente = false;
-          aparecerKDS = false;
-          aparecerExpedicaoMotoboy = false;
-        });
-      }
-    } else {  
-      setState(() {
-        aparecerExpedicaoCliente = false;
-        aparecerKDS = false;
-        aparecerExpedicaoMotoboy = false;
-      });
-    }
-  }
 
   // entrarAutomaticamente 
   Future<void> entrarAutomaticamente() async {
@@ -526,8 +369,8 @@ class InicialPageState extends State<InicialPage> {
         if (!mounted) return;
 
         // Sempre exige seleção de usuário ao entrar (sem restaurar sessão anterior)
-        await carregarRota();
-        if (listaGarcom.isNotEmpty && !rotaPainelCliente && !rotaExpedicaoMotoboy) {
+        await footerButtonsController.carregarRota();
+        if (listaGarcom.isNotEmpty && !footerButtonsController.rotaPainelCliente.value && !footerButtonsController.rotaExpedicaoMotoboy.value) {
           await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
           await Get.find<ZerarAtendimentoController>().zerarAtendimento();
           popupSelecionarGarcom();
@@ -559,36 +402,6 @@ class InicialPageState extends State<InicialPage> {
       if (mounted) setState(() => aparecerConectar = true);
     } finally {
       _inicialCtrl.emExecucao.value = false;
-    }
-  }
-
-  // Carregar Modos
-  Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      setState(() {
-        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa = !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
-
-        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
-        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = false;
-        } else if (modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = true;
-        } else {
-          aparecerCheckInOut = false;
-        }
-      });
-    } else {
-      setState(() {
-        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
-        naoAparecerMapa = true;
-        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo
-      });
     }
   }
   /* Future<void> _carregarModos() async {
@@ -675,137 +488,6 @@ class InicialPageState extends State<InicialPage> {
       });
     }
   } */
-
-  // Carregar check
-  Future<void> _carregarchecks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final checkJson = prefs.getString('check_padrao');
-
-    if (checkJson != null) {
-      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
-
-      if (checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Check-in")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = true;
-        });
-      } else if (!checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-in") &&
-          checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      } else {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      }
-    } else {
-      setState(() {
-        aparecerCheckIn = false;
-        aparecerCheckOut = false;
-      });
-    }
-  }
-
-  // Carregar garçom
-  Future<void> _carregargarcom() async {
-    final prefs = await SharedPreferences.getInstance();
-    final garcomJson = prefs.getString('garcom_padrao');
-
-    if (garcomJson != null) {
-      final garcomSalvos = Set<String>.from(jsonDecode(garcomJson));
-
-      if (garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerGarcom = true;
-      });
-    }
-  }
-
-  // Carregar note
-  Future<void> _carregarNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final noteJson = prefs.getString('note_padrao');
-
-    if (noteJson != null) {
-      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
-
-      if (notesSalvos.contains('Notes')) {
-        // se note selecionado
-        setState(() {
-          aparecerNote = true;
-        });
-      } else {
-        // se note nao selecionado
-        setState(() {
-          aparecerNote = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerNote = false;
-      });
-    }
-  }
-
-  // Carregar recepcao
-  Future<void> _carregarRecepcao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final recepcaoJson = prefs.getString('recepcao_padrao');
-
-    if (recepcaoJson != null) {
-      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
-
-      if (recepcaosSalvos.contains('Recepção')) {
-        // se recepcao selecionado
-        setState(() {
-          aparecerRecepcao = true;
-        });
-      } else {
-        // se recepcao nao selecionado
-        setState(() {
-          aparecerRecepcao = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerRecepcao = false;
-      });
-    }
-  }
-
-  // Métodos de teclado personalizado removidos para usar teclado nativo
 
   // Carregar/Salvar servidor
   Future<void> _loadServidor() async {
@@ -1935,8 +1617,8 @@ class InicialPageState extends State<InicialPage> {
                             if (!mounted) return;
                             await Get.find<ZerarAtendimentoController>().loadNumeroLicenca();
                             await Get.find<ZerarAtendimentoController>().zerarAtendimento();
-                            await carregarRota();
-                            if (listaGarcom.isNotEmpty && !rotaPainelCliente && !rotaExpedicaoMotoboy) {
+                            await footerButtonsController.carregarRota();
+                            if (listaGarcom.isNotEmpty && !footerButtonsController.rotaPainelCliente.value && !footerButtonsController.rotaExpedicaoMotoboy.value) {
                               popupSelecionarGarcom();
                             } else {
                               navegacao_inteligente();
@@ -2193,30 +1875,17 @@ class InicialPageState extends State<InicialPage> {
                         showConfirmationDialog(
                           context: context,
                           title: "Faça seu login",
-                          message:
-                              "Faça seu login para ter acesso as configurações",
-                          icon:
-                              Icons.error, // você pode trocar para outro ícone
+                          message: "Faça seu login para ter acesso as configurações",
+                          icon: Icons.error, // você pode trocar para outro ícone
                           onConfirm: () async {
-                            Navigator.push(
-                              context,
+                            Navigator.push(context,
                               PageRouteBuilder(
-                                transitionDuration:
-                                    Duration.zero, // sem duração
-                                reverseTransitionDuration:
-                                    Duration.zero, // sem duração ao voltar
-                                pageBuilder:
-                                    (context, animation, secondaryAnimation) =>
-                                        InicialPage(),
-                                transitionsBuilder:
-                                    (
-                                      context,
-                                      animation,
-                                      secondaryAnimation,
-                                      child,
-                                    ) {
-                                      return child;
-                                    },
+                                transitionDuration: Duration.zero, // sem duração
+                                reverseTransitionDuration: Duration.zero, // sem duração ao voltar
+                                pageBuilder: (context, animation, secondaryAnimation) => InicialPage(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return child;
+                                },
                               ),
                             );
                           },
@@ -2296,26 +1965,6 @@ class InicialPageState extends State<InicialPage> {
                       ),
                     ],
                   ),
-                  /* Column(
-                    children: [
-                      Text(
-                        "Versão",
-                        style: TextStyle(
-                          color: colorScheme.onPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      Text(
-                        versaoAplicacao,
-                        style: TextStyle(
-                          color: colorScheme.onPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ), */
                 ),
               ],
             ),
@@ -2386,16 +2035,6 @@ class InicialPageState extends State<InicialPage> {
                               ),
                             ],
                           ),
-                          /* SizedBox(height: 6),
-                          TextButton.icon(
-                            onPressed: _selecionandoLicenca ? null : _trocarLicenca,
-                            icon: Icon(Icons.swap_horiz, size: 18),
-                            label: Text("Trocar Licença"),
-                            style: TextButton.styleFrom(
-                              foregroundColor: colorScheme.primary,
-                              textStyle: TextStyle(fontSize: 13),
-                            ),
-                          ), */
                         ],
                       ),
 
@@ -2535,8 +2174,8 @@ class InicialPageState extends State<InicialPage> {
                                             /* if (listaGarcom.isNotEmpty) {
                                               popupSelecionarGarcom();
                                             } */
-                                           await carregarRota();
-                                           if (listaGarcom.isNotEmpty && !rotaPainelCliente && !rotaExpedicaoMotoboy) {
+                                           await footerButtonsController.carregarRota();
+                                           if (listaGarcom.isNotEmpty && !footerButtonsController.rotaPainelCliente.value && !footerButtonsController.rotaExpedicaoMotoboy.value) {
                                               popupSelecionarGarcom();
                                             } else {
                                               navegacao_inteligente();
@@ -2549,7 +2188,6 @@ class InicialPageState extends State<InicialPage> {
                                               naoEstaCadastrado = true;
                                               // aqui
                                               aparecerBotaoSelecionarLicenca = false;
-                                              aparecerGarcom = false;
                                             });
                                             popupSelecionarLicenca();
                                           }

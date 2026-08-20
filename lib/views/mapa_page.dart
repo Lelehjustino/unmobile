@@ -762,7 +762,7 @@ class MapaPageState extends State<MapaPage> {
                                     crossAxisCount: cols,
                                     crossAxisSpacing: 8,
                                     mainAxisSpacing: 8,
-                                    childAspectRatio: 0.9,
+                                    childAspectRatio: 0.8,
                                   ),
                                   itemCount: mapaController.abertasComandas.length,
                                   itemBuilder: (context, index) {
@@ -911,7 +911,7 @@ class MapaPageState extends State<MapaPage> {
                                         crossAxisCount: cols,
                                         crossAxisSpacing: 8,
                                         mainAxisSpacing: 8,
-                                        childAspectRatio: 0.9,
+                                        childAspectRatio: 0.8,
                                       ),
                                       itemCount: comandasDaMesa.length,
                                       itemBuilder: (context, index) {
@@ -2551,7 +2551,7 @@ class MapaPageState extends State<MapaPage> {
           ),
         ],
       ),
-      bottomNavigationBar:
+      /* bottomNavigationBar:
           // Barra inferior com botões quadrados
           _showKeyboardNome
           ? Padding(
@@ -2934,7 +2934,7 @@ class MapaPageState extends State<MapaPage> {
                   SizedBox(width: 4),
                 ],
               ),
-            ),
+            ), */
     );
   }
 }

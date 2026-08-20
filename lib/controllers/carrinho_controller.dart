@@ -121,4 +121,16 @@ class CarrinhoController extends GetxController {
     carrinho.clear();
     update(); // Notifica ouvintes se houver GetBuilder
   }
+
+  void zerarAtendimentoCarrinho() {
+    carrinho.clear();
+    numeroComanda.value = "";
+    numeroMesa.value = "";
+    numeroPedido.value = "";
+    clienteId.value = "";
+    clienteNome.value = "";
+    clienteCpf.value = "";
+    clienteTelefone.value = "";
+    clienteDataNascimento.value = "";
+  }
 }

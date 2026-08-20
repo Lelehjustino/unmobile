@@ -138,43 +138,16 @@ class _AppState extends State<App> {
       initialRoute: '/splash',
 
       getPages: [
-        GetPage(
-          name: '/expedicao_motoboy',
-          page: () => ExpedicaoMotoboyPage(),
-        ),
-        GetPage(
-          name: '/painel_cliente',
-          page: () => PainelCliente(),
-        ), 
-        GetPage(
-          name: '/painel_cozinha',
-          page: () => PainelCozinha(),
-        ),
-        GetPage(
-          name: '/',
-          page: () => CheckinPage(),
-        ),
-        GetPage(
-          name: '/checkin',
-          page: () => CheckinPage(),
-        ),
-        GetPage(
-          name: '/configuracoes',
-          page: () => ConfiguracoesPage(),
-        ),
+        GetPage(name: '/expedicao_motoboy', page: () => ExpedicaoMotoboyPage(),),
+        GetPage(name: '/painel_cliente', page: () => PainelCliente(),),
+        GetPage(name: '/painel_cozinha', page: () => PainelCozinha(),),
+        GetPage(name: '/', page: () => CheckinPage(),),
+        GetPage(name: '/checkin', page: () => CheckinPage(),),
+        GetPage(name: '/configuracoes', page: () => ConfiguracoesPage(),),
         GetPage(name: '/inicial', page: () => InicialPage()),
-        GetPage(
-          name: '/pizza',
-          page: () => PizzaPage(),
-        ),
-        GetPage(
-          name: '/garcom',
-          page: () => GarcomPage(),
-        ),
-        GetPage(
-          name: '/carrinho_comandas',
-          page: () => CarrinhoComandasPage(),
-        ),
+        GetPage(name: '/pizza', page: () => PizzaPage(),),
+        GetPage(name: '/garcom', page: () => GarcomPage(),),
+        GetPage(name: '/carrinho_comandas', page: () => CarrinhoComandasPage(),),
         GetPage(name: '/mapa', page: () => MapaPage()),
         GetPage(name: '/splash', page: () => SplashPage()),
         GetPage(name: '/recepcao', page: () => RecepcaoPage()),
@@ -182,6 +155,7 @@ class _AppState extends State<App> {
         GetPage(name: '/checkout', page: () => CheckoutPage()),
         GetPage(name: '/cupom_avulso', page: () => CupomAvulsoPage()),
         GetPage(name: '/visualizar_comandas_mesa', page: () => VisualizarComandasMesaPage()),
+        //////////////////////////////////////////////////////////////////////////////////////
         GetPage(
           name: '/force_update',
           page: () {

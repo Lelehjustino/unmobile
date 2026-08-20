@@ -1648,10 +1648,7 @@ class NotesPageState extends State<NotesPage> {
                               ),
                             ),
                           ),
-                  // Barra inferior com botões quadrados
-                  // if (!_showKeyboard)
-                    // Barra inferior com botões quadrados
-                    Padding(
+                   /*  Padding(
                       padding: footerButtonsController.aparecerNote.value
                           ? EdgeInsets.only(top: 5.0, bottom: 15.0, left: 10.0, right: 10.0)
                           : EdgeInsets.only(top: 5.0, bottom: 15.0, left: 15.0, right: 15.0),
@@ -2039,7 +2036,7 @@ class NotesPageState extends State<NotesPage> {
                             ),
                         ],
                       ),
-                    ),
+                    ), */
                 ],
               ),
             ),
