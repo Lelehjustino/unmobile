@@ -153,6 +153,7 @@ class InicialPageState extends State<InicialPage> {
   navegacao_inteligente() async {
     await _saveNumeroLicenca(numeroDaLicencaSelecionada);
     await _saveLicenca(nomeDaLicencaSelecionada);
+    footerButtonsController.carregarConfiguracoes();
     if (footerButtonsController.rotaPainelCliente.value) {
       Get.toNamed('/painel_cliente');
     } else if (footerButtonsController.rotaExpedicaoMotoboy.value) {
@@ -164,7 +165,7 @@ class InicialPageState extends State<InicialPage> {
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
-      } else if (!footerButtonsController.aparecerMapa.value) {
+      } else if (footerButtonsController.aparecerMapa.value) {
         Get.toNamed('/mapa');
       } else if (footerButtonsController.aparecerRecepcao.value) {
         Get.toNamed('/recepcao');
@@ -191,76 +192,6 @@ class InicialPageState extends State<InicialPage> {
         Get.toNamed('/garcom');
       }
     }
-    /* if (aparecerGarcom) {
-      Get.toNamed('/garcom');
-    } else if (aparecerCheckIn) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          transitionDuration: Duration.zero, // sem duração
-          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              CheckinPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return child; // retorna direto, sem animação
-          },
-        ),
-      );
-    } else if (aparecerCheckOut) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          transitionDuration: Duration.zero, // sem duração
-          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              CheckoutPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return child; // retorna direto, sem animação
-          },
-        ),
-      );
-    } else if (!naoAparecerMapa) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          transitionDuration: Duration.zero, // sem duração
-          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-          pageBuilder: (context, animation, secondaryAnimation) => MapaPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return child; // retorna direto, sem animação
-          },
-        ),
-      );
-    } else if (aparecerGarcom) {
-      Get.toNamed('/garcom');
-    } else if (aparecerRecepcao) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          transitionDuration: Duration.zero, // sem duração
-          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              RecepcaoPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return child; // retorna direto, sem animação
-          },
-        ),
-      );
-    } else if (aparecerNote) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          transitionDuration: Duration.zero, // sem duração
-          reverseTransitionDuration: Duration.zero, // sem duração ao voltar
-          pageBuilder: (context, animation, secondaryAnimation) => NotesPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return child; // retorna direto, sem animação
-          },
-        ),
-      );
-    } else {
-      Get.toNamed('/garcom');
-    } */
   }
 
 

@@ -409,7 +409,7 @@ class SideNavState extends State<SideNav> {
   Widget vendasPage(String? currentRoute, ColorScheme colorScheme){
     return ListTile(
       leading: Icon(
-        Icons.table_restaurant,
+        Icons.restaurant_menu,
         color: currentRoute == '/garcom'
             ? colorScheme.surface
             : colorScheme.onSurface,

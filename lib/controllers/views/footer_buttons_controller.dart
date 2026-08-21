@@ -179,19 +179,19 @@ class FooterButtonsController extends GetxController {
     if (painelJson != null) {
       final paineisSalvos = Set<String>.from(jsonDecode(painelJson));
 
-      if (paineisSalvos.contains('0')) { // se KDS selecionado
+      if (paineisSalvos.contains('2')) { // se KDS selecionado
           aparecerKDS.value = true;
       } else { // se KDS nao selecionado
           aparecerKDS.value = false;
       }
 
-      if (paineisSalvos.contains('1')) { // se Pedidos selecionado
+      if (paineisSalvos.contains('0')) { // se Pedidos selecionado
           aparecerExpedicaoCliente.value = true;
       } else { // se Pedidos nao selecionado
           aparecerExpedicaoCliente.value = false;
       }
 
-      if (paineisSalvos.contains('2')) { // se Expedição motoboy selecionado
+      if (paineisSalvos.contains('1')) { // se Expedição motoboy selecionado
           aparecerExpedicaoMotoboy.value = true;
       } else { // se Expedição motoboy nao selecionado
           aparecerExpedicaoMotoboy.value = false;

@@ -87,12 +87,6 @@ class ContaPageState extends State<ContaPage>
 
   String comandaNumero = '';
   bool comandaRegistrada = false;
-  bool aparecerCheckInOut = false;
-  bool aparecerRecepcao = false;
-  bool naoAparecerMapa = true;
-  bool aparecerCheckIn = false;
-  bool aparecerCheckOut = false;
-  bool aparecerGarcom = true;
   bool produtoKilo = false;
 
   bool botoesAparecerem = true;
@@ -189,15 +183,10 @@ class ContaPageState extends State<ContaPage>
         _isFocused = true;
       });
     });
-    _carregarNote();
     _carregarModo();
     _carregarServidor();
     _loadServidor();
     _loadComanda();
-    _carregarModos();
-    _carregarRecepcao();
-    _carregarchecks();
-    _carregargarcom();
     calcularTotalPorPessoa();
     _loadNumeroLicenca();
     _loadNumeroGarcom();
@@ -351,190 +340,6 @@ class ContaPageState extends State<ContaPage>
       setState(() {
         numeroDePessoasString = numeroDePessoasInt.toString();
         calcularTotalPorPessoa();
-      });
-    }
-  }
-
-  // Carregar modo
-  Future<void> _carregarModos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modoJson = prefs.getString('modo_padrao');
-
-    if (modoJson != null) {
-      final modosSalvos = Set<String>.from(jsonDecode(modoJson));
-
-      setState(() {
-        // Regra: O mapa aparece se "Mesa" OU "Comanda" estiverem selecionados
-        naoAparecerMapa =
-            !(modosSalvos.contains("Mesa") || modosSalvos.contains("Comanda"));
-
-        // Lógica de aparecerCheckInOut baseada nos modos Comanda/Mesa
-        if (modosSalvos.contains("Mesa") && !modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = false;
-        } else if (modosSalvos.contains("Comanda")) {
-          aparecerCheckInOut = true;
-        } else {
-          aparecerCheckInOut = false;
-        }
-      });
-    } else {
-      setState(() {
-        // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
-        naoAparecerMapa = true;
-        aparecerCheckInOut = true; // Mantendo o padrão deste arquivo para esta variável se nada salvo
-      });
-    }
-  }
-
-  // Carregar check
-  Future<void> _carregarchecks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final checkJson = prefs.getString('check_padrao');
-
-    if (checkJson != null) {
-      final checksSalvos = Set<String>.from(jsonDecode(checkJson));
-
-      if (checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-out") &&
-          !checksSalvos.contains("Check-in")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = true;
-        });
-      } else if (!checksSalvos.contains("Check-in") &&
-          !checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = false;
-          aparecerCheckOut = false;
-        });
-      } else if (checksSalvos.contains("Check-in") &&
-          checksSalvos.contains("Check-out")) {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      } else {
-        setState(() {
-          aparecerCheckIn = true;
-          aparecerCheckOut = true;
-        });
-      }
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerCheckIn = false;
-        aparecerCheckOut = false;
-      });
-    }
-  }
-
-  // Carregar garçom
-  Future<void> _carregargarcom() async {
-    final prefs = await SharedPreferences.getInstance();
-    final garcomJson = prefs.getString('garcom_padrao');
-
-    if (garcomJson != null) {
-      final garcomSalvos = Set<String>.from(jsonDecode(garcomJson));
-
-      if (garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Modo Garçom")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-
-      /* if (garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if (!garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = false;
-        });
-      } else if (!garcomSalvos.contains("Sim") && !garcomSalvos.contains("Não")) {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } else if(garcomSalvos.contains("Sim") && garcomSalvos.contains("Não")){
-        setState(() {
-          aparecerGarcom = true;
-        });
-      }
-      else {
-        setState(() {
-          aparecerGarcom = true;
-        });
-      } */
-    } else {
-      setState(() {
-        // Se não tiver nada salvo, define padrão
-        aparecerGarcom = true;
-      });
-    }
-  }
-
-  // Carregar note
-  Future<void> _carregarNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final noteJson = prefs.getString('note_padrao');
-
-    if (noteJson != null) {
-      final notesSalvos = Set<String>.from(jsonDecode(noteJson));
-
-      if (notesSalvos.contains('Notes')) {
-        // se note selecionado
-        setState(() {
-          aparecerNote = true;
-        });
-      } else {
-        // se note nao selecionado
-        setState(() {
-          aparecerNote = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerNote = false;
-      });
-    }
-  }
-
-  // Carregar recepcao
-  Future<void> _carregarRecepcao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final recepcaoJson = prefs.getString('recepcao_padrao');
-
-    if (recepcaoJson != null) {
-      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
-
-      if (recepcaosSalvos.contains('Recepção')) {
-        // se recepcao selecionado
-        setState(() {
-          aparecerRecepcao = true;
-        });
-      } else {
-        // se recepcao nao selecionado
-        setState(() {
-          aparecerRecepcao = false;
-        });
-      }
-    } else {
-      // configuração padrao
-      setState(() {
-        aparecerRecepcao = false;
       });
     }
   }

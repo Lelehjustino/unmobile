@@ -482,68 +482,6 @@ class CheckoutPageState extends State<CheckoutPage>
           );
         }),
       ),
-      // return Scaffold(
-      // drawer: SideNav(),
-      // appBar: PreferredSize(
-      //   preferredSize: Size.fromHeight(56),
-      //   child:
-      //   Obx(() {
-      //     final conectado = Connection.connectionStatus.value;
-      //     return AppBar(
-      //       backgroundColor: Connection.connectionStatus.value ? colorScheme.primary : colorScheme.error,
-      //       automaticallyImplyLeading: false,
-      //       title: Stack(
-      //         alignment: Alignment.center,
-      //         children: [
-      //           Align(
-      //             alignment: Alignment.centerLeft,
-      //             child: Builder(
-      //               builder: (context) => IconButton(
-      //                 icon: Icon(Icons.menu, color: colorScheme.onPrimary),
-      //                 onPressed: () => Scaffold.of(context).openDrawer(),
-      //               ),
-      //             ),
-      //           ),
-      //           Padding(
-      //             padding: EdgeInsets.all(5.0),
-      //             child: Column(
-      //               mainAxisAlignment: MainAxisAlignment.center,
-      //               children: [
-      //                 Obx(() => Text(
-      //                       variaveis.nomeEmpresa.value,
-      //                       style: TextStyle(
-      //                         fontSize: 15,
-      //                         fontWeight: FontWeight.bold,
-      //                         color: colorScheme.onPrimary,
-      //                       ),
-      //                     )),
-      //                 Text(
-      //                   _horaAtual,
-      //                   style: TextStyle(
-      //                     color: colorScheme.onPrimary,
-      //                     fontSize: 15,
-      //                   ),
-      //                 ),
-      //               ],
-      //             ),
-      //           ),
-      //           Align(
-      //             alignment: Alignment.centerRight,
-      //             child: Text(
-      //               Connection.connectionStatus.value ? 'Online' : 'Offline',
-      //               style: TextStyle(
-      //                 color: colorScheme.onPrimary,
-      //                 fontSize: 15,
-      //                 fontWeight: FontWeight.bold,
-      //               ),
-      //             ),
-      //           ),
-      //         ],
-      //       ),
-      //     );
-      //   }),
-      // ),
-
       // Corpo da tela
       body: Padding(
         padding: EdgeInsets.all(0.0),
@@ -584,25 +522,15 @@ class CheckoutPageState extends State<CheckoutPage>
                             height: 100,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color:
-                                  (animacaoCerto
-                                          ? Theme.of(
-                                              context,
-                                            ).colorScheme.primary
-                                          : Theme.of(context).colorScheme.error)
-                                      .withOpacity(0.15),
+                              color: (animacaoCerto ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error).withOpacity(0.15),
                             ),
                           ),
 
                           // Ícone principal (check ou erro)
                           Icon(
-                            animacaoCerto
-                                ? Icons.check_circle_outline
-                                : Icons.error_outline,
+                            animacaoCerto ? Icons.check_circle_outline : Icons.error_outline,
                             size: 100,
-                            color: animacaoCerto
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.error,
+                            color: animacaoCerto ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
                           ),
                         ],
                       )
@@ -616,28 +544,16 @@ class CheckoutPageState extends State<CheckoutPage>
                               child: TextField(
                                 controller: comandaController,
                                 focusNode: comandaFocus,
-                                readOnly:
-                                    true, // impede digitação pelo teclado nativo
+                                readOnly: true, // impede digitação pelo teclado nativo
                                 showCursor: true, // FORÇA o cursor piscando
-                                cursorColor: Theme.of(
-                                  context,
-                                ).colorScheme.secondary,
-                                keyboardType: TextInputType
-                                    .none, // garante que o teclado não abr
+                                cursorColor: Theme.of(context).colorScheme.secondary,
+                                keyboardType: TextInputType.none, // garante que o teclado não abr
                                 textAlign: TextAlign.center,
                                 decoration: InputDecoration(
                                   filled: true,
-                                  fillColor:
-                                      // _isFocused? colorScheme.primary.withOpacity(0.15)
-                                      //   :
-                                      animacaoCerto
-                                      ? colorScheme.primary.withOpacity(0.15)
-                                      : colorScheme.error.withOpacity(0.15),
+                                  fillColor: animacaoCerto ? colorScheme.primary.withOpacity(0.15) : colorScheme.error.withOpacity(0.15),
                                   border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(
-                                    vertical: 30,
-                                    horizontal: 16,
-                                  ),
+                                  contentPadding: EdgeInsets.symmetric(vertical: 30, horizontal: 16),
                                 ),
                                 style: TextStyle(fontSize: 60),
                               ),
@@ -673,18 +589,12 @@ class CheckoutPageState extends State<CheckoutPage>
                   final int rows = (itemCount / crossAxisCount).ceil();
 
                   // mantém proporção quadrada
-                  final double cellWidth =
-                      (constraints.maxWidth -
-                          (spacing * (crossAxisCount - 1))) /
-                      crossAxisCount;
-                  final double cellHeight =
-                      (constraints.maxHeight - (spacing * (rows - 1))) / rows;
+                  final double cellWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+                  final double cellHeight = (constraints.maxHeight - (spacing * (rows - 1))) / rows;
                   final double childAspectRatio = cellWidth / cellHeight;
 
                   return GridView.builder(
-                    padding: const EdgeInsets.all(
-                      12,
-                    ), // padding externo no grid inteiro
+                    padding: const EdgeInsets.all(12), // padding externo no grid inteiro
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: itemCount,
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

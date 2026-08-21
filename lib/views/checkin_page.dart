@@ -1374,21 +1374,17 @@ class CheckinPageState extends State<CheckinPage>
                                     }
                                   },
                                   child: Card(
-                                    color: selecionado
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context).colorScheme.surfaceContainerLow,
+                                    color: selecionado ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerLow,
                                     child: Center(
                                       child: Padding(
-                                        padding: const EdgeInsets.all(8),
+                                        padding: EdgeInsets.all(8),
                                         child: Text(
                                           nomeObservacao,
                                           textAlign: TextAlign.center,
                                           maxLines: 3,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
-                                            color: selecionado
-                                                ? Theme.of(context).colorScheme.onPrimary
-                                                : Theme.of(context).colorScheme.onSurface,
+                                            color: selecionado ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
                                           ),
                                         ),
                                       ),
@@ -1707,67 +1703,6 @@ class CheckinPageState extends State<CheckinPage>
           );
         }),
       ),
-      // return Scaffold(
-      //   drawer: SideNav(),
-      //   appBar: PreferredSize(
-      //     preferredSize: Size.fromHeight(56),
-      //     child:
-      //     Obx(() {
-      //       final conectado = Connection.connectionStatus.value;
-      //       return AppBar(
-      //         backgroundColor: Connection.connectionStatus.value ? colorScheme.primary : colorScheme.error,
-      //         automaticallyImplyLeading: false,
-      //         title: Stack(
-      //           alignment: Alignment.center,
-      //           children: [
-      //             Align(
-      //               alignment: Alignment.centerLeft,
-      //               child: Builder(
-      //                 builder: (context) => IconButton(
-      //                   icon: Icon(Icons.menu, color: colorScheme.onPrimary),
-      //                   onPressed: () => Scaffold.of(context).openDrawer(),
-      //                 ),
-      //               ),
-      //             ),
-      //             Padding(
-      //               padding: EdgeInsets.all(5.0),
-      //               child: Column(
-      //                 mainAxisAlignment: MainAxisAlignment.center,
-      //                 children: [
-      //                   Obx(() => Text(
-      //                         variaveis.nomeEmpresa.value,
-      //                         style: TextStyle(
-      //                           fontSize: 15,
-      //                           fontWeight: FontWeight.bold,
-      //                           color: colorScheme.onPrimary,
-      //                         ),
-      //                       )),
-      //                   Text(
-      //                     _horaAtual,
-      //                     style: TextStyle(
-      //                       color: colorScheme.onPrimary,
-      //                       fontSize: 15,
-      //                     ),
-      //                   ),
-      //                 ],
-      //               ),
-      //             ),
-      //             Align(
-      //               alignment: Alignment.centerRight,
-      //               child: Text(
-      //                 Connection.connectionStatus.value ? 'Online' : 'Offline',
-      //                 style: TextStyle(
-      //                   color: colorScheme.onPrimary,
-      //                   fontSize: 15,
-      //                   fontWeight: FontWeight.bold,
-      //                 ),
-      //               ),
-      //             ),
-      //           ],
-      //         ),
-      //       );
-      //     }),
-      //   ),
       // Corpo da tela
       body:
           // Quando servidor já está salvo
@@ -1790,15 +1725,9 @@ class CheckinPageState extends State<CheckinPage>
                   height: 150,
                   child: AnimatedSwitcher(
                     // ele troca os widgets de forma animada sempre que o conteúdo mudar
-                    duration: Duration(
-                      milliseconds: 300,
-                    ), // quanto tempo vai durar a animação de troca entre os widgets
-                    transitionBuilder:
-                        (child, animation) => // sacele = tipo da animação
-                        ScaleTransition(
-                          scale: animation,
-                          child: child,
-                        ), // está sendo usada uma animação de escala (scale), ou seja, o widget vai crescer ou encolher ao ser exibido
+                    duration: Duration(milliseconds: 300), // quanto tempo vai durar a animação de troca entre os widgets
+                    transitionBuilder: (child, animation) => // sacele = tipo da animação
+                        ScaleTransition(scale: animation, child: child), // está sendo usada uma animação de escala (scale), ou seja, o widget vai crescer ou encolher ao ser exibido
                     child: animacaoAparecer
                         ? Stack(
                             key: ValueKey('iconStack'),
@@ -1810,27 +1739,15 @@ class CheckinPageState extends State<CheckinPage>
                                 height: 100,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color:
-                                      (animacaoCerto
-                                              ? Theme.of(
-                                                  context,
-                                                ).colorScheme.primary
-                                              : Theme.of(
-                                                  context,
-                                                ).colorScheme.error)
-                                          .withOpacity(0.15),
+                                  color: (animacaoCerto ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error).withOpacity(0.15),
                                 ),
                               ),
 
                               // Ícone principal (check ou erro)
                               Icon(
-                                animacaoCerto
-                                    ? Icons.check_circle_outline
-                                    : Icons.error_outline,
+                                animacaoCerto ? Icons.check_circle_outline : Icons.error_outline,
                                 size: 100,
-                                color: animacaoCerto
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.error,
+                                color: animacaoCerto ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
                               ),
                             ],
                           )
@@ -1844,26 +1761,15 @@ class CheckinPageState extends State<CheckinPage>
                                   child: TextField(
                                     controller: comandaController,
                                     focusNode: comandaFocus,
-                                    readOnly:
-                                        true, // impede digitação pelo teclado nativo
+                                    readOnly: true, // impede digitação pelo teclado nativo
                                     showCursor: true, // FORÇA o cursor piscando
-                                    cursorColor: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    keyboardType: TextInputType
-                                        .none, // garante que o teclado não abr
+                                    cursorColor: Theme.of(context).colorScheme.primary,
+                                    keyboardType: TextInputType.none, // garante que o teclado não abr
                                     textAlign: TextAlign.center,
                                     // keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                       filled: true,
-                                      fillColor:
-                                          // _isFocused? colorScheme.primary.withOpacity(0.15)
-                                          //   :
-                                          animacaoCerto
-                                          ? colorScheme.primary.withOpacity(
-                                              0.15,
-                                            )
-                                          : colorScheme.error.withOpacity(0.15),
+                                      fillColor: animacaoCerto ? colorScheme.primary.withOpacity(0.15) : colorScheme.error.withOpacity(0.15),
                                       border: OutlineInputBorder(),
                                       contentPadding: EdgeInsets.symmetric(
                                         vertical: 30,
@@ -1885,9 +1791,7 @@ class CheckinPageState extends State<CheckinPage>
                     ? Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 6,
-                          valueColor: AlwaysStoppedAnimation(
-                            colorScheme.primary,
-                          ),
+                          valueColor: AlwaysStoppedAnimation(colorScheme.primary),
                         ),
                       )
                     : Center(
@@ -1901,9 +1805,7 @@ class CheckinPageState extends State<CheckinPage>
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 30,
-                                  color: corMensagem
-                                      ? colorScheme.primary
-                                      : colorScheme.error,
+                                  color: corMensagem ? colorScheme.primary : colorScheme.error,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1938,42 +1840,18 @@ class CheckinPageState extends State<CheckinPage>
                       final int rows = (itemCount / crossAxisCount).ceil();
 
                       // mantém proporção quadrada ou ajusta à área disponível
-                      double cellWidth =
-                          (constraints.maxWidth -
-                              (spacing * (crossAxisCount - 1))) /
-                          crossAxisCount;
-                      double cellHeight =
-                          (constraints.maxHeight - (spacing * (rows - 1))) /
-                          rows;
-
-                      // Logs temporários solicitados para rastrear os valores envolvidos
-                      print(
-                        '[CheckinPage] constraints: ${constraints.maxWidth} x ${constraints.maxHeight}',
-                      );
-                      print(
-                        '[CheckinPage] cellWidth original: $cellWidth, cellHeight original: $cellHeight',
-                      );
-
-                      // A causa raiz do problema: se a tela encolher muito
-                      // (ex: na abertura do teclado numérico ou redimensionamento da janela),
-                      // constraints.maxHeight pode ficar menor que o espaço consumido apenas pelos paddings (spacing * (rows - 1)).
-                      // Com isso, (constraints.maxHeight - spacing) fica <= 0, tornando o cellHeight <= 0.
-                      // Consequentemente, childAspectRatio resultará em algo <= 0 ou Infinity caindo no AssertionError do GridView.
+                      double cellWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+                      double cellHeight = (constraints.maxHeight - (spacing * (rows - 1))) / rows;
 
                       // Correção: Garantir que cellWidth e cellHeight sempre sejam positivos estritos (> 0).
                       if (cellWidth <= 0) cellWidth = 1.0;
                       if (cellHeight <= 0) cellHeight = 1.0;
 
                       final double childAspectRatio = cellWidth / cellHeight;
-                      print(
-                        '[CheckinPage] childAspectRatio final: $childAspectRatio',
-                      );
 
                       return GridView.builder(
-                        padding: const EdgeInsets.all(
-                          12,
-                        ), // padding externo no grid inteiro
-                        physics: const NeverScrollableScrollPhysics(),
+                        padding: EdgeInsets.all(12), // padding externo no grid inteiro
+                        physics: NeverScrollableScrollPhysics(),
                         itemCount: itemCount,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
@@ -1986,11 +1864,8 @@ class CheckinPageState extends State<CheckinPage>
                             return ElevatedButton(
                               onPressed: _apagarNumero,
                               style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                                padding:
-                                    EdgeInsets.zero, // Remove o padding fixo
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                padding: EdgeInsets.zero, // Remove o padding fixo
                                 backgroundColor: colorScheme.onPrimary,
                               ),
                               child: FittedBox(
@@ -2006,19 +1881,14 @@ class CheckinPageState extends State<CheckinPage>
                             return ElevatedButton(
                               onPressed: () => _adicionarNumero("0"),
                               style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                                padding:
-                                    EdgeInsets.zero, // Remove o padding fixo
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                padding: EdgeInsets.zero, // Remove o padding fixo
                               ),
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
-                                child: const Text(
+                                child: Text(
                                   "0",
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                  ), // número maior
+                                  style: TextStyle(fontSize: 28), // número maior
                                 ),
                               ),
                             );
@@ -2026,14 +1896,9 @@ class CheckinPageState extends State<CheckinPage>
                             return ElevatedButton(
                               onPressed: _confirmar,
                               style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                                padding:
-                                    EdgeInsets.zero, // Remove o padding fixo
-                                backgroundColor: cliqueiCheck
-                                    ? colorScheme.primary.withOpacity(0.01)
-                                    : colorScheme.primary,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                padding: EdgeInsets.zero, // Remove o padding fixo
+                                backgroundColor: cliqueiCheck ? colorScheme.primary.withOpacity(0.01) : colorScheme.primary,
                               ),
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
@@ -2049,17 +1914,14 @@ class CheckinPageState extends State<CheckinPage>
                             return ElevatedButton(
                               onPressed: () => _adicionarNumero(numero),
                               style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                                padding:
-                                    EdgeInsets.zero, // Remove o padding fixo
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                padding: EdgeInsets.zero, // Remove o padding fixo
                               ),
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   numero,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 28,
                                   ), // Isso será ajustado automaticamente
                                 ),

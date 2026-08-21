@@ -70,11 +70,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> check = ['Check-in', 'Check-out'];
   Set<String> checkSelecionados = {};
 
-  List<String> garcom = ['Atendente'];
+  List<String> garcom = ['Vendas'];
   Set<String> garcomSelecionados = {'0'};
 
   // List<String> paineis = ['KDS', 'Pedidos', 'Expedição motoboy'];
-  List<String> paineis = ['KDS', 'Expedição cliente', 'Expedição motoboy'];
+  List<String> paineis = ['Expedição cliente', 'Expedição motoboy', 'KDS'];
   Set<String> paineisSelecionados = {};
 
   // List<String> rotas = ['Home', 'Painel cliente'];
@@ -239,37 +239,37 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {}
 
   navegar() async {
-    if (rotaPainelCliente) {
+    if (footerButtonsController.rotaPainelCliente.value) {
       Get.toNamed('/painel_cliente');
-    } else if (rotaExpedicaoMotoboy) {
+    } else if (footerButtonsController.rotaExpedicaoMotoboy.value) {
       Get.toNamed('/expedicao_motoboy');
     } else {
-      if (aparecerCheckIn) {
+      if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
-      } else if (aparecerGarcom) {
+      } else if (footerButtonsController.aparecerGarcom.value) {
         Get.toNamed('/garcom');
-      } else if (aparecerCheckOut) {
+      } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
-      } else if (!naoAparecerMapa) {
+      } else if (footerButtonsController.aparecerMapa.value) {
         Get.toNamed('/mapa');
-      } else if (aparecerRecepcao) {
+      } else if (footerButtonsController.aparecerRecepcao.value) {
         Get.toNamed('/recepcao');
-      } else if (aparecerNote) {
+      } else if (footerButtonsController.aparecerNote.value) {
         Get.toNamed('/notes');
       } 
       // expedicao cliente
-      else if(aparecerExpedicaoCliente){
+      else if(footerButtonsController.aparecerExpedicaoCliente.value){
         Get.toNamed('/painel_cliente');
       }
       // KDS
-      else if(aparecerKDS){
+      else if(footerButtonsController.aparecerKDS.value){
         Get.toNamed('/painel_cozinha');
       }
       // expedicao motoboy
-      else if(aparecerExpedicaoMotoboy){
+      else if(footerButtonsController.aparecerExpedicaoMotoboy.value){
         Get.toNamed('/expedicao_motoboy');
       } 
-      else if(aparecerCupomAvulso){
+      else if(footerButtonsController.aparecerCupomAvulso.value){
         Get.toNamed('/cupom_avulso');
       }
       else {
@@ -1297,7 +1297,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   // Deriva as variáveis booleanas de navegação diretamente dos Sets já em memória.
   // NÃO relê SharedPreferences — usa os Sets que acabaram de ser salvos.
   // Faz apenas 1 setState, eliminando os ~14 rebuilds por salvamento.
-  void _aplicarConfiguracoesDaMemoria() {
+  Future<void> _aplicarConfiguracoesDaMemoria() async {
     // --- mapa ---
     final bool novoNaoAparecerMapa = !modosSelecionados.contains('0');
     final bool novoAparecerCheckInOut = modosSelecionados.contains('0');
@@ -1336,22 +1336,24 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
     if (!mounted) return;
     setState(() {
-      naoAparecerMapa       = novoNaoAparecerMapa;
-      aparecerCheckInOut    = novoAparecerCheckInOut;
-      aparecerCheckIn       = novoCheckIn;
-      aparecerCheckOut      = novoCheckOut;
-      aparecerGarcom        = novoGarcom;
-      aparecerNote          = novoNote;
-      aparecerRecepcao      = novoRecepcao;
-      aparecerKDS           = novoKDS;
-      aparecerExpedicaoCliente  = novoExpCliente;
-      aparecerExpedicaoMotoboy  = novoExpMotoboy;
-      rotaHome              = novoRotaHome;
-      rotaPainelCliente     = novoRotaCliente;
-      rotaExpedicaoMotoboy  = novoRotaMotoboy;
-      aparecerCupomAvulso   = novoCupomAvulso;
+      naoAparecerMapa = novoNaoAparecerMapa;
+      aparecerCheckInOut = novoAparecerCheckInOut;
+      aparecerCheckIn = novoCheckIn;
+      aparecerCheckOut = novoCheckOut;
+      aparecerGarcom = novoGarcom;
+      aparecerNote = novoNote;
+      aparecerRecepcao = novoRecepcao;
+      aparecerKDS = novoKDS;
+      aparecerExpedicaoCliente = novoExpCliente;
+      aparecerExpedicaoMotoboy = novoExpMotoboy;
+      rotaHome = novoRotaHome;
+      rotaPainelCliente = novoRotaCliente;
+      rotaExpedicaoMotoboy = novoRotaMotoboy;
+      aparecerCupomAvulso = novoCupomAvulso;
       aparecerCadastroCliente = novoCadastroCliente;
     });
+
+    footerButtonsController.carregarConfiguracoes();
   }
 
   Future<void> salvarGarcomSalvo(Set<String> garcomSalvos) async {
@@ -2276,6 +2278,106 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ],
                       ),
+                      // check in e check out
+                      if (check.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else
+                        Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: check.length,
+                            itemBuilder: (context, index) {
+                              String modo = check[index];
+                              String indexStr = index.toString();
+                              
+                              final bool isChecked = checkSelecionados.contains(indexStr);
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                // Diminui o espaço vertical
+                                  dense: true,
+                                  visualDensity: const VisualDensity(
+                                    horizontal: -2,
+                                    vertical: -3,
+                                  ),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      if (checkSelecionados.length <= 2)
+                                        checkSelecionados.add(indexStr); // só pode ter até duas opções selecionadas na lista
+                                        if (modo == '0') {
+                                          checkSelecionados.add('0');
+                                        } 
+                                        if (modo == '1') {
+                                          checkSelecionados.add('1');
+                                        }
+                                    } else {
+                                      checkSelecionados.remove(indexStr);
+                                      if (modo == '0') {
+                                        checkSelecionados.remove('0');
+                                      } 
+                                      if (modo == '1') {
+                                        checkSelecionados.remove('1');
+                                      }
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        if (paineis.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else
+                        Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: paineis.length,
+                            itemBuilder: (context, index) {
+                              String modo = paineis[index];
+                              String indexStr = index.toString();
+                              bool isChecked = paineisSelecionados.contains(
+                                indexStr,
+                              );
+                              return CheckboxListTile(
+                                activeColor: colorScheme.primary,
+                                controlAffinity:  ListTileControlAffinity.leading,
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                        paineisSelecionados.add(indexStr);
+                                    } else {
+                                      paineisSelecionados.remove(indexStr);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
                      /*  Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -2475,80 +2577,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                      /* Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              textAlign: TextAlign.center,
-                              'Configurações check-in e check-out:',
-                              style: TextStyle(
-                                color: colorScheme.onSecondary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ), */
-                      // SizedBox(height: 2),
-                      if (check.isEmpty)
-                        Padding(
-                          padding: EdgeInsets.all(10.0),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else
-                        Padding(
-                          padding: EdgeInsets.only(right: 8),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemCount: check.length,
-                            itemBuilder: (context, index) {
-                              String modo = check[index];
-                              String indexStr = index.toString();
-                              
-                              final bool isChecked = checkSelecionados.contains(indexStr);
-                              return CheckboxListTile(
-                                controlAffinity: ListTileControlAffinity.leading,
-                                // Diminui o espaço vertical
-  dense: true,
-  visualDensity: const VisualDensity(
-    horizontal: -2,
-    vertical: -3,
-  ),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
-                                title: Text(modo, style: TextStyle(
-                                  fontSize: 15
-                                ),),
-                                value: isChecked,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    if (value == true) {
-                                      if (checkSelecionados.length <= 2)
-                                        checkSelecionados.add(indexStr); // só pode ter até duas opções selecionadas na lista
-                                        if (modo == '0') {
-                                          checkSelecionados.add('0');
-                                        } 
-                                        if (modo == '1') {
-                                          checkSelecionados.add('1');
-                                        }
-                                    } else {
-                                      checkSelecionados.remove(indexStr);
-                                      if (modo == '0') {
-                                        checkSelecionados.remove('0');
-                                      } 
-                                      if (modo == '1') {
-                                        checkSelecionados.remove('1');
-                                      }
-                                    }
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ),
+                        
                       /* Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -2586,11 +2615,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               return CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 // Diminui o espaço vertical
-  dense: true,
-  visualDensity: const VisualDensity(
-    horizontal: -2,
-    vertical: -3,
-  ),
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
                                 contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
                                 title: Text(modo, style: TextStyle(
                                   fontSize: 15
@@ -2637,47 +2666,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ],
                       ), */
                       /* // SizedBox(height: 2), */
-                      if (paineis.isEmpty)
-                        Padding(
-                          padding: EdgeInsets.all(10.0),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else
-                        Padding(
-                          padding: EdgeInsets.only(right: 8),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemCount: paineis.length,
-                            itemBuilder: (context, index) {
-                              String modo = paineis[index];
-                              String indexStr = index.toString();
-                              bool isChecked = paineisSelecionados.contains(
-                                indexStr,
-                              );
-                              return CheckboxListTile(
-                                activeColor: colorScheme.primary,
-                                controlAffinity:  ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
-                                title: Text(modo, style: TextStyle(
-                                  fontSize: 15
-                                ),),
-                                value: isChecked,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    if (value == true) {
-                                        paineisSelecionados.add(indexStr);
-                                    } else {
-                                      paineisSelecionados.remove(indexStr);
-                                    }
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ),
 
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -2717,11 +2705,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               return CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 // Diminui o espaço vertical
-  dense: true,
-  visualDensity: const VisualDensity(
-    horizontal: -2,
-    vertical: -3,
-  ),
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16.0,
                                 ),
@@ -2757,11 +2745,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               return RadioListTile<String>(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 // Diminui o espaço vertical
-  dense: true,
-  visualDensity: const VisualDensity(
-    horizontal: -2,
-    vertical: -3,
-  ),
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
                                 activeColor: colorScheme.secondary,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16.0,
@@ -2783,11 +2771,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               /* CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 // Diminui o espaço vertical
-  dense: true,
-  visualDensity: const VisualDensity(
-    horizontal: -2,
-    vertical: -3,
-  ),
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
                                 activeColor: colorScheme.secondary,
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16.0,
@@ -2823,11 +2811,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               return CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 // Diminui o espaço vertical
-  dense: true,
-  visualDensity: const VisualDensity(
-    horizontal: -2,
-    vertical: -3,
-  ),
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
                                 activeColor: colorScheme.tertiary,
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16.0,
@@ -2999,11 +2987,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               return RadioListTile<String>(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 // Diminui o espaço vertical
-  dense: true,
-  visualDensity: const VisualDensity(
-    horizontal: -2,
-    vertical: -3,
-  ),
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
                                 activeColor: colorScheme.scrim,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16.0,
@@ -3085,7 +3073,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             bool servidorMudou = servidorAntigoFuncao != servidorNovo;
 
                             await _salvarConfiguracoes();
-                            _aplicarConfiguracoesDaMemoria();
+                            await _aplicarConfiguracoesDaMemoria();
 
                             bool conectado = await Connection.conectarBanco();
 

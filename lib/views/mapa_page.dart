@@ -57,15 +57,15 @@ class MapaPageState extends State<MapaPage> {
   bool mostrarMesaseComandas = true;
 
   bool _showKeyboardNome = false;
-  List<dynamic> todasMesas = [];
+/*   List<dynamic> todasMesas = [];
   List<dynamic> abertasMesas = [];
-  List<dynamic> fechadasMesas = [];
+  List<dynamic> fechadasMesas = []; */
   List<dynamic> comandasVinculadas = [];
   List<dynamic> comandasVinculadasMesa = [];
 
-  List<dynamic> todasComandas = [];
+/*   List<dynamic> todasComandas = [];
   List<dynamic> abertasComandas = [];
-  List<dynamic> fechadasComandas = [];
+  List<dynamic> fechadasComandas = []; */
 
   bool aberto = false;
   bool conta = false;
@@ -115,9 +115,9 @@ class MapaPageState extends State<MapaPage> {
     _atualizarHora();
     _timer = Timer.periodic(Duration(seconds: 1), (_) => _atualizarHora());
 
-    carregarTodasAsComandas();
+    /* carregarTodasAsComandas();
     carregarAsComandasAbertas();
-    carregarAsComandasFechadas();
+    carregarAsComandasFechadas(); */
     buscarTipoPedido();
     _loadNomeEmpresa();
     _loadNumeroLicenca();
@@ -358,7 +358,7 @@ class MapaPageState extends State<MapaPage> {
     }
   }
 
-  // Função carregar TODAS as comandas
+  /* // Função carregar TODAS as comandas
   Future<void> carregarTodasAsComandas() async {
     try {
       await Future.delayed(Duration.zero);
@@ -379,9 +379,9 @@ class MapaPageState extends State<MapaPage> {
       if (!mounted) return;
       setState(() => todasComandas = []);
     }
-  }
+  } */
 
-  // Função carregar TODAS as mesas
+  /* // Função carregar TODAS as mesas
   Future<void> carregarTodasAsMesas() async {
     try {
       await Future.delayed(Duration.zero);
@@ -402,10 +402,10 @@ class MapaPageState extends State<MapaPage> {
       if (!mounted) return;
       setState(() => todasMesas = []);
     }
-  }
+  } */
 
   // Função carregar as comandas ABERTAS
-  Future<void> carregarAsComandasAbertas() async {
+  /* Future<void> carregarAsComandasAbertas() async {
     try {
       await Future.delayed(Duration.zero);
 
@@ -425,10 +425,10 @@ class MapaPageState extends State<MapaPage> {
       if (!mounted) return;
       setState(() => abertasComandas = []);
     }
-  }
+  } */
 
   // Função carregar as mesas ABERTAS
-  Future<void> carregarAsMesasAbertas() async {
+  /* Future<void> carregarAsMesasAbertas() async {
     try {
       await Future.delayed(Duration.zero);
 
@@ -448,10 +448,10 @@ class MapaPageState extends State<MapaPage> {
       if (!mounted) return;
       setState(() => abertasMesas = []);
     }
-  }
+  } */
 
   // Função carregar as comandas FECHADAS
-  Future<void> carregarAsComandasFechadas() async {
+  /* Future<void> carregarAsComandasFechadas() async {
     try {
       await Future.delayed(Duration.zero);
 
@@ -494,7 +494,7 @@ class MapaPageState extends State<MapaPage> {
       if (!mounted) return;
       setState(() => fechadasMesas = []);
     }
-  }
+  } */
 
   // Função carregar TODAS as comandas vinculadas com mesa
   Future<List<dynamic>> buscarComandasMesa(dynamic numeroMesa) async {
@@ -532,7 +532,7 @@ class MapaPageState extends State<MapaPage> {
     super.dispose();
   }
 
-  // Carregar selects
+  /* // Carregar selects
   Future<void> _toggleAberta() async {
     if (mostrarMesas) {
       await Future.wait([
@@ -551,7 +551,7 @@ class MapaPageState extends State<MapaPage> {
     if (mounted) {
       setState(() {});
     }
-  }
+  } */
 
   Future<void> _selecionarPrimeiroGrupo(List<dynamic> mesas) async {
     if(logicaPorComandaNaMesa){
