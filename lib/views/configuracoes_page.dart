@@ -2278,6 +2278,56 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ],
                       ),
+                      // Vendas
+                      if (garcom.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else
+                        Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: garcom.length,
+                            itemBuilder: (context, index) {
+                              String modo = garcom[index];
+                              String indexStr = index.toString();
+                              bool isChecked = garcomSelecionados.contains(indexStr);
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                // Diminui o espaço vertical
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      if (garcomSelecionados.length <= 2)
+                                        garcomSelecionados.add(indexStr);
+                                        if (modo == '0') {
+                                          garcomSelecionados.add('0');
+                                        } 
+                                    } else {
+                                      garcomSelecionados.remove(indexStr);
+                                      if (modo == '0') {
+                                        garcomSelecionados.remove('0');
+                                      }
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
                       // check in e check out
                       if (check.isEmpty)
                         Padding(
@@ -2595,7 +2645,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ],
                       ), */
-                      // SizedBox(height: 2),
+                      /* // SizedBox(height: 2),
                       if (garcom.isEmpty)
                         Padding(
                           padding: EdgeInsets.all(10.0),
@@ -2644,7 +2694,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               );
                             },
                           ),
-                        ),
+                        ), */
 
                       // SizedBox(height: 2),
 

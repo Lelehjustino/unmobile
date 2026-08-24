@@ -79,11 +79,11 @@ class ItemPizzaGrafico {
   ];  
 
   final List<Color> _coresBordas = [
-    const Color.fromRGBO(243, 153, 48, 1),
-    const Color.fromRGBO(1, 132, 152, 1),
-    const Color.fromRGBO(255, 216, 99, 1),
-    const Color.fromRGBO(173, 216, 208, 1.0),
-    const Color.fromRGBO(87, 154, 146, 1),
+    const Color.fromRGBO(243, 153, 48, 1).withOpacity(0.7),
+    const Color.fromRGBO(1, 132, 152, 1).withOpacity(0.7),
+    const Color.fromRGBO(255, 216, 99, 1).withOpacity(0.7),
+    const Color.fromRGBO(173, 216, 208, 1.0).withOpacity(0.7),
+    const Color.fromRGBO(87, 154, 146, 1).withOpacity(0.7),
   ];
 
   String quebrarTexto(String texto, int maxCaracteres) {

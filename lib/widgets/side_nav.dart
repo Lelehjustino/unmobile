@@ -539,7 +539,7 @@ class SideNavState extends State<SideNav> {
             : colorScheme.onSurface,
       ),
       title: Text(
-        "Cupom Avulso",
+        "Cupom Avulso / Teste",
         style: TextStyle(
           color: currentRoute == '/cupom_avulso'
               ? colorScheme.surface
@@ -661,6 +661,9 @@ class SideNavState extends State<SideNav> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+
+                  if (footerButtonsController.aparecerGarcom.value && footerButtonsController.rotaHome.value)
+                  vendasPage(currentRoute, colorScheme),
             
                   if (footerButtonsController.aparecerCheckIn.value && footerButtonsController.rotaHome.value)
                   checkInPage(currentRoute, colorScheme),
@@ -688,9 +691,6 @@ class SideNavState extends State<SideNav> {
 
                   if (footerButtonsController.aparecerRecepcao.value && footerButtonsController.rotaHome.value)
                   receptionPage(currentRoute, colorScheme),
-
-                  if (footerButtonsController.aparecerGarcom.value && footerButtonsController.rotaHome.value)
-                  vendasPage(currentRoute, colorScheme),
 
                   configuracoesPage(currentRoute, colorScheme),
                   
