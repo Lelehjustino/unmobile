@@ -566,14 +566,14 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                                       if (tipoPedido == "0")
                                         Image.asset(
                                           'assets/retirada_balcao_icone.png',
-                                          width: MediaQuery.of(context).size.width * 0.020,
-                                          height: MediaQuery.of(context).size.width * 0.020,
+                                          width: MediaQuery.of(context).size.width * 0.025,
+                                          height: MediaQuery.of(context).size.width * 0.025,
                                         )
                                       else
                                         Image.asset(
                                           'assets/icone_moto_delivery.png',
-                                          width: MediaQuery.of(context).size.width * 0.025,
-                                          height: MediaQuery.of(context).size.width * 0.025,
+                                          width: MediaQuery.of(context).size.width * 0.030,
+                                          height: MediaQuery.of(context).size.width * 0.030,
                                         ),
 
                                       SizedBox(width: 5),
@@ -766,19 +766,26 @@ class _PainelCozinhaState extends State<PainelCozinha> {
         final double totalHeight = constraints.maxHeight;
         
         // Calcula o Aspect Ratio para ocupar 3 colunas e 2 linhas perfeitamente
-        final double childWidth = (totalWidth - (spacing * 2)) / 3;
+        /* final double childWidth = (totalWidth - (spacing * 2)) / 2;
+        final double childHeight = (totalHeight - spacing) / 2; */
+        // 2 colunas
+        final double childWidth = (totalWidth - spacing) / 2;
+
+        // 2 linhas
         final double childHeight = (totalHeight - spacing) / 2;
         final double aspectRatio = childWidth / childHeight;
 
         return GridView.builder(
             padding: EdgeInsets.zero,
             physics: NeverScrollableScrollPhysics(), 
-            itemCount: 6, // Sempre 6 cards
+            itemCount: 4, 
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+              crossAxisCount: 2,
               crossAxisSpacing: spacing,
               mainAxisSpacing: spacing,
-              childAspectRatio: aspectRatio > 0 ? aspectRatio : 1.0,
+              /* childAspectRatio: 0.5, */
+              childAspectRatio: aspectRatio,
+              /* childAspectRatio: aspectRatio > 0 ? aspectRatio : 1.5, */
             ),
             itemBuilder: (context, index) {
               if (index >= grupos.length) {
@@ -813,10 +820,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
               } else {
 
               }
-
-              // ValueKey baseada no número real do pedido:
-              // → Flutter mantém o estado do card correto ao reorganizar
-              // → Evita o "salto" visual quando um pedido sai da fila
+              
               return GestureDetector(
                 onTap: () {
                   popupInfoPedido(descricaoPedido, horaPedido, itensPorPedidoString, pedidos, numeroPedido);
@@ -843,14 +847,14 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                                         if (tipoPedido == "0")
                                           Image.asset(
                                             'assets/retirada_balcao_icone.png',
-                                            width: MediaQuery.of(context).size.width * 0.020,
-                                            height: MediaQuery.of(context).size.width * 0.020,
+                                            width: MediaQuery.of(context).size.width * 0.025,
+                                            height: MediaQuery.of(context).size.width * 0.025,
                                           )
                                         else
                                           Image.asset(
                                             'assets/icone_moto_delivery.png',
-                                            width: MediaQuery.of(context).size.width * 0.025,
-                                            height: MediaQuery.of(context).size.width * 0.025,
+                                            width: MediaQuery.of(context).size.width * 0.030,
+                                            height: MediaQuery.of(context).size.width * 0.030,
                                           ),
                 
                                         SizedBox(width: 5),
@@ -858,10 +862,10 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                                         Expanded(
                                           child: Text(
                                             descricaoPedido,
-                                            maxLines: 1,
+                                            maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize: MediaQuery.of(context).size.width * 0.015,
+                                              fontSize: MediaQuery.of(context).size.width * 0.030,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
@@ -988,7 +992,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: Theme.of(context).colorScheme.onPrimary,
-                                          fontSize: MediaQuery.of(context).size.width * 0.020,
+                                          fontSize: MediaQuery.of(context).size.width * 0.030,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -1066,6 +1070,126 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                   itemCount: gruposQuantidade.length > 6 ? gruposQuantidade.length - 6 : 0,
                   itemBuilder: (context, index) {
                     final actualIndex = index + 6;
+                    final grupo = gruposQuantidade[actualIndex];
+                    final descricaoPedido = grupo.key;
+                    final horaRaw = grupo.value.first['min(v.datahora)'] ?? '';
+                    final pedidos = grupo.value;
+                    final itensPorPedido = pedidos.length;
+                    final numeroPedido = pedidos[0]['numeropedido'].toString();
+                    String horaPedido = "";
+                    if (horaRaw != "") {
+                      try {
+                        horaPedido = DateFormat('HH:mm').format(DateTime.parse(horaRaw));
+                      } catch (_) {}
+                    }
+                    
+                    return Card(
+                      elevation: 1,
+                      margin: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          String itensPorPedidoString = itensPorPedido.toString();
+                          // abrir dialogo informacoes do pedido
+                          popupInfoPedido(descricaoPedido, horaPedido, itensPorPedidoString, pedidos, numeroPedido);
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                descricaoPedido,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                              if (horaPedido != "")
+                                Text(
+                                  "${horaPedido} - ${itensPorPedido} itens",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colorScheme.onSurface.withOpacity(0.7),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProntosRowMobile() {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Container(
+        color: colorScheme.primary.withOpacity(0.1),
+        child: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding:  EdgeInsets.symmetric(horizontal: 16.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colorScheme.onPrimary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            "PEDIDOS",
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.error,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          "${gruposQuantidade.length}",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Divider(),
+              Expanded(
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: gruposQuantidade.length > 4 ? gruposQuantidade.length - 4 : 0,
+                  itemBuilder: (context, index) {
+                    final actualIndex = index + 4;
                     final grupo = gruposQuantidade[actualIndex];
                     final descricaoPedido = grupo.key;
                     final horaRaw = grupo.value.first['min(v.datahora)'] ?? '';
@@ -1418,8 +1542,41 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                   ),
                 ),
 
-                // STATUS - precisa de Obx
                 Align(
+                  alignment: Alignment.centerRight,
+                  child: 
+                  Column(
+                    // crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _horaAtual,
+                            style: TextStyle(
+                              color: colorScheme.onPrimary,
+                              fontSize: 18,
+                            ),
+                          ),
+                          SizedBox(width: 15),
+                          Text(
+                            "${funcoesController.dataAtual.value}",
+                            style: TextStyle(
+                              color: colorScheme.onPrimary,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Dia e hora
+                /* Align(
                   alignment: Alignment.centerRight,
                   child: 
                   Column(
@@ -1450,7 +1607,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                       ),
                     ],
                   ),
-                ),
+                ), */
               ],
             ),
           );
@@ -1495,7 +1652,7 @@ class _PainelCozinhaState extends State<PainelCozinha> {
                         ),
                         Expanded(
                           flex: 1,
-                          child: _buildProntosRow(),
+                          child: _buildProntosRowMobile(),
                         ),
                       ],
                     ),

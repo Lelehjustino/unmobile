@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/models/itemPizzaGrafico.dart';
 import 'package:un_recepcao/services/remote_config_service.dart';
+import 'package:un_recepcao/services/stone_service.dart';
 import 'package:un_recepcao/views/cupom_avulso_page.dart';
 import 'package:un_recepcao/views/fechar_page.dart';
 
@@ -68,7 +69,8 @@ void main() async {
   Get.put(PainelController(), permanent: true);
   Get.put(ItemPizzaGrafico(), permanent: true);
   Get.put(FooterButtonsController(), permanent: true);
-
+  Get.put(StoneService(), permanent: true);
+  
   ServicoNotificacao.configurarAudio();
 
   await SystemChrome.setPreferredOrientations([

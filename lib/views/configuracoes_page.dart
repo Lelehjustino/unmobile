@@ -13,6 +13,7 @@ import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
+import 'package:un_recepcao/services/stone_service.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/expedicao_motoboy_page.dart';
@@ -38,6 +39,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     with WidgetsBindingObserver {
   String versaoAplicacao = Get.find<FuncoesController>().versaoDoApp;
   final FuncoesController funcoesController = Get.find<FuncoesController>();
+  final StoneService stoneService = Get.find<StoneService>();
 
   final TextEditingController senhaController = TextEditingController();
   final FooterButtonsController footerButtonsController = Get.find<FooterButtonsController>();
@@ -64,7 +66,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   // Set<String> modosSelecionados = {'Mesa', 'Comanda'};
   Set<String> modosSelecionados = {};
 
-  List<String> notes = ['Notes'];
+  List<String> notes = ['Fila de espera'];
   Set<String> notesSelecionados = {};
 
   List<String> check = ['Check-in', 'Check-out'];
@@ -2034,6 +2036,17 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
               ]
             ), */
             // SizedBox(height: 2),
+            ElevatedButton(
+              onPressed: () async {
+                final resultado = await stoneService.pagar(
+                  valor: 1000,
+                  referencia: 'TESTE-001',
+                );
+
+                print(resultado);
+              },
+              child: Text('TESTAR STONE'),
+            ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 15.0),
               child: Row(

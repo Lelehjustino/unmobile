@@ -12,7 +12,7 @@ class FuncoesController extends GetxController {
   String atendimentoAtual = "";
   String nomeTraidpoint = "";
   
-  String versaoDoApp = "1.9.23";
+  String versaoDoApp = "1.9.24";
 
   // Controlar o aparecimento do botão pagar
   RxBool aparecerBotaoPagar = false.obs;
@@ -209,10 +209,6 @@ class FuncoesController extends GetxController {
       try {
 
         /* String dadosJson = await Connection().select(
-          "SELECT numeroproduto_FK AS numeroproduto, if(numeroobservacao_FK = '0','0',(SELECT observacao FROM observacoes WHERE numero=numeroobservacao_FK)) AS nomeobservacao, numeroprodutoadicional_FK AS numeroadicional, if(numeroprodutoadicional_FK = '0', '', (SELECT nome FROM produtos WHERE numero=numeroprodutoadicional_FK)) AS nomeadicional, numeroobservacao_FK as numeroobservacao FROM observacoesadicionaisprodutos ORDER BY nomeadicional, nomeobservacao;",
-        ); */
-
-        String dadosJson = await Connection().select(
           """
           SELECT
             numeroproduto_FK AS numeroproduto,
@@ -231,6 +227,51 @@ class FuncoesController extends GetxController {
             valor_adc AS valorAdicional
 
           FROM observacoesadicionaisprodutos
+          ORDER BY nomeadicional, nomeobservacao;
+          """,
+        ); */
+
+        String dadosJson = await Connection().select(
+          """
+            SELECT
+              oap.numeroproduto_FK AS numeroproduto,
+
+              oap.numeroobservacao_FK AS numeroobservacao,
+              IF(
+                  oap.numeroobservacao_FK = '0',
+                  '0',
+                  o.observacao
+              ) AS nomeobservacao,
+
+              oap.diasdasemana_obs AS diasDaSemanaObs,
+              oap.horainicio_obs AS inicioObs,
+              oap.horatermino_obs AS fimObs,
+
+              oap.numeroprodutoadicional_FK AS numeroadicional,
+              IF(
+                  oap.numeroprodutoadicional_FK = '0',
+                  '',
+                  p.nome
+              ) AS nomeadicional,
+
+              oap.diasdasemana_adc AS diasDaSemanaAdd,
+              oap.horainicio_adc AS inicioAdd,
+              oap.horatermino_adc AS fimAdd,
+              oap.valor_adc AS valorAdicional
+
+          FROM observacoesadicionaisprodutos oap
+
+          LEFT JOIN observacoes o
+              ON o.numero = oap.numeroobservacao_FK
+
+          LEFT JOIN produtos p
+              ON p.numero = oap.numeroprodutoadicional_FK
+              AND p.ativo = 1
+
+          WHERE
+              oap.numeroprodutoadicional_FK = '0'
+              OR p.numero IS NOT NULL
+
           ORDER BY nomeadicional, nomeobservacao;
           """,
         );

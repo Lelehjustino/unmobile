@@ -2758,6 +2758,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final orientation = MediaQuery.of(context).orientation;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: PopScope(
@@ -4323,7 +4324,8 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                     ),
                     /* if((!cardapioFocus.hasFocus && !quantidadePizzaBordaSelecionadoFocus.hasFocus && !observacaoSaborSelecionadoFocus.hasFocus && modoCarrinho && !terminarPizza) 
                       || (terminarPizza && !observacaoPizzaFocus.hasFocus)) */
-                      if((modoCarrinho && !terminarPizza) || (terminarPizza))
+                    // vertical 
+                    if((modoCarrinho && !terminarPizza && orientation == Orientation.portrait) || (terminarPizza && orientation == Orientation.portrait))
                     Positioned(
                       bottom: 8,
                       left: 0,
@@ -4333,6 +4335,24 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                           padding: EdgeInsets.only(left: 8.0, right: 8.0, top: 0.0, bottom: 8.0),
                           child: SizedBox(
                            //  aspectRatio: 1,
+                            child: _buildPizzaVisual(bordas: itemPizzaGraficoController.listaBordas, sabores: itemPizzaGraficoController.listaSabores),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // horizontal
+                    if((modoCarrinho && !terminarPizza && orientation == Orientation.landscape) || (terminarPizza && orientation == Orientation.landscape))
+                    Positioned(
+                      bottom: 8,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(left: 8.0, right: 8.0, top: 0.0, bottom: 8.0),
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.30,
+                            width: MediaQuery.of(context).size.width * 0.40,
                             child: _buildPizzaVisual(bordas: itemPizzaGraficoController.listaBordas, sabores: itemPizzaGraficoController.listaSabores),
                           ),
                         ),

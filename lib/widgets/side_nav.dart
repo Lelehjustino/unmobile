@@ -325,7 +325,7 @@ class SideNavState extends State<SideNav> {
           : colorScheme.onSurface,
     ),
     title: Text(
-      "Notes",
+      "Fila de espera",
       style: TextStyle(
         color: currentRoute == '/notes'
             ? colorScheme.surface

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:un_recepcao/api/stone_service.dart';
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';

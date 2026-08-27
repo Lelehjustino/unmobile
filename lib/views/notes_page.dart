@@ -1003,7 +1003,7 @@ class NotesPageState extends State<NotesPage> {
                     children: [
                       // Texto
                       Text(
-                        'Notes',
+                        'Fila de espera',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 30,
