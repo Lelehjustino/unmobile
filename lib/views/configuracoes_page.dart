@@ -2036,7 +2036,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
               ]
             ), */
             // SizedBox(height: 2),
-            ElevatedButton(
+           /*  ElevatedButton(
               onPressed: () async {
                 final resultado = await stoneService.pagar(
                   valor: 1000,
@@ -2046,7 +2046,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                 print(resultado);
               },
               child: Text('TESTAR STONE'),
-            ),
+            ), */
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 15.0),
               child: Row(

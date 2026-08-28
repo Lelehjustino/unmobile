@@ -1759,56 +1759,108 @@ class GarcomPageState extends State<GarcomPage>
       } else if (produto.id == 'PZ') {
         final partes = montarSaboresEBordas(produto.adicionais);
 
-        sucesso = await inserirProdutosPizza(
-          produto.numero,
-          numeroComanda,
-          numeroMesa,
-          produto.nome,
-          produto.observacaoEscrita,
-          '',
-          produto.quantidade,
-          numeroTradepoint,
-          produto.id,
-          montarPartesPizza(produto.adicionais), // divisão 00000000
-          // SABORES
-          partes.sabores[0],
-          partes.sabores[1],
-          partes.sabores[2],
-          partes.sabores[3],
-          partes.sabores[4],
-          partes.sabores[5],
-          partes.sabores[6],
-          partes.sabores[7],
-          // OBS SABORES
-          partes.obsSabores[0],
-          partes.obsSabores[1],
-          partes.obsSabores[2],
-          partes.obsSabores[3],
-          partes.obsSabores[4],
-          partes.obsSabores[5],
-          partes.obsSabores[6],
-          partes.obsSabores[7],
-          // BORDAS
-          partes.bordas[0],
-          partes.bordas[1],
-          partes.bordas[2],
-          partes.bordas[3],
-          partes.bordas[4],
-          partes.bordas[5],
-          partes.bordas[6],
-          partes.bordas[7],
-          // OBS BORDAS
-          partes.obsBordas[0],
-          partes.obsBordas[1],
-          partes.obsBordas[2],
-          partes.obsBordas[3],
-          partes.obsBordas[4],
-          partes.obsBordas[5],
-          partes.obsBordas[6],
-          partes.obsBordas[7],
-        );
-      }
-
+        if(produto.quantidade > 1){
+          for(int i = 0; i < produto.quantidade; i++){
+            sucesso = await inserirProdutosPizza(
+              produto.numero,
+              numeroComanda,
+              numeroMesa,
+              produto.nome,
+              produto.observacaoEscrita,
+              '',
+              1.0,
+              numeroTradepoint,
+              produto.id,
+              montarPartesPizza(produto.adicionais), // divisão 00000000
+              // SABORES
+              partes.sabores[0],
+              partes.sabores[1],
+              partes.sabores[2],
+              partes.sabores[3],
+              partes.sabores[4],
+              partes.sabores[5],
+              partes.sabores[6],
+              partes.sabores[7],
+              // OBS SABORES
+              partes.obsSabores[0],
+              partes.obsSabores[1],
+              partes.obsSabores[2],
+              partes.obsSabores[3],
+              partes.obsSabores[4],
+              partes.obsSabores[5],
+              partes.obsSabores[6],
+              partes.obsSabores[7],
+              // BORDAS
+              partes.bordas[0],
+              partes.bordas[1],
+              partes.bordas[2],
+              partes.bordas[3],
+              partes.bordas[4],
+              partes.bordas[5],
+              partes.bordas[6],
+              partes.bordas[7],
+              // OBS BORDAS
+              partes.obsBordas[0],
+              partes.obsBordas[1],
+              partes.obsBordas[2],
+              partes.obsBordas[3],
+              partes.obsBordas[4],
+              partes.obsBordas[5],
+              partes.obsBordas[6],
+              partes.obsBordas[7],
+            );
+          }
+        } else {
+            sucesso = await inserirProdutosPizza(
+              produto.numero,
+              numeroComanda,
+              numeroMesa,
+              produto.nome,
+              produto.observacaoEscrita,
+              '',
+              produto.quantidade,
+              numeroTradepoint,
+              produto.id,
+              montarPartesPizza(produto.adicionais), // divisão 00000000
+              // SABORES
+              partes.sabores[0],
+              partes.sabores[1],
+              partes.sabores[2],
+              partes.sabores[3],
+              partes.sabores[4],
+              partes.sabores[5],
+              partes.sabores[6],
+              partes.sabores[7],
+              // OBS SABORES
+              partes.obsSabores[0],
+              partes.obsSabores[1],
+              partes.obsSabores[2],
+              partes.obsSabores[3],
+              partes.obsSabores[4],
+              partes.obsSabores[5],
+              partes.obsSabores[6],
+              partes.obsSabores[7],
+              // BORDAS
+              partes.bordas[0],
+              partes.bordas[1],
+              partes.bordas[2],
+              partes.bordas[3],
+              partes.bordas[4],
+              partes.bordas[5],
+              partes.bordas[6],
+              partes.bordas[7],
+              // OBS BORDAS
+              partes.obsBordas[0],
+              partes.obsBordas[1],
+              partes.obsBordas[2],
+              partes.obsBordas[3],
+              partes.obsBordas[4],
+              partes.obsBordas[5],
+              partes.obsBordas[6],
+              partes.obsBordas[7],
+            );
+          }
+        }
       if (!sucesso) {
         todasSucesso = false;
       }
@@ -1859,6 +1911,59 @@ class GarcomPageState extends State<GarcomPage>
       } else if (produto.id == 'PZ') {
         final partes = montarSaboresEBordas(produto.adicionais);
 
+        if(produto.quantidade > 1){
+          for(int i = 0; i < produto.quantidade; i++){
+            sucesso = await inserirProdutosPizza(
+              produto.numero,
+              numeroComanda,
+              numeroMesa,
+              produto.nome,
+              produto.observacaoEscrita,
+              '',
+              1.0,
+              numeroTradepoint,
+              produto.id,
+              montarPartesPizza(produto.adicionais), // divisão 00000000
+              // SABORES
+              partes.sabores[0],
+              partes.sabores[1],
+              partes.sabores[2],
+              partes.sabores[3],
+              partes.sabores[4],
+              partes.sabores[5],
+              partes.sabores[6],
+              partes.sabores[7],
+              // OBS SABORES
+              partes.obsSabores[0],
+              partes.obsSabores[1],
+              partes.obsSabores[2],
+              partes.obsSabores[3],
+              partes.obsSabores[4],
+              partes.obsSabores[5],
+              partes.obsSabores[6],
+              partes.obsSabores[7],
+              // BORDAS
+              partes.bordas[0],
+              partes.bordas[1],
+              partes.bordas[2],
+              partes.bordas[3],
+              partes.bordas[4],
+              partes.bordas[5],
+              partes.bordas[6],
+              partes.bordas[7],
+              // OBS BORDAS
+              partes.obsBordas[0],
+              partes.obsBordas[1],
+              partes.obsBordas[2],
+              partes.obsBordas[3],
+              partes.obsBordas[4],
+              partes.obsBordas[5],
+              partes.obsBordas[6],
+              partes.obsBordas[7],
+            );
+          }
+        } else {
+
         sucesso = await inserirProdutosPizza(
           produto.numero,
           numeroComanda,
@@ -1910,6 +2015,7 @@ class GarcomPageState extends State<GarcomPage>
           partes.obsBordas[6],
           partes.obsBordas[7],
         );
+      }
       }
 
       if (!sucesso) {
@@ -10161,18 +10267,13 @@ class GarcomPageState extends State<GarcomPage>
                                     } else if (produto['produto_id'] == 'E') {
                                       // Atualiza os controladores fora do setState para evitar loops de rebuild
                                       cardapioController.text = produto['produto_nome'];
-                                      numeroProdutoSelecionadoController.text =
-                                          produto['produto_numero'];
+                                      numeroProdutoSelecionadoController.text = produto['produto_numero'];
 
                                       // Atribuições de lógica que não dependem do setState
-                                      idDoProdutoSelecionado =
-                                          produto['produto_id'];
-                                      _campoAtivo =
-                                          'quantidadeProdutoSelecionadoController';
-                                      numeroDoProdutoSelecionado =
-                                          produto['produto_numero'];
-                                      valorDoProdutoSelecionado =
-                                          produto['produto_valor'];
+                                      idDoProdutoSelecionado = produto['produto_id'];
+                                      _campoAtivo = 'quantidadeProdutoSelecionadoController';
+                                      numeroDoProdutoSelecionado = produto['produto_numero'];
+                                      valorDoProdutoSelecionado = produto['produto_valor'];
 
                                       setState(() {
                                         aparecerLista = false;
@@ -10235,20 +10336,19 @@ class GarcomPageState extends State<GarcomPage>
                                     decoration: BoxDecoration(
                                       border: Border(
                                         bottom: BorderSide(
-                                          color: colorScheme.primary
-                                              .withOpacity(0.2),
+                                          color: colorScheme.primary.withOpacity(0.2),
                                         ),
                                       ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Flexible(
                                           child: Column(
                                             mainAxisAlignment: MainAxisAlignment.start,
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
+                                              // Nome produto
                                               Text(
                                                 '${produto['produto_numero']} - ${produto['produto_nome']}',
                                                 style: TextStyle(
@@ -10257,6 +10357,7 @@ class GarcomPageState extends State<GarcomPage>
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
+                                              // Unidade produto 
                                               Text(
                                                 '(${produto['produto_un']})',
                                                 style: TextStyle(
@@ -10268,7 +10369,40 @@ class GarcomPageState extends State<GarcomPage>
                                             ],
                                           ),
                                         ),
+                                        // icone pizza -> se for pizza
+                                        if(produto['produto_id'] == 'PZ')
+                                        Flexible(
+                                          child: Padding(
+                                            padding: EdgeInsets.only(right: 17),
+                                            child: Icon(
+                                              Icons.local_pizza,
+                                              size: 23,
+                                              color: colorScheme.scrim,
+                                            ),
+                                          ),
+                                        ),
+                                        
+                                        // icone para meia porcao 
+                                        if (produto['produto_meia_porcao'] != '0')
+                                        Container(
+                                          width: 28,
+                                          height: 28,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.outline,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text(
+                                            '½',
+                                            style: TextStyle(
+                                              color: colorScheme.onPrimary,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
                                        //  Expanded(child: Row()),
+                                       // preco
                                         if (produto['produto_valor'] != '0.00')
                                           Flexible(
                                             child: Text(
