@@ -17,6 +17,7 @@ class GarcomController extends GetxController {
   RxBool tipoCadastroClienteCpf = false.obs;
   RxBool tipoCadastroClienteTelefone = false.obs;
   RxBool forcarCadastroCliente = false.obs;
+  RxBool modoCarrinhoComandas = false.obs;
 
   @override
   void onInit() {
@@ -27,12 +28,33 @@ class GarcomController extends GetxController {
   Future<void> carregarTudo() async {
     await carregarCidadeUf();
     await configuracoesCadastroCliente();
+    await carregarModoCarrinhoComandas();
   }
 
   Future<void> configuracoesCadastroCliente() async {
     await carregarCadastroCliente();
     await carregarTipoCadastroCliente();
     await carregarForcarCadastroCliente();
+  }
+
+  Future<void> carregarModoCarrinhoComandas() async {
+    final prefs = await SharedPreferences.getInstance();
+    final recepcaoJson = prefs.getString('modo_carrinho_comandas');
+
+    if (recepcaoJson != null) {
+      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
+
+      if (recepcaosSalvos.contains('0')) {
+        // se recepcao selecionado
+        modoCarrinhoComandas.value = true;
+      } else {
+        // se recepcao nao selecionado
+        modoCarrinhoComandas.value = false;
+      }
+    } else {
+      // configuração padrao
+      modoCarrinhoComandas.value = false;
+    }
   }
 
   Future<void> carregarForcarCadastroCliente() async {

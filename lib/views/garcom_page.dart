@@ -472,6 +472,7 @@ class GarcomPageState extends State<GarcomPage>
     // limparCarrinho();
 
     garcomController.configuracoesCadastroCliente();
+    garcomController.carregarModoCarrinhoComandas();
   }
 
   Future<void> atualizarValores(
@@ -8794,7 +8795,7 @@ class GarcomPageState extends State<GarcomPage>
                                     child: Padding(
                                       padding: EdgeInsets.only(
                                         left: 20,
-                                        right: comandaValida ? 20 : 90,
+                                        right: comandaValida && garcomController.modoCarrinhoComandas.value ? 20 : 90,
                                         top: 10,
                                         bottom: 10,
                                       ),
@@ -8949,13 +8950,11 @@ class GarcomPageState extends State<GarcomPage>
                                     ),
                                   ),
                                   // Botão de adicionar comanda
-                                  if (comandaValida)
+                                  if (comandaValida && garcomController.modoCarrinhoComandas.value)
                                     GestureDetector(
                                       onTap: () {
                                         // Adicionar comanda
-                                        if (carrinhoController
-                                            .carrinho
-                                            .isNotEmpty) {
+                                        if (carrinhoController.carrinho.isNotEmpty) {
                                           numeroMesaParaCarrinho = mesaController.text;
 
                                           comandaCarrinhoController.salvarCarrinho(
@@ -8975,16 +8974,9 @@ class GarcomPageState extends State<GarcomPage>
                                               content: Text(
                                                 'Carrinho vazio, acrescente produtos ao carrinho!',
                                               ),
-                                              backgroundColor:
-                                                  colorScheme.error,
-                                              behavior:
-                                                  SnackBarBehavior.floating,
-                                              margin: EdgeInsets.fromLTRB(
-                                                0,
-                                                0,
-                                                0,
-                                                0,
-                                              ),
+                                              backgroundColor:colorScheme.error,
+                                              behavior:SnackBarBehavior.floating,
+                                              margin: EdgeInsets.fromLTRB(0,0,0,0),
                                               duration: Duration(seconds: 3),
                                             ),
                                           );
@@ -9402,7 +9394,7 @@ class GarcomPageState extends State<GarcomPage>
                                     child: Padding(
                                       padding: EdgeInsets.only(
                                         left: 20,
-                                        right: comandaValida ? 20 : 90,
+                                        right: comandaValida && garcomController.modoCarrinhoComandas.value ? 20 : 90,
                                         top: 10,
                                         bottom: 10,
                                       ),
@@ -9413,8 +9405,7 @@ class GarcomPageState extends State<GarcomPage>
                                           autoScroll: false,
 
                                           config: KeyboardActionsConfig(
-                                            keyboardActionsPlatform:
-                                                KeyboardActionsPlatform.IOS,
+                                            keyboardActionsPlatform: KeyboardActionsPlatform.IOS,
                                             nextFocus: false,
                                             actions: [
                                               KeyboardActionsItem(
@@ -9565,7 +9556,7 @@ class GarcomPageState extends State<GarcomPage>
                                     ),
                                   ),
                                   // Botão de adicionar comanda
-                                  if (comandaValida)
+                                  if (comandaValida && garcomController.modoCarrinhoComandas.value)
                                     GestureDetector(
                                       onTap: () {
                                         // Adicionar comanda

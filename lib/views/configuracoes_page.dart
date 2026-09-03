@@ -86,6 +86,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> cupomAvulso = ['Cupom Avulso'];
   Set<String> cupomAvulsoSelecionados = {};
 
+  List<String> modoCarrinhoComandas = ['Carrinho comandas'];
+  Set<String> modoCarrinhoComandasSelecionados = {};
+
   List<String> cadastroCliente = ['Cadastro Cliente'];
   Set<String> cadastroClienteSelecionados = {};
   List<String> tipoCadastroCliente = ['CPF', 'Telefone'];
@@ -107,6 +110,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   bool aparecerNote = false;
   bool aparecerRecepcao = false;
   bool naoAparecerMapa = true;
+  bool aparecerModoCarrinhoComandas = false;
 
   // Variaveis de Licença
   bool licencaSelecionada = false;
@@ -224,6 +228,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadCadastroClienteSalvo();
     _loadTipoCadastroClienteSalvo();
     _loadFocarCadastroClienteSalvo();
+    _loadModoCarrinhoComandasSalvo();
   }
 
   @override
@@ -363,6 +368,37 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     setState(() {
       cadastroClienteSelecionados = setLocal;
     });
+  }
+
+  // Carrega o modo carrinho de comandas - bool para rota
+  Future<void> _loadModoCarrinhoComandasSalvo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('modo_carrinho_comandas');
+
+    if (valor == null || valor.isEmpty) return;
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      modoCarrinhoComandasSelecionados = setLocal;
+    });
+  }
+
+  // Salva o modo carrinho de comandas
+  _saveModoCarrinhoComandas(Set<String> modoCarrinhoComandasSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'modo_carrinho_comandas',
+      jsonEncode(modoCarrinhoComandasSelecionados.toList()),
+    );
   }
 
   // Salva o cupom avulso
@@ -1294,6 +1330,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await _saveCadastroCliente(cadastroClienteSelecionados);
     await _saveTipoCadastroCliente(tipoCadastroClienteSelecionados);
     await _saveForcarCadastroCliente(forcarCadastroClienteSelecionados);
+    await _saveModoCarrinhoComandas(modoCarrinhoComandasSelecionados);
   }
 
   // Deriva as variáveis booleanas de navegação diretamente dos Sets já em memória.
@@ -1336,6 +1373,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     // --- cadastro cliente ---
     final bool novoCadastroCliente  = cadastroClienteSelecionados.contains('0');
 
+    // --- modo carrinho comandas ---
+    final bool novoModoCarrinhoComandas = modoCarrinhoComandasSelecionados.contains('0');
+
     if (!mounted) return;
     setState(() {
       naoAparecerMapa = novoNaoAparecerMapa;
@@ -1353,6 +1393,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       rotaExpedicaoMotoboy = novoRotaMotoboy;
       aparecerCupomAvulso = novoCupomAvulso;
       aparecerCadastroCliente = novoCadastroCliente;
+      aparecerModoCarrinhoComandas = novoModoCarrinhoComandas;
     });
 
     footerButtonsController.carregarConfiguracoes();
@@ -3011,6 +3052,70 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ), */
+
+                        Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textAlign: TextAlign.center,
+                              'Carrinho de comandas(Vendas):',
+                              style: TextStyle(
+                                color: colorScheme.onSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // SizedBox(height: 2),
+                      if (modoCarrinhoComandas.isEmpty)
+                        Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else
+                        Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: modoCarrinhoComandas.length,
+                            itemBuilder: (context, index) {
+                              String modo = modoCarrinhoComandas[index];
+                              String indexStr = index.toString();
+                              bool isChecked = modoCarrinhoComandasSelecionados.contains(indexStr);
+
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                // Diminui o espaço vertical
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      modoCarrinhoComandasSelecionados.add(indexStr);
+                                    } else {
+                                      modoCarrinhoComandasSelecionados.remove(indexStr);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
 
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
