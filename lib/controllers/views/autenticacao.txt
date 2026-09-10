@@ -1,0 +1,12 @@
+Autenticação:
+Para acessar o aplicativo, é obrigatório realizar a configuração inicial corretamente.
+Ao abrir o sistema, siga atentamente as etapas abaixo:
+
+Clique no campo Servidor para habilitar a digitação.
+
+1 - Informe o endereço IP do servidor no formato correto: 192.192.192.192
+2 - O endereço IP deve ser digitado obrigatoriamente com os pontos (.).
+3 - Caso os pontos não sejam informados, o sistema não conseguirá realizar o login.
+4 - Após preencher o servidor, selecione uma licença válida entre as opções disponíveis no sistema.
+5 - Em seguida, selecione o usuário cadastrado que será utilizado para autenticação.
+6 - Após o preenchimento correto de todas as informações, o sistema será carregado automaticamente e estará pronto para utilização.
