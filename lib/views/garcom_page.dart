@@ -8905,6 +8905,10 @@ class GarcomPageState extends State<GarcomPage>
                                               }
                                             },
 
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter.deny(RegExp(r'[.,;]')),
+                                            ],
+
                                             keyboardType: TextInputType.number,
                                             readOnly: false,
                                             showCursor: true,
@@ -9260,6 +9264,9 @@ class GarcomPageState extends State<GarcomPage>
                                                 _confirmar();
                                               }
                                             },
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter.deny(RegExp(r'[.,;]')),
+                                            ],
                                             readOnly: false,
                                             showCursor: true,
                                             keyboardType: TextInputType.number,
@@ -9503,6 +9510,10 @@ class GarcomPageState extends State<GarcomPage>
                                                 chamarFoco();
                                               }
                                             },
+
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter.deny(RegExp(r'[.,;]')),
+                                            ],
 
                                             onSubmitted: (value) {
                                               if (value.isNotEmpty) {
