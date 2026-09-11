@@ -1,16 +1,99 @@
 import 'dart:convert';
 
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_instance/src/extension_instance.dart';
 import 'package:http/http.dart' as http;
+import 'package:un_recepcao/models/pagBank/order_class_pb.dart';
 
 class CriarPedidoCartaoService {
+  final OrderClassPb orderClassPbController = Get.find<OrderClassPb>();
   static const String _baseUrl = 'https://sandbox.api.pagseguro.com';
 
-  static Future<Map<String, dynamic>> criarPedido({
+  Future<Map<String, dynamic>> criarPedido({
     required String token,
   }) async {
     final url = Uri.parse('$_baseUrl/orders');
 
     final body = {
+      "reference_id": orderClassPbController.reference_id,
+
+      "customer": {
+        "name": orderClassPbController.customer?.name,
+        "email": orderClassPbController.customer?.email,
+        "tax_id": orderClassPbController.customer?.tax_id,
+        "phones": [
+          {
+            "country": orderClassPbController.customer?.phone?.first.country,
+            "area": orderClassPbController.customer?.phone?.first.area,
+            "number": orderClassPbController.customer?.phone?.first.number,
+            "type": orderClassPbController.customer?.phone?.first.type,
+          }
+        ]
+      },
+
+      "items": [
+        {
+          "reference_id": orderClassPbController.items?.reference_id,
+          "name": orderClassPbController.items?.name,
+          "quantity": orderClassPbController.items?.quantity,
+          "unit_amount": orderClassPbController.items?.unit_amount,
+        }
+      ],
+
+      "shipping": {
+        "address": {
+          "street": orderClassPbController.shipping?.first.address?.street,
+          "number": orderClassPbController.shipping?.first.address?.number,
+          "complement": orderClassPbController.shipping?.first.address?.complement,
+          "locality": orderClassPbController.shipping?.first.address?.locality,
+          "city": orderClassPbController.shipping?.first.address?.city,
+          "region_code": orderClassPbController.shipping?.first.address?.region_code,
+          "country": orderClassPbController.shipping?.first.address?.country,
+          "postal_code": orderClassPbController.shipping?.first.address?.postal_code,
+        }
+      },
+
+      "notification_urls": [
+        orderClassPbController.notification_urls,
+      ],
+
+      "charges": [
+        {
+          "reference_id": orderClassPbController.charges?.first.reference_id,
+          "description": orderClassPbController.charges?.first.description,
+
+          "amount": {
+            "value": orderClassPbController.charges?.first.amount?.value,
+            "currency": orderClassPbController.charges?.first.amount?.currency
+          },
+
+          "payment_method": {
+            "type": orderClassPbController.charges?.first.payment_method?.type,
+            "installments": orderClassPbController.charges?.first.payment_method?.installments,
+            "capture": orderClassPbController.charges?.first.payment_method?.capture,
+            "soft_descriptor": orderClassPbController.charges?.first.payment_method?.soft_descriptor,
+
+            "card": {
+              "number": orderClassPbController.charges?.first.payment_method?.card?.number,
+              "exp_month": orderClassPbController.charges?.first.payment_method?.card?.exp_month,
+              "exp_year": orderClassPbController.charges?.first.payment_method?.card?.exp_year,
+              "security_code": orderClassPbController.charges?.first.payment_method?.card?.security_code,
+
+              "holder": {
+                "name": orderClassPbController.charges?.first.payment_method?.card?.holder?.name,
+                "tax_id": orderClassPbController.charges?.first.payment_method?.card?.holder?.tax_id,
+              }
+            }
+          },
+
+          "notification_urls": [
+            orderClassPbController.notification_urls,
+          ]
+        }
+      ]
+    };
+
+    /* final body = {
       "reference_id": "ex-00001",
 
       "customer": {
@@ -87,7 +170,7 @@ class CriarPedidoCartaoService {
           ]
         }
       ]
-    };
+    }; */
 
     final response = await http.post(
       url,

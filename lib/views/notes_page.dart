@@ -1427,7 +1427,7 @@ class NotesPageState extends State<NotesPage> {
                     // AQUI 
                     ElevatedButton(
                       onPressed: () async {
-                        final resultado = await CriarPedidoCartaoService.criarPedido( 
+                        final resultado = await CriarPedidoCartaoService().criarPedido( 
                           token: seuToken, 
                         ); 
                         print(resultado);

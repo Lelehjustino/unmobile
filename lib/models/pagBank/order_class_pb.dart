@@ -15,6 +15,4 @@ class OrderClassPb {
   List<String>? notification_urls; // nao sei 
   List<ChargesClassPb>?charges; // Representa todos os dados disponíveis em uma cobrança, ou seja, na iniciação de um pagamento.
   List<LinksClassPb>?links; 
-
-  
 }
