@@ -7,6 +7,8 @@ import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
+import 'package:un_recepcao/services/pagBank/criar_pedido_cartao_service.dart';
+import 'package:un_recepcao/services/pagBank/criar_pedido_pb_service.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
@@ -25,9 +27,10 @@ class NotesPage extends StatefulWidget {
 class NotesPageState extends State<NotesPage> {
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
+  String seuToken = FuncoesController().seuToken;
   final FuncoesController funcoesController = Get.find<FuncoesController>();
   final FooterButtonsController footerButtonsController = Get.find<FooterButtonsController>();
-   final painelController = Get.find<PainelController>();
+  final painelController = Get.find<PainelController>();
 
   final TextEditingController nomeClienteController = TextEditingController();
   final TextEditingController quantidadeController = TextEditingController();
@@ -1420,6 +1423,23 @@ class NotesPageState extends State<NotesPage> {
                         ],
                       ),
                     ),
+
+                    // AQUI 
+                    ElevatedButton(
+                      onPressed: () async {
+                        final resultado = await CriarPedidoCartaoService.criarPedido( 
+                          token: seuToken, 
+                        ); 
+                        print(resultado);
+                      }, 
+                      child: Text(
+                          'Criar pedido ',
+                          style: TextStyle(
+                            // fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                  ),
 
                   if (!isLoading)
                     Expanded(

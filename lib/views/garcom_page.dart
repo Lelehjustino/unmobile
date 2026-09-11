@@ -103,8 +103,7 @@ class GarcomPage extends StatefulWidget {
   State<GarcomPage> createState() => GarcomPageState();
 }
 
-class GarcomPageState extends State<GarcomPage>
-    with SingleTickerProviderStateMixin {
+class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMixin {
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
 

@@ -13,6 +13,7 @@ class FuncoesController extends GetxController {
   String nomeTraidpoint = "";
   
   String versaoDoApp = "1.9.25";
+  String seuToken = "403f2607-f69e-40e0-86ec-5127ffcf00011669e17c44a695e98e8ea63c42f70b9be7c3-0ade-41ac-8d48-4d3358966eb8";
 
   // Controlar o aparecimento do botão pagar
   RxBool aparecerBotaoPagar = false.obs;
