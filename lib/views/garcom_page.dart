@@ -1148,11 +1148,11 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
   }
 
   void iniciarComandaMesa() {
-    if (funcoesController.logicaPorMesa.value) {
+    if ((garcomController.vendaMesa.value)) {
       mesaController.addListener(_onMesaChanged);
-    } else if (funcoesController.logicaPorComanda.value) {
+    } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
       comandaController.addListener(_onComandaChanged);
-    } else if (funcoesController.logicaPorComandaNaMesa.value) {
+    } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
       comandaController.addListener(_onComandaChanged);
     }
   }
@@ -1190,8 +1190,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   // Verificar se tem conta quando reconstroi a tela
   verificarSeTemConta(String numero) async {
-    if (funcoesController.logicaPorComanda.value ||
-        funcoesController.logicaPorComandaNaMesa.value) {
+    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+        (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
       String dadosJson = await Connection().select(
         "SELECT valorliquidopedido FROM cartoes WHERE numero='$numero';",
       );
@@ -1309,25 +1309,25 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       // await buscarTipoPedido();
 
       if (numeropedido == "0") {
-        if ((funcoesController.logicaPorComanda.value || funcoesController.logicaPorComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value) {
+        if (((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) && !garcomController.retirarBalcaoRota.value) {
           validarComanda(comandaDoPedido);
-        } else if (funcoesController.logicaPorMesa.value && !garcomController.retirarBalcaoRota.value) {
+        } else if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value) {
           validarMesa(mesaDoPedido);
         } else if (garcomController.retirarBalcaoRota.value){
           _fluxoRetirarBalcao();
         }
       } else {
-        if ((funcoesController.logicaPorComanda.value || funcoesController.logicaPorComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value) {
+        if (((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) && !garcomController.retirarBalcaoRota.value) {
           verificarSeTemConta(comandaDoPedido);
-        } else if (funcoesController.logicaPorMesa.value && !garcomController.retirarBalcaoRota.value){
+        } else if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value){
           verificarSeTemConta(mesaDoPedido);
         } else if (garcomController.retirarBalcaoRota.value){
           _fluxoRetirarBalcao();
         }
 
-        if ((funcoesController.logicaPorComanda.value || funcoesController.logicaPorComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value) {
+        if (((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) && !garcomController.retirarBalcaoRota.value) {
           buscarNumeroPedido(comandaDoPedido);
-        } else if (funcoesController.logicaPorMesa.value && !garcomController.retirarBalcaoRota.value) {
+        } else if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value) {
           buscarNumeroPedido(mesaDoPedido);
         } else if (garcomController.retirarBalcaoRota.value){
           _fluxoRetirarBalcao();
@@ -1374,8 +1374,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         String clienteTelefone = carrinhoController.clienteTelefone.value;
         String clienteDataNascimento = carrinhoController.clienteDataNascimento.value;
         
-        if (funcoesController.logicaPorComanda.value ||
-            funcoesController.logicaPorComandaNaMesa.value) {
+        if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+            (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
           await buscarNumeroPedido(comandaDoPedido);
           numeropedido = carrinhoController.numeroPedido.value;
         } else {
@@ -1413,22 +1413,22 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         // await buscarTipoPedido();
 
         if (numeropedido == "0") {
-          if (funcoesController.logicaPorComanda.value ||
-              funcoesController.logicaPorComandaNaMesa.value) {
+          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
             validarComanda(comandaDoPedido);
           } else {
             validarMesa(mesaDoPedido);
           }
         } else {
-          if (funcoesController.logicaPorComanda.value ||
-              funcoesController.logicaPorComandaNaMesa.value) {
+          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
             verificarSeTemConta(comandaDoPedido);
           } else {
             verificarSeTemConta(mesaDoPedido);
           }
 
-          if (funcoesController.logicaPorComanda.value ||
-              funcoesController.logicaPorComandaNaMesa.value) {
+          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
             buscarNumeroPedido(comandaDoPedido);
           } else {
             buscarNumeroPedido(mesaDoPedido);
@@ -1912,193 +1912,23 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     for (final produto in carrinhoSnapshot) {
       bool sucesso = false;
       if (produto.id == 'P' || produto.id == 'E') {
-        if(garcomController.retirarBalcaoRota.value){
-          sucesso = await inserirProdutosBalcao(
-            produto.numero,
-            numeroComanda,
-            numeroMesa,
-            produto.nome,
-            montarObservacoes(produto, produto.adicionais),
-            montarAdicionais(produto),
-            produto.quantidade,
-            numeroTradepoint,
-            produto.id,
-            '00000000',
-          );
-        } else {
-          sucesso = await inserirProdutos(
-            produto.numero,
-            numeroComanda,
-            numeroMesa,
-            produto.nome,
-            montarObservacoes(produto, produto.adicionais),
-            montarAdicionais(produto),
-            produto.quantidade,
-            numeroTradepoint,
-            produto.id,
-            '00000000',
-          );
-        }
+        sucesso = await inserirProdutos(
+          produto.numero,
+          numeroComanda,
+          numeroMesa,
+          produto.nome,
+          montarObservacoes(produto, produto.adicionais),
+          montarAdicionais(produto),
+          produto.quantidade,
+          numeroTradepoint,
+          produto.id,
+          '00000000',
+        );
       } else if (produto.id == 'PZ') {
         final partes = montarSaboresEBordas(produto.adicionais);
 
         if(produto.quantidade > 1){
           for(int i = 0; i < produto.quantidade; i++){
-            if(garcomController.retirarBalcaoRota.value){
-              sucesso = await inserirProdutosPizzaBalcao(
-                produto.numero,
-                numeroComanda,
-                numeroMesa,
-                produto.nome,
-                produto.observacaoEscrita,
-                '',
-                1.0,
-                numeroTradepoint,
-                produto.id,
-                montarPartesPizza(produto.adicionais), // divisão 00000000
-                // SABORES
-                partes.sabores[0],
-                partes.sabores[1],
-                partes.sabores[2],
-                partes.sabores[3],
-                partes.sabores[4],
-                partes.sabores[5],
-                partes.sabores[6],
-                partes.sabores[7],
-                // OBS SABORES
-                partes.obsSabores[0],
-                partes.obsSabores[1],
-                partes.obsSabores[2],
-                partes.obsSabores[3],
-                partes.obsSabores[4],
-                partes.obsSabores[5],
-                partes.obsSabores[6],
-                partes.obsSabores[7],
-                // BORDAS
-                partes.bordas[0],
-                partes.bordas[1],
-                partes.bordas[2],
-                partes.bordas[3],
-                partes.bordas[4],
-                partes.bordas[5],
-                partes.bordas[6],
-                partes.bordas[7],
-                // OBS BORDAS
-                partes.obsBordas[0],
-                partes.obsBordas[1],
-                partes.obsBordas[2],
-                partes.obsBordas[3],
-                partes.obsBordas[4],
-                partes.obsBordas[5],
-                partes.obsBordas[6],
-                partes.obsBordas[7],
-              );
-            } else {
-              sucesso = await inserirProdutosPizza(
-                produto.numero,
-                numeroComanda,
-                numeroMesa,
-                produto.nome,
-                produto.observacaoEscrita,
-                '',
-                1.0,
-                numeroTradepoint,
-                produto.id,
-                montarPartesPizza(produto.adicionais), // divisão 00000000
-                // SABORES
-                partes.sabores[0],
-                partes.sabores[1],
-                partes.sabores[2],
-                partes.sabores[3],
-                partes.sabores[4],
-                partes.sabores[5],
-                partes.sabores[6],
-                partes.sabores[7],
-                // OBS SABORES
-                partes.obsSabores[0],
-                partes.obsSabores[1],
-                partes.obsSabores[2],
-                partes.obsSabores[3],
-                partes.obsSabores[4],
-                partes.obsSabores[5],
-                partes.obsSabores[6],
-                partes.obsSabores[7],
-                // BORDAS
-                partes.bordas[0],
-                partes.bordas[1],
-                partes.bordas[2],
-                partes.bordas[3],
-                partes.bordas[4],
-                partes.bordas[5],
-                partes.bordas[6],
-                partes.bordas[7],
-                // OBS BORDAS
-                partes.obsBordas[0],
-                partes.obsBordas[1],
-                partes.obsBordas[2],
-                partes.obsBordas[3],
-                partes.obsBordas[4],
-                partes.obsBordas[5],
-                partes.obsBordas[6],
-                partes.obsBordas[7],
-              );
-            }
-            
-          }
-        } else {
-          if (garcomController.retirarBalcaoRota.value){
-            sucesso = await inserirProdutosPizzaBalcao(
-              produto.numero,
-              numeroComanda,
-              numeroMesa,
-              produto.nome,
-              produto.observacaoEscrita,
-              '',
-              produto.quantidade,
-              numeroTradepoint,
-              produto.id,
-              montarPartesPizza(produto.adicionais), // divisão 00000000
-              // SABORES
-              partes.sabores[0],
-              partes.sabores[1],
-              partes.sabores[2],
-              partes.sabores[3],
-              partes.sabores[4],
-              partes.sabores[5],
-              partes.sabores[6],
-              partes.sabores[7],
-
-              // OBS SABORES
-              partes.obsSabores[0],
-              partes.obsSabores[1],
-              partes.obsSabores[2],
-              partes.obsSabores[3],
-              partes.obsSabores[4],
-              partes.obsSabores[5],
-              partes.obsSabores[6],
-              partes.obsSabores[7],
-
-              // BORDAS
-              partes.bordas[0],
-              partes.bordas[1],
-              partes.bordas[2],
-              partes.bordas[3],
-              partes.bordas[4],
-              partes.bordas[5],
-              partes.bordas[6],
-              partes.bordas[7],
-
-              // OBS BORDAS
-              partes.obsBordas[0],
-              partes.obsBordas[1],
-              partes.obsBordas[2],
-              partes.obsBordas[3],
-              partes.obsBordas[4],
-              partes.obsBordas[5],
-              partes.obsBordas[6],
-              partes.obsBordas[7],
-            );
-          } else {
             sucesso = await inserirProdutosPizza(
               produto.numero,
               numeroComanda,
@@ -2106,7 +1936,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               produto.nome,
               produto.observacaoEscrita,
               '',
-              produto.quantidade,
+              1.0,
               numeroTradepoint,
               produto.id,
               montarPartesPizza(produto.adicionais), // divisão 00000000
@@ -2119,7 +1949,6 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.sabores[5],
               partes.sabores[6],
               partes.sabores[7],
-
               // OBS SABORES
               partes.obsSabores[0],
               partes.obsSabores[1],
@@ -2129,7 +1958,6 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsSabores[5],
               partes.obsSabores[6],
               partes.obsSabores[7],
-
               // BORDAS
               partes.bordas[0],
               partes.bordas[1],
@@ -2139,7 +1967,6 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.bordas[5],
               partes.bordas[6],
               partes.bordas[7],
-
               // OBS BORDAS
               partes.obsBordas[0],
               partes.obsBordas[1],
@@ -2151,6 +1978,58 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsBordas[7],
             );
           }
+        } else {
+          sucesso = await inserirProdutosPizza(
+            produto.numero,
+            numeroComanda,
+            numeroMesa,
+            produto.nome,
+            produto.observacaoEscrita,
+            '',
+            produto.quantidade,
+            numeroTradepoint,
+            produto.id,
+            montarPartesPizza(produto.adicionais), // divisão 00000000
+            // SABORES
+            partes.sabores[0],
+            partes.sabores[1],
+            partes.sabores[2],
+            partes.sabores[3],
+            partes.sabores[4],
+            partes.sabores[5],
+            partes.sabores[6],
+            partes.sabores[7],
+
+            // OBS SABORES
+            partes.obsSabores[0],
+            partes.obsSabores[1],
+            partes.obsSabores[2],
+            partes.obsSabores[3],
+            partes.obsSabores[4],
+            partes.obsSabores[5],
+            partes.obsSabores[6],
+            partes.obsSabores[7],
+
+            // BORDAS
+            partes.bordas[0],
+            partes.bordas[1],
+            partes.bordas[2],
+            partes.bordas[3],
+            partes.bordas[4],
+            partes.bordas[5],
+            partes.bordas[6],
+            partes.bordas[7],
+
+            // OBS BORDAS
+            partes.obsBordas[0],
+            partes.obsBordas[1],
+            partes.obsBordas[2],
+            partes.obsBordas[3],
+            partes.obsBordas[4],
+            partes.obsBordas[5],
+            partes.obsBordas[6],
+            partes.obsBordas[7],
+          );
         }
       }
 
@@ -2559,301 +2438,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     }
   }
 
-  Future<bool> inserirProdutosPizzaBalcao(
-    String numeroDoProduto,
-    String numeroComanda,
-    String numeroMesa,
-    String nomeProduto,
-    String observacao,
-    String adicional,
-    double quantidade,
-    String numeroTradepoint,
-    String id,
-    String divisaoDeSabores, // 00000000
-    String numerosabor1_FK,
-    String numerosabor2_FK,
-    String numerosabor3_FK,
-    String numerosabor4_FK,
-    String numerosabor5_FK,
-    String numerosabor6_FK,
-    String numerosabor7_FK,
-    String numerosabor8_FK,
-    String obssabor1,
-    String obssabor2,
-    String obssabor3,
-    String obssabor4,
-    String obssabor5,
-    String obssabor6,
-    String obssabor7,
-    String obssabor8,
-    String numeroborda1_FK,
-    String numeroborda2_FK,
-    String numeroborda3_FK,
-    String numeroborda4_FK,
-    String numeroborda5_FK,
-    String numeroborda6_FK,
-    String numeroborda7_FK,
-    String numeroborda8_FK,
-    String obsborda1,
-    String obsborda2,
-    String obsborda3,
-    String obsborda4,
-    String obsborda5,
-    String obsborda6,
-    String obsborda7,
-    String obsborda8,
-  ) async {
-    String divisaoDeSaboresParaInsert = completarComZeros(divisaoDeSabores);
-    String numeroSerie = '1';
-    String numeroTradepointParaInsert = numeroTradepoint;
-    String numeroUsuarioFK = numeroDoGarcom;
-    String numeroComandaParaInsert = numeroComanda;
-    String numeroProdutoParaInsert = numeroDoProduto;
-    double quantidadeParaInsert = quantidade;
-    String observacaoParaInsert = observacao;
-    String adicionalParaInsert = adicional;
-    String nomeProdutoParaInsert = nomeProduto;
-    /* int numeroMesaParaInsert = int.tryParse(numeroMesa) ?? 0; */
-    String numeroMesaParaInsert = numeroMesa;
-    String status = '1';
-
-    // Números sabores
-    String numerosabor1_FKParaInsert = numerosabor1_FK;
-    String numeroSabor2_FKParaInsert = numerosabor2_FK;
-    String numeroSabor3_FKParaInsert = numerosabor3_FK;
-    String numeroSabor4_FKParaInsert = numerosabor4_FK;
-    String numeroSabor5_FKParaInsert = numerosabor5_FK;
-    String numeroSabor6_FKParaInsert = numerosabor6_FK;
-    String numeroSabor7_FKParaInsert = numerosabor7_FK;
-    String numeroSabor8_FKParaInsert = numerosabor8_FK;
-
-    // Observações sabores
-    String obsabor1ParaInsert = obssabor1;
-    String obsabor2ParaInsert = obssabor2;
-    String obsabor3ParaInsert = obssabor3;
-    String obsabor4ParaInsert = obssabor4;
-    String obsabor5ParaInsert = obssabor5;
-    String obsabor6ParaInsert = obssabor6;
-    String obsabor7ParaInsert = obssabor7;
-    String obsabor8ParaInsert = obssabor8;
-
-    // Números bordas
-    String numeroborda1_FKParaInsert = numeroborda1_FK;
-    String numeroborda2_FKParaInsert = numeroborda2_FK;
-    String numeroborda3_FKParaInsert = numeroborda3_FK;
-    String numeroborda4_FKParaInsert = numeroborda4_FK;
-    String numeroborda5_FKParaInsert = numeroborda5_FK;
-    String numeroborda6_FKParaInsert = numeroborda6_FK;
-    String numeroborda7_FKParaInsert = numeroborda7_FK;
-    String numeroborda8_FKParaInsert = numeroborda8_FK;
-
-    // Observações bordas
-    String obsborda1ParaInsert = obsborda1;
-    String obsborda2ParaInsert = obsborda2;
-    String obsborda3ParaInsert = obsborda3;
-    String obsborda4ParaInsert = obsborda4;
-    String obsborda5ParaInsert = obsborda5;
-    String obsborda6ParaInsert = obsborda6;
-    String obsborda7ParaInsert = obsborda7;
-    String obsborda8ParaInsert = obsborda8;
-
-    try {
-      String sql =
-          """
-        INSERT INTO vendasmobiles(
-          numeroserie, 
-          numerotradepoint_FK, 
-          numerousuario_FK, 
-          numerocartao, 
-          numeroproduto_FK, 
-          quantidade, 
-          observacao, 
-          adicional, 
-          nomeproduto, 
-          numeromesa, 
-          status,
-          divisaosabores,
-          numerosabor1_FK,
-          numerosabor2_FK,
-          numerosabor3_FK,
-          numerosabor4_FK,
-          numerosabor5_FK,
-          numerosabor6_FK,
-          numerosabor7_FK,
-          numerosabor8_FK,
-          obssabor1,
-          obssabor2,
-          obssabor3,
-          obssabor4,
-          obssabor5,
-          obssabor6,
-          obssabor7,
-          obssabor8,
-          numeroborda1_FK,
-          numeroborda2_FK,
-          numeroborda3_FK,
-          numeroborda4_FK,
-          numeroborda5_FK,
-          numeroborda6_FK,
-          numeroborda7_FK,
-          numeroborda8_FK,
-          obsborda1,
-          obsborda2,
-          obsborda3,
-          obsborda4,
-          obsborda5,
-          obsborda6,
-          obsborda7,
-          obsborda8,
-          numerocliente_FK
-        ) VALUES (
-          '$numeroSerie',
-          '$numeroTradepointParaInsert',
-          '$numeroUsuarioFK',
-          '$numeroComandaParaInsert',
-          '$numeroProdutoParaInsert',
-          $quantidadeParaInsert,
-          '$observacaoParaInsert',
-          '$adicionalParaInsert',
-          '$nomeProdutoParaInsert',
-          '$numeroMesaParaInsert',
-          '$status',
-          '$divisaoDeSaboresParaInsert',
-          '$numerosabor1_FKParaInsert',
-          '$numeroSabor2_FKParaInsert',
-          '$numeroSabor3_FKParaInsert',
-          '$numeroSabor4_FKParaInsert',
-          '$numeroSabor5_FKParaInsert',
-          '$numeroSabor6_FKParaInsert',
-          '$numeroSabor7_FKParaInsert',
-          '$numeroSabor8_FKParaInsert',
-          '$obsabor1ParaInsert',
-          '$obsabor2ParaInsert',
-          '$obsabor3ParaInsert',
-          '$obsabor4ParaInsert',
-          '$obsabor5ParaInsert',
-          '$obsabor6ParaInsert',
-          '$obsabor7ParaInsert',
-          '$obsabor8ParaInsert',
-          '$numeroborda1_FKParaInsert',
-          '$numeroborda2_FKParaInsert',
-          '$numeroborda3_FKParaInsert',
-          '$numeroborda4_FKParaInsert',
-          '$numeroborda5_FKParaInsert',
-          '$numeroborda6_FKParaInsert',
-          '$numeroborda7_FKParaInsert',
-          '$numeroborda8_FKParaInsert',
-          '$obsborda1ParaInsert',
-          '$obsborda2ParaInsert',
-          '$obsborda3ParaInsert',
-          '$obsborda4ParaInsert',
-          '$obsborda5ParaInsert',
-          '$obsborda6ParaInsert',
-          '$obsborda7ParaInsert',
-          '$obsborda8ParaInsert',
-          '$numeroClienteString'
-        )
-      """;
-      print('SQL: $sql');
-
-      String resultado = await Connection().ipd(sql);
-
-      if (resultado == 'sucesso') {
-        print(
-          "Venda inserida com sucesso! Pedido: $numeroComanda | Produto: $nomeProduto",
-        );
-        return true;
-      } else {
-        print("Erro ao inserir venda: $resultado");
-        return false;
-      }
-    } catch (e) {
-      print("Erro inesperado ao inserir venda: $e");
-      return false;
-    }
-  }
-
   // Função para inserir um produto
   Future<bool> inserirProdutos(
-    String numeroDoProduto,
-    String numeroComanda,
-    String numeroMesa,
-    String nomeProduto,
-    String observacao,
-    String adicional,
-    double quantidade,
-    String numeroTradepoint,
-    String id,
-    String divisaoDeSabores, // 00000000
-  ) async {
-    String divisaoDeSaboresParaInsert = completarComZeros(divisaoDeSabores);
-    String numeroSerie = '1';
-    String numeroTradepointParaInsert = numeroTradepoint;
-    String numeroUsuarioFK = numeroDoGarcom;
-    String numeroComandaParaInsert = numeroComanda;
-    String numeroProdutoParaInsert = numeroDoProduto;
-    double quantidadeParaInsert = quantidade;
-    String observacaoParaInsert = observacao;
-    String adicionalParaInsert = adicional;
-    String nomeProdutoParaInsert = nomeProduto;
-    /* int numeroMesaParaInsert = int.tryParse(numeroMesa) ?? 0; */
-    String numeroMesaParaInsert = numeroMesa;
-    String status = '1';
-
-    try {
-      String sql =
-          """
-        INSERT INTO vendasmobiles(
-          numeroserie, 
-          numerotradepoint_FK, 
-          numerousuario_FK, 
-          numerocartao, 
-          numeroproduto_FK, 
-          quantidade, 
-          observacao, 
-          adicional, 
-          nomeproduto, 
-          numeromesa, 
-          status,
-          divisaosabores,
-          numerocliente_FK
-        ) VALUES (
-          '$numeroSerie',
-          '$numeroTradepointParaInsert',
-          '$numeroUsuarioFK',
-          '$numeroComandaParaInsert',
-          '$numeroProdutoParaInsert',
-          $quantidadeParaInsert,
-          '$observacaoParaInsert',
-          '$adicionalParaInsert',
-          '$nomeProdutoParaInsert',
-          '$numeroMesaParaInsert',
-          '$status',
-          '$divisaoDeSaboresParaInsert',
-          '$numeroClienteString'
-        )
-      """;
-
-      String resultado = await Connection().ipd(sql);
-      print('>>>>>>>>>>>>>>>>>>>>>>resultado: $resultado');
-
-      if (resultado == 'sucesso') {
-        print(
-          "Venda inserida com sucesso! Pedido: $numeroComanda | Produto: $nomeProduto",
-        );
-        return true;
-      } else {
-        print("Erro ao inserir venda: $resultado");
-        return false;
-      }
-    } catch (e) {
-      print("Erro inesperado ao inserir venda: $e");
-      return false;
-    }
-  }
-
-  // Função para inserir um produto
-  Future<bool> inserirProdutosBalcao(
     String numeroDoProduto,
     String numeroComanda,
     String numeroMesa,
@@ -2995,7 +2581,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         }
       });
     }
-    if (funcoesController.logicaPorComanda.value || funcoesController.logicaPorComandaNaMesa.value) {
+    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
       setState(() {
         showKeyboardNumero = true;
         empurrarBotoes = false;
@@ -3006,7 +2592,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           comandaFocus.requestFocus();
         }
       });
-    } else if (funcoesController.logicaPorMesa.value) {
+    } else if ((garcomController.vendaMesa.value)) {
       setState(() {
         showKeyboardNumero = true;
         empurrarBotoes = false;
@@ -3030,8 +2616,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       iniciaComCarrinho();
       return;
     }
-    if (funcoesController.logicaPorComanda.value ||
-        funcoesController.logicaPorComandaNaMesa.value) {
+    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+        (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
       setState(() {
         showKeyboardNumero = true;
         empurrarBotoes = false;
@@ -3042,7 +2628,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           comandaFocus.requestFocus();
         }
       });
-    } else if (funcoesController.logicaPorMesa.value) {
+    } else if ((garcomController.vendaMesa.value)) {
       setState(() {
         showKeyboardNumero = true;
         _campoAtivo = 'mesaController';
@@ -3191,12 +2777,12 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         // Só solicita foco se o bloqueio global NÃO estiver ativo
         // (ex: diálogo de sucesso/erro ainda visível)
         if (!_bloqueandoFoco) {
-          if (funcoesController.logicaPorComanda.value ||
-              funcoesController.logicaPorComandaNaMesa.value) {
+          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
             _campoAtivo = 'comandaController';
-          } else if (funcoesController.logicaPorMesa.value) {
+          } else if ((garcomController.vendaMesa.value)) {
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
             _campoAtivo = 'mesaController';
@@ -3204,7 +2790,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           
           WidgetsBinding.instance.addPostFrameCallback((_) {
              if (!_bloqueandoFoco && mounted) {
-                FocusNode node = funcoesController.logicaPorMesa.value ? mesaFocus : comandaFocus;
+                FocusNode node = (garcomController.vendaMesa.value) ? mesaFocus : comandaFocus;
                 if (node.canRequestFocus) {
                   node.requestFocus();
                 }
@@ -3287,8 +2873,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   // Buscar numero pedido
   Future<void> buscarNumeroPedido(String numero) async {
-    if (funcoesController.logicaPorComanda.value ||
-        funcoesController.logicaPorComandaNaMesa.value) {
+    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+        (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
       try {
         String dadosJson = await Connection().select(
           "SELECT numeropedido_FK FROM cartoes WHERE numero='$numero';",
@@ -3317,7 +2903,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           numeropedido_FK = "";
         });
       }
-    } else if (funcoesController.logicaPorMesa.value) {
+    } else if ((garcomController.vendaMesa.value)) {
       try {
         String dadosJson = await Connection().select(
           "SELECT numeropedido_FK FROM mesas WHERE numero='$numero';",
@@ -3470,7 +3056,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
             double valorLiquido = double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
-            if (funcoesController.logicaPorComanda.value) {
+            if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
               setState(() {
                 numeroComandaEmUso = numeroComanda;
                 comandaValida = true;
@@ -3478,7 +3064,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 mostrarDentroComandaMesa = valorLiquido != 0.0;
               });
               _irParaCardapio();
-            } else if (funcoesController.logicaPorComandaNaMesa.value) {
+            } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
               setState(() {
                 numeroComandaEmUso = numeroComanda;
                 numeroMesaEmUso = comanda['numeromesa'];
@@ -3509,7 +3095,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
         double valorLiquido = double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
-        if (funcoesController.logicaPorComanda.value) {
+        if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
           setState(() {
             numeroComandaEmUso = numeroComanda;
             comandaValida = true;
@@ -3517,7 +3103,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             mostrarDentroComandaMesa = valorLiquido != 0.0;
             _irParaCardapio();
           });
-        } else if (funcoesController.logicaPorComandaNaMesa.value) {
+        } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
           setState(() {
             numeroComandaEmUso = numeroComanda;
             numeroMesaEmUso = comanda['numeromesa'];
@@ -3665,7 +3251,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           },
         );
         // Se a mesa estiver aberta e a logica for por comanda na mesa
-      } else if (funcoesController.logicaPorComandaNaMesa.value &&
+      } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value) &&
           mesa['numeropedido_FK'] != '0') {
         setState(() {
           validaMesa = [];
@@ -3676,7 +3262,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         });
       }
       // Nao pode abrir mesa com pedido
-      else if (mesa['comandavinculada'] != '0' && funcoesController.logicaPorMesa.value) {
+      else if (mesa['comandavinculada'] != '0' && (garcomController.vendaMesa.value)) {
         setState(() {
           validaMesa = [];
           mensagemNaMesa = "Mesa $numeroMesa já esta vinculada a uma comanda!";
@@ -3727,7 +3313,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
             double valorLiquido = double.tryParse(mesa['valorliquidopedido'].toString()) ?? 0.0;
 
-            if (funcoesController.logicaPorMesa.value) {
+            if ((garcomController.vendaMesa.value)) {
               carrinhoController.numeroMesa.value = numeroMesa;
               setState(() {
                 numeroMesaEmUso = numeroMesa;
@@ -3744,7 +3330,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                   }
                 });
               });
-            } else if (funcoesController.logicaPorComandaNaMesa.value) {
+            } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
               carrinhoController.numeroMesa.value = numeroMesa;
               // Atualização da tela
               setState(() {
@@ -3784,7 +3370,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           mesaComandaNaoTemConta = true;
         });
 
-        if(funcoesController.logicaPorMesa.value){
+        if((garcomController.vendaMesa.value)){
           setState(() {
             mostrarDentroComandaMesa = valorLiquido != 0.0;
           });
@@ -6511,7 +6097,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       if (mesaValida) {
         aparecerFazerPedido = true;
       } else {
-        if (!funcoesController.logicaPorMesa.value) {
+        if (!(garcomController.vendaMesa.value)) {
           if (mesaComandaNaoTemConta) {
             showErrorDialog(
               context: context,
@@ -6522,13 +6108,13 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               icon: Icons.error, // você pode trocar para outro ícone
               onConfirm: () async {
                 _dialogVincularMesa(false);
-                if (funcoesController.logicaPorComandaNaMesa.value) {
+                if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
                   comandaController.text = numeroComanda;
                   numeroComandaEmUso = numeroComanda;
                 }
               },
             );
-            if (funcoesController.logicaPorComandaNaMesa.value) {
+            if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
               comandaController.text = numeroComanda;
               numeroComandaEmUso = numeroComanda;
             }
@@ -6578,17 +6164,17 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       }
 
       // Se está na tela de escolha de mesa
-      if (funcoesController.logicaPorComandaNaMesa.value) {
+      if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
         await _fluxoComandaNaMesa();
         return;
       }
 
-      if (funcoesController.logicaPorMesa.value) {
+      if ((garcomController.vendaMesa.value)) {
         await _fluxoMesa();
         return;
       }
 
-      if (funcoesController.logicaPorComanda.value) {
+      if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
         await _fluxoComanda();
         aparecerPopUpCliente();
         return;
@@ -6774,7 +6360,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         }
       });
     });
-    if (!funcoesController.logicaPorMesa.value) {
+    if (!(garcomController.vendaMesa.value)) {
       shownDialogTwoBottomKeyboard(
         context: context, 
         title: "Deseja vincular a uma mesa?",
@@ -6854,7 +6440,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         message: "",
         icon: Icons.error, // você pode trocar para outro ícone
         onConfirm: () async {
-          if(funcoesController.logicaPorMesa.value){
+          if((garcomController.vendaMesa.value)){
             // Navigator.pushNamed(context, '/garcom');
             Navigator.of(context).push(
               PageRouteBuilder(
@@ -6868,7 +6454,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           }
         },
       );
-      if (funcoesController.logicaPorComandaNaMesa.value) {
+      if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
         comandaController.text = numeroComandaEmUso;
       }
     }
@@ -8831,7 +8417,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                       child: GestureDetector(
                                         // quando clicar em fazer pedido
                                         onTap: () async {
-                                          if (funcoesController.logicaPorComanda.value) {
+                                          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
                                             Get.to(
                                               () => ContaPage(),
                                               arguments: {
@@ -8841,7 +8427,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'page': "garcom",
                                               },
                                             );
-                                          } else if (funcoesController.logicaPorMesa.value) {
+                                          } else if ((garcomController.vendaMesa.value)) {
                                             Get.to(
                                               () => ContaPage(),
                                               arguments: {
@@ -8851,7 +8437,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'page': "garcom",
                                               },
                                             );
-                                          } else if (funcoesController.logicaPorComandaNaMesa.value) {
+                                          } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
                                             Get.to(
                                               () => ContaPage(),
                                               arguments: {
@@ -8989,8 +8575,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                               aparecerLista = false;
                                             });
 
-                                            if (funcoesController.logicaPorComanda.value ||
-                                                funcoesController.logicaPorComandaNaMesa.value) {
+                                            if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+                                                (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
                                               setState(() {
                                                 showKeyboardNumero = true;
                                                 showKeyboardAlfa = false;
@@ -8998,7 +8584,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 FocusScope.of(context).requestFocus(comandaFocus);
                                               });
                                               conectarBanco();
-                                            } else if (funcoesController.logicaPorMesa.value) {
+                                            } else if ((garcomController.vendaMesa.value)) {
                                               setState(() {
                                                 showKeyboardNumero = true;
                                                 showKeyboardAlfa = false;
@@ -9183,7 +8769,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                       ),
                     ),
                     // LÓGICA DA COMANDA
-                    if (funcoesController.logicaPorComanda.value && !garcomController.retirarBalcaoRota.value)
+                    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value)
                       Padding(
                         padding: EdgeInsets.all(0.0),
                         child: Container(
@@ -9546,7 +9132,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                       ),
 
                     // LÓGICA DA MESA
-                    if (funcoesController.logicaPorMesa.value && !garcomController.retirarBalcaoRota.value)
+                    if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value)
                       Padding(
                         padding: EdgeInsets.all(0.0),
                         child: Container(
@@ -9782,7 +9368,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                       ),
 
                     // LÓGICA DA COMANDA NA MESA
-                    if (funcoesController.logicaPorComandaNaMesa.value && !garcomController.retirarBalcaoRota.value)
+                    if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value)
                       Padding(
                         padding: EdgeInsets.all(0.0),
                         child: Container(
@@ -10526,7 +10112,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                               ),
 
                               // Ícone da mesa
-                              if (funcoesController.logicaPorComandaNaMesa.value && !garcomController.retirarBalcaoRota.value)
+                              if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value)
                                 Padding(
                                   padding: EdgeInsets.only(left: 8, right: 0, top: 16, bottom: 8,),
                                   child: GestureDetector(
@@ -10651,7 +10237,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                   ),
                                 ),
                                 
-                                if(garcomController.cadastroCliente.value && !funcoesController.logicaPorMesa.value && !garcomController.retirarBalcaoRota.value)
+                                if(garcomController.cadastroCliente.value && !(garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value)
                                 Padding(
                                   padding: EdgeInsets.only(left: 8, right: 8, top: 16, bottom: 8,),
                                   child: Column(

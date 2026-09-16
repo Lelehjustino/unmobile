@@ -72,8 +72,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> check = ['Check-in', 'Check-out'];
   Set<String> checkSelecionados = {};
 
-  List<String> garcom = ['Vendas'];
-  Set<String> garcomSelecionados = {'0'};
+  List<String> vendaComanda = ['Venda comanda'];
+  Set<String> vendaComandaSelecionados = {'0'};
+
+    List<String> vendaMesa = ['Venda mesa'];
+  Set<String> vendaMesaSelecionados = {'0'};
 
   // List<String> paineis = ['KDS', 'Pedidos', 'Expedição motoboy'];
   List<String> paineis = ['Expedição cliente', 'Expedição motoboy', 'KDS'];
@@ -113,6 +116,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   bool aparecerRecepcao = false;
   bool naoAparecerMapa = true;
   bool aparecerModoCarrinhoComandas = false;
+  bool aparecerVendaComanda = false;
+  bool aparecerVendaMesa = false;
 
   // Variaveis de Licença
   bool licencaSelecionada = false;
@@ -212,7 +217,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadNoteSalvo();
     _loadRecepcaoSalvo();
     _loadCheckSalvo();
-    _loadGarcomSalvo();
+    _loadVendaComanda();
+    _loadVendaMesa();
     _loadServidorAntigo();
     _loadPainelSalvo();
     carregarRota();
@@ -423,6 +429,68 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await prefs.setString(
       'retirar_balcao',
       jsonEncode(retirarBalcaoSelecionados.toList()),
+    );
+  }
+
+  // Carrega se retirar balcao esta marcado 
+  Future<void> _loadVendaMesa() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('venda_mesa');
+
+    if (valor == null || valor.isEmpty) return;
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      vendaMesaSelecionados = setLocal;
+    });
+  }
+
+  // salvar retirar balcao 
+  _saveVendaMesa(Set<String> vendaMesaSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'venda_mesa',
+      jsonEncode(vendaMesaSelecionados.toList()),
+    );
+  }
+
+  // Carrega se retirar balcao esta marcado 
+  Future<void> _loadVendaComanda() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('venda_comanda');
+
+    if (valor == null || valor.isEmpty) return;
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      vendaComandaSelecionados = setLocal;
+    });
+  }
+
+  // salvar retirar balcao 
+  _saveVendaComanda(Set<String> vendaMesaSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'venda_comanda',
+      jsonEncode(vendaMesaSelecionados.toList()),
     );
   }
 
@@ -1332,24 +1400,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   }
 
 
-  Future<void> _loadGarcomSalvo() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      // CORRIGIDO: lia 'rota_padrao' por engano — deve ser 'garcom_padrao'
-      final savedGarcom = prefs.getString('garcom_padrao');
-      if (savedGarcom != null) {
-        final setLocal = Set<String>.from(jsonDecode(savedGarcom));
-        if (!mounted) return;
-        setState(() {
-          garcomSelecionados = setLocal;
-        });
-      }
-    } catch (e, st) {
-      // debugPrint("Erro _loadGarcomSalvo(): $e\n$st");
-    }
-  }
-
-
 
   Future<void> _salvarConfiguracoes() async {
     await salvarModoSalvo(modosSelecionados);
@@ -1357,7 +1407,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await salvarRecepcaoSalvo(recepcaoSelecionados);
     await _saveServidor(servidorController.text);
     await salvarCheckSalvo(checkSelecionados);
-    await salvarGarcomSalvo(garcomSelecionados);
+    await _saveVendaComanda(vendaComandaSelecionados);
+    await _saveVendaMesa(vendaMesaSelecionados);
     await salvarPainelSalvo(paineisSelecionados);
     await salvarRota(rotasSelecionadas);
     await _saveCupomAvulso(cupomAvulsoSelecionados);
@@ -1380,8 +1431,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     final bool novoCheckIn  = checkSelecionados.contains('0');
     final bool novoCheckOut = checkSelecionados.contains('1');
 
-    // --- garçom ---
-    final bool novoGarcom = garcomSelecionados.contains('0');
+    // --- venda comanda ---
+    final bool novoVendaComanda = vendaComandaSelecionados.contains('0');
+
+    // --- venda mesa ---
+    final bool novoVendaMesa = vendaMesaSelecionados.contains('0');
 
     // --- note ---
     final bool novoNote = notesSelecionados.contains('Notes');
@@ -1420,7 +1474,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       aparecerCheckInOut = novoAparecerCheckInOut;
       aparecerCheckIn = novoCheckIn;
       aparecerCheckOut = novoCheckOut;
-      aparecerGarcom = novoGarcom;
+      aparecerVendaComanda = novoVendaComanda;
+      aparecerVendaMesa = novoVendaMesa;
       aparecerNote = novoNote;
       aparecerRecepcao = novoRecepcao;
       aparecerKDS = novoKDS;
@@ -2370,23 +2425,18 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ],
                       ),
-                      // Vendas
-                      if (garcom.isEmpty)
-                        Padding(
-                          padding: EdgeInsets.all(10.0),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else
-                        Padding(
+                      // Venda comanda
+                      if(funcoesController.vendaComanda.value)
+                      Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
-                            itemCount: garcom.length,
+                            itemCount: vendaComanda.length,
                             itemBuilder: (context, index) {
-                              String modo = garcom[index];
+                              String modo = vendaComanda[index];
                               String indexStr = index.toString();
-                              bool isChecked = garcomSelecionados.contains(indexStr);
+                              bool isChecked = vendaComandaSelecionados.contains(indexStr);
                               return CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 // Diminui o espaço vertical
@@ -2403,16 +2453,100 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
-                                      if (garcomSelecionados.length <= 2)
-                                        garcomSelecionados.add(indexStr);
+                                      if (vendaComandaSelecionados.length <= 2)
+                                        vendaComandaSelecionados.add(indexStr);
                                         if (modo == '0') {
-                                          garcomSelecionados.add('0');
+                                          vendaComandaSelecionados.add('0');
                                         } 
                                     } else {
-                                      garcomSelecionados.remove(indexStr);
+                                      vendaComandaSelecionados.remove(indexStr);
                                       if (modo == '0') {
-                                        garcomSelecionados.remove('0');
+                                        vendaComandaSelecionados.remove('0');
                                       }
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        // Venda mesa
+                        if(funcoesController.vendaMesa.value)
+                        Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: vendaMesa.length,
+                            itemBuilder: (context, index) {
+                              String modo = vendaMesa[index];
+                              String indexStr = index.toString();
+                              bool isChecked = vendaMesaSelecionados.contains(indexStr);
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                // Diminui o espaço vertical
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      if (vendaMesaSelecionados.length <= 2)
+                                        vendaMesaSelecionados.add(indexStr);
+                                        if (modo == '0') {
+                                          vendaMesaSelecionados.add('0');
+                                        } 
+                                    } else {
+                                      vendaMesaSelecionados.remove(indexStr);
+                                      if (modo == '0') {
+                                        vendaMesaSelecionados.remove('0');
+                                      }
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: retirarBalcao.length,
+                            itemBuilder: (context, index) {
+                              String modo = retirarBalcao[index];
+                              String indexStr = index.toString();
+                              bool isChecked = retirarBalcaoSelecionados.contains(indexStr);
+
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                // Diminui o espaço vertical
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      retirarBalcaoSelecionados.add(indexStr);
+                                    } else {
+                                      retirarBalcaoSelecionados.remove(indexStr);
                                     }
                                   });
                                 },
@@ -2719,47 +2853,6 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-
-                        Padding(
-                          padding: EdgeInsets.only(right: 8),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemCount: retirarBalcao.length,
-                            itemBuilder: (context, index) {
-                              String modo = retirarBalcao[index];
-                              String indexStr = index.toString();
-                              bool isChecked = retirarBalcaoSelecionados.contains(indexStr);
-
-                              return CheckboxListTile(
-                                controlAffinity: ListTileControlAffinity.leading,
-                                // Diminui o espaço vertical
-                                dense: true,
-                                visualDensity: const VisualDensity(
-                                  horizontal: -2,
-                                  vertical: -3,
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
-                                title: Text(modo, style: TextStyle(
-                                  fontSize: 15
-                                ),),
-                                value: isChecked,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    if (value == true) {
-                                      retirarBalcaoSelecionados.add(indexStr);
-                                    } else {
-                                      retirarBalcaoSelecionados.remove(indexStr);
-                                    }
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                        
                       /* Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,

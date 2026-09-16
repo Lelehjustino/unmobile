@@ -408,16 +408,16 @@ class SideNavState extends State<SideNav> {
     );
   }
 
-  Widget vendasPage(String? currentRoute, ColorScheme colorScheme){
+  Widget vendasComandaPage(String? currentRoute, ColorScheme colorScheme){
     return ListTile(
       leading: Icon(
-        Icons.restaurant_menu,
+        Icons.description,
         color: currentRoute == '/garcom'
             ? colorScheme.surface
             : colorScheme.onSurface,
       ),
       title: Text(
-        "Vendas",
+        "Venda Comanda",
         style: TextStyle(
           color: currentRoute == '/garcom'
               ? colorScheme.surface
@@ -428,6 +428,72 @@ class SideNavState extends State<SideNav> {
       selectedTileColor: colorScheme.primary,
       onTap: () {
         garcomController.retirarBalcaoRota.value = false;
+        garcomController.vendaComanda.value = true;
+        garcomController.vendaMesa.value = false;
+        if(carrinhoController.carrinho.isNotEmpty){
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget vendasMesaPage(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.table_bar,
+        color: currentRoute == '/garcom'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Venda Mesa",
+        style: TextStyle(
+          color: currentRoute == '/garcom'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/garcom',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        garcomController.retirarBalcaoRota.value = false;
+        garcomController.vendaComanda.value = false;
+        garcomController.vendaMesa.value = true;
+        if(carrinhoController.carrinho.isNotEmpty){
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
+          funcoesController.zerarAtendimento();
+          carrinhoController.zerarAtendimentoCarrinho();
+        }
+      },
+    );
+  }
+
+  Widget retirarBalcao(String? currentRoute, ColorScheme colorScheme){
+    return ListTile(
+      leading: Icon(
+        Icons.room_service,
+        color: currentRoute == '/garcom'
+            ? colorScheme.surface
+            : colorScheme.onSurface,
+      ),
+      title: Text(
+        "Retirar balcão",
+        style: TextStyle(
+          color: currentRoute == '/garcom'
+              ? colorScheme.surface
+              : colorScheme.onSurface,
+        ),
+      ),
+      selected: currentRoute == '/garcom',
+      selectedTileColor: colorScheme.primary,
+      onTap: () {
+        garcomController.retirarBalcaoRota.value = true;
         if(carrinhoController.carrinho.isNotEmpty){
           Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
         } else {
@@ -589,37 +655,6 @@ class SideNavState extends State<SideNav> {
     );
   }
 
-  Widget retirarBalcao(String? currentRoute, ColorScheme colorScheme){
-    return ListTile(
-      leading: Icon(
-        Icons.room_service,
-        color: currentRoute == '/garcom'
-            ? colorScheme.surface
-            : colorScheme.onSurface,
-      ),
-      title: Text(
-        "Retirar balcão",
-        style: TextStyle(
-          color: currentRoute == '/garcom'
-              ? colorScheme.surface
-              : colorScheme.onSurface,
-        ),
-      ),
-      selected: currentRoute == '/garcom',
-      selectedTileColor: colorScheme.primary,
-      onTap: () {
-        garcomController.retirarBalcaoRota.value = true;
-        if(carrinhoController.carrinho.isNotEmpty){
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
-        } else {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => GarcomPage()));
-          funcoesController.zerarAtendimento();
-          carrinhoController.zerarAtendimentoCarrinho();
-        }
-      },
-    );
-  }
-
   Widget sairApp(String? currentRoute, ColorScheme colorScheme){
     return ListTile(
       leading: Icon(
@@ -696,8 +731,14 @@ class SideNavState extends State<SideNav> {
                 padding: EdgeInsets.zero,
                 children: [
 
-                  if (footerButtonsController.aparecerGarcom.value && footerButtonsController.rotaHome.value)
-                  vendasPage(currentRoute, colorScheme),
+                  if (footerButtonsController.vendaComanda.value && footerButtonsController.rotaHome.value)
+                  vendasComandaPage(currentRoute, colorScheme),
+
+                  if (footerButtonsController.vendaMesa.value && footerButtonsController.rotaHome.value)
+                  vendasMesaPage(currentRoute, colorScheme),
+
+                  if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value)
+                  retirarBalcao(currentRoute, colorScheme),
             
                   if (footerButtonsController.aparecerCheckIn.value && footerButtonsController.rotaHome.value)
                   checkInPage(currentRoute, colorScheme),
@@ -725,9 +766,6 @@ class SideNavState extends State<SideNav> {
 
                   if (footerButtonsController.aparecerRecepcao.value && footerButtonsController.rotaHome.value)
                   receptionPage(currentRoute, colorScheme),
-
-                  if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value)
-                  retirarBalcao(currentRoute, colorScheme),
 
                   configuracoesPage(currentRoute, colorScheme),
                   

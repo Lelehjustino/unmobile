@@ -21,6 +21,8 @@ class FooterButtonsController extends GetxController {
   RxBool rotaExpedicaoMotoboy = false.obs;
   RxBool aparecerCupomAvulso = false.obs;
   RxBool retirarBalcao = false.obs;
+  RxBool vendaComanda = false.obs;
+  RxBool vendaMesa = false.obs;
 
   RxBool cadastroCliente = false.obs;
   RxBool tipoCadastroClienteCpf = false.obs;
@@ -46,6 +48,48 @@ class FooterButtonsController extends GetxController {
     await carregarCupomAvulso();
     await configuracoesCadastroCliente();
     await carregarRetiradaBalcao();
+    await carregarVendaComanda();
+    await carregarVendaMesa();
+  }
+
+  Future<void> carregarVendaComanda() async {
+    final prefs = await SharedPreferences.getInstance();
+    final recepcaoJson = prefs.getString('venda_comanda');
+
+    if (recepcaoJson != null) {
+      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
+
+      if (recepcaosSalvos.contains('0')) {
+        // se recepcao selecionado
+        vendaComanda.value = true;
+      } else {
+        // se recepcao nao selecionado
+        vendaComanda.value = false;
+      }
+    } else {
+      // configuração padrao
+      vendaComanda.value = false;
+    }
+  }
+
+  Future<void> carregarVendaMesa() async {
+    final prefs = await SharedPreferences.getInstance();
+    final recepcaoJson = prefs.getString('venda_mesa');
+
+    if (recepcaoJson != null) {
+      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
+
+      if (recepcaosSalvos.contains('0')) {
+        // se recepcao selecionado
+        vendaMesa.value = true;
+      } else {
+        // se recepcao nao selecionado
+        vendaMesa.value = false;
+      }
+    } else {
+      // configuração padrao
+      vendaMesa.value = false;
+    }
   }
 
   Future<void> carregarRetiradaBalcao() async {

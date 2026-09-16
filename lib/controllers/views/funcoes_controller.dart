@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:world_holidays/world_holidays.dart';
 // importar final FuncoesController funcoesController = Get.put(FuncoesController());
 class FuncoesController extends GetxController {
+  final GarcomController garcomController = Get.find<GarcomController>();
   // --- Controle de Atendimento (Fazer Pedido) ---
   RxBool isEnviandoPedido = false.obs;
   String atendimentoAtual = "";
@@ -110,6 +112,9 @@ class FuncoesController extends GetxController {
     RxBool logicaPorComanda = false.obs;
     RxBool logicaPorComandaNaMesa = false.obs;
     RxBool logicaPorComandaNaMesaEMesa = false.obs;
+    RxBool logicaPorComandaEMesa = false.obs;
+    RxBool vendaComanda = false.obs;
+    RxBool vendaMesa = false.obs;
 
     // pegarmeuMobileId
     RxString meuMobileId = ''.obs;
@@ -466,23 +471,45 @@ class FuncoesController extends GetxController {
         logicaPorMesa.value = false;
         logicaPorComanda.value = false;
         logicaPorComandaNaMesa.value = false;
+        logicaPorComandaNaMesaEMesa.value = false;
+        logicaPorComandaEMesa.value = false;
+        vendaComanda.value = false;
+        vendaMesa.value = false;
+        garcomController.vendaComandaNaMesa.value = false;
         
         if (tipoDoPedido == "100") {
+          // venda comanda
           logicaPorMesa.value = true;
-          // Set<String> modosSelecionados = {'Mesa'};
-          // salvarModoSalvo(modosSelecionados);
+          vendaComanda.value = true;
+          garcomController.vendaComandaNaMesa.value = false;
+          vendaMesa.value = false;
         } else if (tipoDoPedido == "010") {
+          // venda comanda
           logicaPorComanda.value = true;
-          // Set<String> modosSelecionados = {'Comanda'};
-          // salvarModoSalvo(modosSelecionados);
+          vendaComanda.value = true;
+          vendaMesa.value = false;
+          garcomController.vendaComandaNaMesa.value = false;
         } else if (tipoDoPedido == "011") {
+          // venda mesa
           logicaPorComandaNaMesa.value = true;
-          // Set<String> modosSelecionados = {'Mesa', 'Comanda'};
-          // salvarModoSalvo(modosSelecionados);
+          vendaComanda.value = false;
+          vendaMesa.value = true;
+          garcomController.vendaComandaNaMesa.value = true;
         } else if (tipoDoPedido == "111"){
+          // venda mesa e comanda
           logicaPorComandaNaMesaEMesa.value = true;
+          vendaComanda.value = true;
+          vendaMesa.value = true;
+          garcomController.vendaComandaNaMesa.value = true;
+        } else if (tipoDoPedido == "110"){
+          // venda mesa e comanda
+          logicaPorComandaEMesa.value = true;
+          vendaComanda.value = true;
+          vendaMesa.value = true;
+          garcomController.vendaComandaNaMesa.value = false;
         }
         print("Tipo do pedido: $tipoDoPedido");
+        // quarta posicao em try catch 
       } else {
         // se a lista vier vazia
         tipoDoPedido.value = "Não foi possível buscar tipo do pedido";

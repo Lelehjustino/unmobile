@@ -20,6 +20,9 @@ class GarcomController extends GetxController {
   RxBool modoCarrinhoComandas = false.obs;
   RxBool retirarBalcao = false.obs;
   RxBool retirarBalcaoRota = false.obs;
+  RxBool vendaComanda = false.obs;
+  RxBool vendaMesa = false.obs;
+  RxBool vendaComandaNaMesa = false.obs;
 
   @override
   void onInit() {
