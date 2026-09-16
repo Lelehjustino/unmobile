@@ -95,6 +95,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   Set<String> tipoCadastroClienteSelecionados = {};
   List<String> forcarCadastroCliente = ['Forçar cadastro'];
   Set<String> forcarCadastroClienteSelecionados = {};
+  List<String> retirarBalcao = ['Retirar balcão'];
+  Set<String> retirarBalcaoSelecionados = {};
 
   bool servidorConectado = false;
 
@@ -229,6 +231,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadTipoCadastroClienteSalvo();
     _loadFocarCadastroClienteSalvo();
     _loadModoCarrinhoComandasSalvo();
+    _loadRetirarBalcao();
   }
 
   @override
@@ -390,6 +393,37 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     setState(() {
       modoCarrinhoComandasSelecionados = setLocal;
     });
+  }
+
+  // Carrega se retirar balcao esta marcado 
+  Future<void> _loadRetirarBalcao() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('retirar_balcao');
+
+    if (valor == null || valor.isEmpty) return;
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      retirarBalcaoSelecionados = setLocal;
+    });
+  }
+
+  // salvar retirar balcao 
+  _saveRetirarBalcao(Set<String> retirarBalcaoSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'retirar_balcao',
+      jsonEncode(retirarBalcaoSelecionados.toList()),
+    );
   }
 
   // Salva o modo carrinho de comandas
@@ -1331,6 +1365,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await _saveTipoCadastroCliente(tipoCadastroClienteSelecionados);
     await _saveForcarCadastroCliente(forcarCadastroClienteSelecionados);
     await _saveModoCarrinhoComandas(modoCarrinhoComandasSelecionados);
+    await _saveRetirarBalcao(retirarBalcaoSelecionados);
   }
 
   // Deriva as variáveis booleanas de navegação diretamente dos Sets já em memória.
@@ -1375,6 +1410,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
     // --- modo carrinho comandas ---
     final bool novoModoCarrinhoComandas = modoCarrinhoComandasSelecionados.contains('0');
+
+    // --- retirar balcão ----
+    final bool novoRetirarBalcao = retirarBalcaoSelecionados.contains('0');
 
     if (!mounted) return;
     setState(() {
@@ -2674,6 +2712,46 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                       if (modo == '0') {
                                         recepcaoSelecionados.remove('0');
                                       } 
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+
+                        Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: retirarBalcao.length,
+                            itemBuilder: (context, index) {
+                              String modo = retirarBalcao[index];
+                              String indexStr = index.toString();
+                              bool isChecked = retirarBalcaoSelecionados.contains(indexStr);
+
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                // Diminui o espaço vertical
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      retirarBalcaoSelecionados.add(indexStr);
+                                    } else {
+                                      retirarBalcaoSelecionados.remove(indexStr);
                                     }
                                   });
                                 },

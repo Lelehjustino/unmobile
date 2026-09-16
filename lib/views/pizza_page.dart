@@ -43,6 +43,8 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   final String clienteTelefoneArgs = Get.arguments['clienteTelefone'] ?? '';
   final String clienteDataNascimentoArgs = Get.arguments['clienteDataNascimento'] ?? '';
 
+  final String nomeClienteArgs = Get.arguments['nomeCliente'] ?? '';
+
   // edição de pizza
   final int index = Get.arguments['index'];
   final Produto? produtoSelecionado = Get.arguments['produtoSelecionado'];
@@ -2906,6 +2908,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                     'clienteCpf': clienteCpfArgs,
                                     'clienteTelefone': clienteTelefoneArgs,
                                     'clienteDataNascimento': clienteDataNascimentoArgs,
+                                    'nomeCliente': nomeClienteArgs
                                   },
                                 );
                               } else if (terminarPizza){
@@ -2928,6 +2931,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                     'clienteCpf': clienteCpfArgs,
                                     'clienteTelefone': clienteTelefoneArgs,
                                     'clienteDataNascimento': clienteDataNascimentoArgs,
+                                    'nomeCliente': nomeClienteArgs
                                   },
                                 );
                               }
@@ -3016,6 +3020,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                         'clienteCpf': clienteCpfArgs,
                                         'clienteTelefone': clienteTelefoneArgs,
                                         'clienteDataNascimento': clienteDataNascimentoArgs,
+                                        'nomeCliente': nomeClienteArgs
                                       },
                                     );
                                     return;

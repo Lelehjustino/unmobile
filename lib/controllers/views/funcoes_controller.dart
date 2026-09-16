@@ -109,6 +109,7 @@ class FuncoesController extends GetxController {
     RxBool logicaPorMesa = false.obs;
     RxBool logicaPorComanda = false.obs;
     RxBool logicaPorComandaNaMesa = false.obs;
+    RxBool logicaPorComandaNaMesaEMesa = false.obs;
 
     // pegarmeuMobileId
     RxString meuMobileId = ''.obs;
@@ -478,6 +479,8 @@ class FuncoesController extends GetxController {
           logicaPorComandaNaMesa.value = true;
           // Set<String> modosSelecionados = {'Mesa', 'Comanda'};
           // salvarModoSalvo(modosSelecionados);
+        } else if (tipoDoPedido == "111"){
+          logicaPorComandaNaMesaEMesa.value = true;
         }
         print("Tipo do pedido: $tipoDoPedido");
       } else {

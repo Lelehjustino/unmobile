@@ -20,6 +20,7 @@ class FooterButtonsController extends GetxController {
   RxBool rotaPainelCliente = false.obs;
   RxBool rotaExpedicaoMotoboy = false.obs;
   RxBool aparecerCupomAvulso = false.obs;
+  RxBool retirarBalcao = false.obs;
 
   RxBool cadastroCliente = false.obs;
   RxBool tipoCadastroClienteCpf = false.obs;
@@ -44,6 +45,27 @@ class FooterButtonsController extends GetxController {
     await carregarPaineis();
     await carregarCupomAvulso();
     await configuracoesCadastroCliente();
+    await carregarRetiradaBalcao();
+  }
+
+  Future<void> carregarRetiradaBalcao() async {
+    final prefs = await SharedPreferences.getInstance();
+    final recepcaoJson = prefs.getString('retirar_balcao');
+
+    if (recepcaoJson != null) {
+      final recepcaosSalvos = Set<String>.from(jsonDecode(recepcaoJson));
+
+      if (recepcaosSalvos.contains('0')) {
+        // se recepcao selecionado
+        retirarBalcao.value = true;
+      } else {
+        // se recepcao nao selecionado
+        retirarBalcao.value = false;
+      }
+    } else {
+      // configuração padrao
+      retirarBalcao.value = false;
+    }
   }
 
   // Checkin e Checkout
