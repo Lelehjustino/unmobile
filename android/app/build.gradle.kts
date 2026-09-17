@@ -108,6 +108,10 @@ flutter {
     source = "../.."
 }
 
+dependencies {
+    implementation("br.com.uol.pagseguro.plugpagservice.wrapper:wrapper:1.35.0")
+}
+
 
 // plugins {
 //     id("com.android.application")

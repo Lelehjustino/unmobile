@@ -9,6 +9,7 @@ import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/services/pagBank/criar_pedido_cartao_service.dart';
 import 'package:un_recepcao/services/pagBank/criar_pedido_pb_service.dart';
+import 'package:un_recepcao/services/pagBank/smartPos/pagbank_smartpos.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
 import 'package:un_recepcao/views/checkout_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
@@ -1425,12 +1426,19 @@ class NotesPageState extends State<NotesPage> {
                     ),
 
                     // AQUI 
-                    ElevatedButton(
+                    /* ElevatedButton(
                       onPressed: () async {
-                        final resultado = await CriarPedidoCartaoService().criarPedido( 
-                          token: seuToken, 
-                        ); 
-                        print(resultado);
+                        final resultado = await PagBankSmartPOS.pagar(
+                          valorCentavos: 3590,
+                          tipo: 'credito',
+                          referencia: 'VENDA123',
+                        );
+
+                        if (resultado['aprovado'] == true) {
+                          print('APROVADO! Código: ${resultado['transactionCode']}');
+                        } else {
+                          print('${resultado['status']}: ${resultado['mensagem']}');
+                        }
                       }, 
                       child: Text(
                           'Criar pedido ',
@@ -1439,7 +1447,7 @@ class NotesPageState extends State<NotesPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                  ),
+                  ), */
 
                   if (!isLoading)
                     Expanded(

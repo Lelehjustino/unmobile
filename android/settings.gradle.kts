@@ -25,4 +25,15 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
 }
 
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+
+        maven {
+            setUrl("https://github.com/pagseguro/PlugPagServiceWrapper/raw/master")
+        }
+    }
+}
+
 include(":app")
