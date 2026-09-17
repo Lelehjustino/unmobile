@@ -12,6 +12,7 @@ import 'package:un_recepcao/controllers/connectivity_controller.dart';
 import 'package:un_recepcao/controllers/inicial_controller.dart';
 import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
+import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/zerar_atendimento.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/views/checkin_page.dart';
@@ -33,6 +34,7 @@ class InicialPage extends StatefulWidget {
 class InicialPageState extends State<InicialPage> {
   final FuncoesController funcoesController = Get.find<FuncoesController>();
   final FooterButtonsController footerButtonsController = Get.find<FooterButtonsController>();
+  final GarcomController garcomController = Get.find<GarcomController>();
   late String versaoAplicacao = funcoesController.versaoDoApp;
   
   // Controller reativo para o fluxo de entrarAutomaticamente
@@ -162,6 +164,24 @@ class InicialPageState extends State<InicialPage> {
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
       } else if (footerButtonsController.aparecerGarcom.value) {
+        // venda comanda marcada 
+        if(footerButtonsController.vendaComanda.value && garcomController.vendaComanda.value){
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = true;
+          garcomController.vendaMesa.value = false;
+        } 
+        // venda mesa marcada 
+        else if (footerButtonsController.vendaMesa.value && garcomController.vendaMesa.value) {
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = false;
+          garcomController.vendaMesa.value = true;
+        } 
+        // venda balcao marcada 
+        else if (footerButtonsController.retirarBalcao.value && funcoesController.vendaBalcao.value) {
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = true;
+          garcomController.vendaMesa.value = false;
+        }
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');

@@ -1636,9 +1636,9 @@ class ContaPageState extends State<ContaPage>
                               ),
                               Flexible(
                                 child: Text(
-                                  funcoesController.logicaPorMesa.value
+                                  (comandaDoPedido == "0")
                                       ? 'MESA: $mesaDoPedido'
-                                      : funcoesController.logicaPorComanda.value
+                                      : (mesaDoPedido == "0")
                                       ? 'COMANDA: $comandaDoPedido'
                                       : comandaDoPedido != "0" &&
                                             mesaDoPedido != "0"

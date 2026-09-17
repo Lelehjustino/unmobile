@@ -108,13 +108,9 @@ class FuncoesController extends GetxController {
 
     // buscarTipoPedido
     RxString tipoDoPedido = ''.obs;
-    RxBool logicaPorMesa = false.obs;
-    RxBool logicaPorComanda = false.obs;
-    RxBool logicaPorComandaNaMesa = false.obs;
-    RxBool logicaPorComandaNaMesaEMesa = false.obs;
-    RxBool logicaPorComandaEMesa = false.obs;
     RxBool vendaComanda = false.obs;
     RxBool vendaMesa = false.obs;
+    RxBool vendaBalcao = false.obs;
 
     // pegarmeuMobileId
     RxString meuMobileId = ''.obs;
@@ -465,19 +461,47 @@ class FuncoesController extends GetxController {
 
       if (lista.isNotEmpty) {
         // pega apenas o campo resultado
+        // String valor = lista[0]['resultado'].toString();
         String valor = lista[0]['resultado'].toString();
 
+        String mesa = valor.length >= 3 ? valor.substring(0, 1) : valor;
+        String comanda = valor.length >= 3 ? valor.substring(1, 2) : valor;
+        String comandaNaMesa = valor.length >= 3 ? valor.substring(2, 3) : valor;
+        String balcao = "";
+
+        try {
+          balcao = valor.length >= 3 ? valor.substring(3, 4) : valor;
+        } catch (e){
+          balcao = "";
+        }
+
         tipoDoPedido.value = valor;
-        logicaPorMesa.value = false;
-        logicaPorComanda.value = false;
-        logicaPorComandaNaMesa.value = false;
-        logicaPorComandaNaMesaEMesa.value = false;
-        logicaPorComandaEMesa.value = false;
         vendaComanda.value = false;
         vendaMesa.value = false;
+        vendaBalcao.value = false;
         garcomController.vendaComandaNaMesa.value = false;
+
+        if (mesa == "1"){
+          vendaMesa.value = true;
+          garcomController.vendaMesa.value = true;
+        } 
+
+        if (comanda == "1"){
+          vendaComanda.value = true;
+          garcomController.vendaComanda.value = true;
+        }
+
+        if (comandaNaMesa == "1"){
+          vendaComanda.value = true;
+          garcomController.vendaComandaNaMesa.value = true;
+          garcomController.vendaComanda.value = true;
+        }
+
+        if (balcao == "1"){
+          vendaBalcao.value = true;
+        }
         
-        if (tipoDoPedido == "100") {
+        /* if (tipoDoPedido == "100") {
           // venda comanda
           logicaPorMesa.value = true;
           vendaComanda.value = true;
@@ -513,6 +537,7 @@ class FuncoesController extends GetxController {
       } else {
         // se a lista vier vazia
         tipoDoPedido.value = "Não foi possível buscar tipo do pedido";
+      } */
       }
     } catch (e) {
       print("Erro ao carregar configuracaoServico: $e");

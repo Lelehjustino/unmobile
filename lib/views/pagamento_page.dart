@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:un_recepcao/controllers/payment_service.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
+import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
@@ -26,7 +27,8 @@ class PagamentoPageState extends State<PagamentoPage>
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
 
-  final FuncoesController funcoesController = Get.put(FuncoesController());
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
+  final GarcomController garcomController = Get.find<GarcomController>();
   final painelController = Get.put(PainelController());
 
   // Variáveis para receber e ajeitar args
@@ -1405,7 +1407,7 @@ class PagamentoPageState extends State<PagamentoPage>
       """);
       
       // Logica por Mesa
-      if(funcoesController.logicaPorMesa.value == true){
+      if(garcomController.vendaMesa.value == true){
         queries.add("""
           UPDATE mesas 
             SET 
@@ -1423,7 +1425,7 @@ class PagamentoPageState extends State<PagamentoPage>
       }
       
       // Logica por Comanda
-      if(funcoesController.logicaPorComanda.value == true){
+      if(garcomController.vendaComanda == true && garcomController.vendaComandaNaMesa == false){
         queries.add("""
           UPDATE cartoes 
           SET 
@@ -1440,7 +1442,7 @@ class PagamentoPageState extends State<PagamentoPage>
         """);
       }
 
-      if(funcoesController.logicaPorComandaNaMesa.value == true){
+      if(garcomController.vendaComanda == true && garcomController.vendaComandaNaMesa == true){
         // Comandas
         queries.add("""
           UPDATE cartoes 
@@ -2541,18 +2543,17 @@ class PagamentoPageState extends State<PagamentoPage>
                                 ),
                               ),
                               Text(
-                                funcoesController.logicaPorMesa.value == true
-                                    ? 'MESA: $mesaDoPedido'
-                                    : funcoesController.logicaPorComanda.value == true
-                                    ? 'COMANDA: $comandaDoPedido'
-                                    : comandaDoPedido != "0" &&
-                                          mesaDoPedido != "0"
-                                    ? 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
-                                    : comandaDoPedido != "0"
-                                    ? 'COMANDA: $comandaDoPedido'
-                                    : mesaDoPedido != "0"
-                                    ? 'MESA: $mesaDoPedido'
-                                    : '',
+                               (comandaDoPedido == "0")
+                                  ? 'MESA: $mesaDoPedido'
+                                  : (mesaDoPedido == "0")
+                                  ? 'COMANDA: $comandaDoPedido'
+                                  : comandaDoPedido != "0" && mesaDoPedido != "0"
+                                  ? 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
+                                  : comandaDoPedido != "0"
+                                  ? 'COMANDA: $comandaDoPedido'
+                                  : mesaDoPedido != "0"
+                                  ? 'MESA: $mesaDoPedido'
+                                  : '',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,

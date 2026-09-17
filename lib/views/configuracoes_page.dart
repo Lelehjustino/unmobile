@@ -11,6 +11,7 @@ import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/navegacao_inteligente.dart';
 import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
+import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/services/stone_service.dart';
@@ -98,7 +99,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   Set<String> tipoCadastroClienteSelecionados = {};
   List<String> forcarCadastroCliente = ['Forçar cadastro'];
   Set<String> forcarCadastroClienteSelecionados = {};
-  List<String> retirarBalcao = ['Retirar balcão'];
+  List<String> retirarBalcao = ['Venda balcão'];
   Set<String> retirarBalcaoSelecionados = {};
 
   bool servidorConectado = false;
@@ -167,6 +168,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   int shakeKey = 0;
 
   final painelController = Get.find<PainelController>();
+  final GarcomController garcomController = Get.find<GarcomController>();
 
   // Variaveis de Rota
   bool rotaHome = true;
@@ -263,6 +265,25 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
       } else if (footerButtonsController.aparecerGarcom.value) {
+        // venda comanda marcada 
+        if(footerButtonsController.vendaComanda.value){
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = true;
+          garcomController.vendaMesa.value = false;
+        } 
+        // venda mesa marcada 
+        else if (footerButtonsController.vendaMesa.value) {
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = false;
+          garcomController.vendaMesa.value = true;
+        } 
+        // venda balcao marcada 
+        else if (footerButtonsController.retirarBalcao.value) {
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = true;
+          garcomController.vendaMesa.value = false;
+        }
+        Get.toNamed('/garcom');
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
@@ -2515,6 +2536,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
+                        if(funcoesController.vendaBalcao.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(

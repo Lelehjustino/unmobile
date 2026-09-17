@@ -173,8 +173,7 @@ class SideNavState extends State<SideNav> {
                   ),
 
                 // O SEU NOVO CAMPO DE TEXTO COM OS CONTROLADORES
-                if (textController !=
-                    null) // Só mostra o TextField se um controller for fornecido
+                if (textController != null) // Só mostra o TextField se um controller for fornecido
                   Padding(
                     padding: EdgeInsets.only(bottom: 15.0),
                     child: TextField(
@@ -412,20 +411,16 @@ class SideNavState extends State<SideNav> {
     return ListTile(
       leading: Icon(
         Icons.description,
-        color: currentRoute == '/garcom'
-            ? colorScheme.surface
-            : colorScheme.onSurface,
+        color: colorScheme.onSurface,
       ),
       title: Text(
         "Venda Comanda",
         style: TextStyle(
-          color: currentRoute == '/garcom'
-              ? colorScheme.surface
-              : colorScheme.onSurface,
+          color: colorScheme.onSurface,
         ),
       ),
-      selected: currentRoute == '/garcom',
-      selectedTileColor: colorScheme.primary,
+      // selected: currentRoute == '/garcom',
+      // selectedTileColor: colorScheme.primary,
       onTap: () {
         garcomController.retirarBalcaoRota.value = false;
         garcomController.vendaComanda.value = true;
@@ -445,20 +440,16 @@ class SideNavState extends State<SideNav> {
     return ListTile(
       leading: Icon(
         Icons.table_bar,
-        color: currentRoute == '/garcom'
-            ? colorScheme.surface
-            : colorScheme.onSurface,
+        color: colorScheme.onSurface,
       ),
       title: Text(
         "Venda Mesa",
         style: TextStyle(
-          color: currentRoute == '/garcom'
-              ? colorScheme.surface
-              : colorScheme.onSurface,
+          color: colorScheme.onSurface,
         ),
       ),
-      selected: currentRoute == '/garcom',
-      selectedTileColor: colorScheme.primary,
+      //selected: currentRoute == '/garcom',
+      //selectedTileColor: colorScheme.primary,
       onTap: () {
         garcomController.retirarBalcaoRota.value = false;
         garcomController.vendaComanda.value = false;
@@ -478,20 +469,16 @@ class SideNavState extends State<SideNav> {
     return ListTile(
       leading: Icon(
         Icons.room_service,
-        color: currentRoute == '/garcom'
-            ? colorScheme.surface
-            : colorScheme.onSurface,
+        color: colorScheme.onSurface,
       ),
       title: Text(
-        "Retirar balcão",
+        "Venda balcão",
         style: TextStyle(
-          color: currentRoute == '/garcom'
-              ? colorScheme.surface
-              : colorScheme.onSurface,
+          color: colorScheme.onSurface,
         ),
       ),
-      selected: currentRoute == '/garcom',
-      selectedTileColor: colorScheme.primary,
+      //selected: currentRoute == '/garcom',
+      //selectedTileColor: colorScheme.primary,
       onTap: () {
         garcomController.retirarBalcaoRota.value = true;
         if(carrinhoController.carrinho.isNotEmpty){
@@ -731,13 +718,13 @@ class SideNavState extends State<SideNav> {
                 padding: EdgeInsets.zero,
                 children: [
 
-                  if (footerButtonsController.vendaComanda.value && footerButtonsController.rotaHome.value)
+                  if (footerButtonsController.vendaComanda.value && footerButtonsController.rotaHome.value && funcoesController.vendaComanda.value)
                   vendasComandaPage(currentRoute, colorScheme),
 
-                  if (footerButtonsController.vendaMesa.value && footerButtonsController.rotaHome.value)
+                  if (footerButtonsController.vendaMesa.value && footerButtonsController.rotaHome.value && funcoesController.vendaMesa.value)
                   vendasMesaPage(currentRoute, colorScheme),
 
-                  if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value)
+                  if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value && funcoesController.vendaBalcao.value)
                   retirarBalcao(currentRoute, colorScheme),
             
                   if (footerButtonsController.aparecerCheckIn.value && footerButtonsController.rotaHome.value)
