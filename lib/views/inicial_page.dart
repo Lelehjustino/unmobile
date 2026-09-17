@@ -181,6 +181,11 @@ class InicialPageState extends State<InicialPage> {
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = true;
           garcomController.vendaMesa.value = false;
+        } 
+        else {
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = true;
+          garcomController.vendaMesa.value = false;
         }
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {

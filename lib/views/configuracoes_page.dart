@@ -283,7 +283,11 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
           garcomController.vendaComanda.value = true;
           garcomController.vendaMesa.value = false;
         }
-        Get.toNamed('/garcom');
+        else {
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = true;
+          garcomController.vendaMesa.value = false;
+        }
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');

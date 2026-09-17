@@ -1925,17 +1925,17 @@ class PagamentoPageState extends State<PagamentoPage>
 
           final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
 
-          /* await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
-          await pagarPedido(); */
+          await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
+          await pagarPedido(); 
 
-          if (maquininhaDisponivel) {
+          /* if (maquininhaDisponivel) {
             final bool pagBankAprovado = await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
             if (pagBankAprovado) {
               await pagarPedido();
             }
           } else {
             await pagarPedido();
-          }
+          } */
 
           dialogoConfirmacaoAberto = false;
         },
