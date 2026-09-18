@@ -1165,7 +1165,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       message: "Deseja descartar este pedido?",
       icon: Icons.shopping_cart,
       onConfirm: () async {
-        _executarLimpezaGeral();
+        await _executarLimpezaGeral();
       },
       onCancel: () async {
         _isZerando = false;
@@ -1174,9 +1174,11 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
         comandaController.text = numeroComandaEmUso;
         mesaController.text = numeroMesaEmUso;
+        nomeClienteController.text = carrinhoController.nomeCliente.value;
 
         comandaController.addListener(_onComandaChanged);
         mesaController.addListener(_onMesaChanged);
+        nomeClienteFocus.unfocus();
 
         setState(() {
           aparecerCardapio = true;
@@ -1773,6 +1775,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           numeroTradepoint,
           produto.id,
           '00000000',
+          garcomController.retirarBalcaoRota.value ? '1' : '0',
+          garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
         );
       } else if (produto.id == 'PZ') {
         final partes = montarSaboresEBordas(produto.adicionais);
@@ -1826,6 +1830,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsBordas[5],
               partes.obsBordas[6],
               partes.obsBordas[7],
+              garcomController.retirarBalcaoRota.value ? '1' : '0',
+              garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
             );
           }
         } else {
@@ -1876,6 +1882,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsBordas[5],
               partes.obsBordas[6],
               partes.obsBordas[7],
+              garcomController.retirarBalcaoRota.value ? '1' : '0',
+              garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
             );
           }
         }
@@ -1923,6 +1931,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           numeroTradepoint,
           produto.id,
           '00000000',
+          garcomController.retirarBalcaoRota.value ? '1' : '0',
+          garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
         );
       } else if (produto.id == 'PZ') {
         final partes = montarSaboresEBordas(produto.adicionais);
@@ -1976,6 +1986,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsBordas[5],
               partes.obsBordas[6],
               partes.obsBordas[7],
+              garcomController.retirarBalcaoRota.value ? '1' : '0',
+              garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
             );
           }
         } else {
@@ -2029,6 +2041,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             partes.obsBordas[5],
             partes.obsBordas[6],
             partes.obsBordas[7],
+            garcomController.retirarBalcaoRota.value ? '1' : '0',
+            garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
           );
         }
       }
@@ -2267,6 +2281,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String obsborda6,
     String obsborda7,
     String obsborda8,
+    String balcao, 
+    String nomeCliente,
   ) async {
     String divisaoDeSaboresParaInsert = completarComZeros(divisaoDeSabores);
     String numeroSerie = '1';
@@ -2322,6 +2338,10 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String obsborda7ParaInsert = obsborda7;
     String obsborda8ParaInsert = obsborda8;
 
+    // Dados cliente 
+    String balcaoInsert = balcao;
+    String nomeClienteInsert = nomeCliente;
+
     try {
       String sql =
           """
@@ -2370,7 +2390,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           obsborda6,
           obsborda7,
           obsborda8,
-          numerocliente_FK
+          numerocliente_FK,
+          balcao,
+          nomeCliente
         ) VALUES (
           '$numeroSerie',
           '$numeroTradepointParaInsert',
@@ -2416,7 +2438,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           '$obsborda6ParaInsert',
           '$obsborda7ParaInsert',
           '$obsborda8ParaInsert',
-          '$numeroClienteString'
+          '$numeroClienteString',
+          '$balcaoInsert',
+          '$nomeClienteInsert'
         )
       """;
       print('SQL: $sql');
@@ -2450,6 +2474,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String numeroTradepoint,
     String id,
     String divisaoDeSabores, // 00000000
+    String balcaoString,
+    String nomeClienteString,
   ) async {
     String divisaoDeSaboresParaInsert = completarComZeros(divisaoDeSabores);
     String numeroSerie = '1';
@@ -2464,7 +2490,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     /* int numeroMesaParaInsert = int.tryParse(numeroMesa) ?? 0; */
     String numeroMesaParaInsert = numeroMesa;
     String status = '1';
-
+    String balcaoStringInsert = balcaoString;
+    String nomeClienteStringInsert = nomeClienteString;
     try {
       String sql =
           """
@@ -2481,7 +2508,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           numeromesa, 
           status,
           divisaosabores,
-          numerocliente_FK
+          numerocliente_FK,
+          balcao,
+          nomeCliente
         ) VALUES (
           '$numeroSerie',
           '$numeroTradepointParaInsert',
@@ -2495,7 +2524,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           '$numeroMesaParaInsert',
           '$status',
           '$divisaoDeSaboresParaInsert',
-          '$numeroClienteString'
+          '$numeroClienteString',
+          '$balcaoStringInsert',
+          '$nomeClienteStringInsert'
         )
       """;
 
@@ -2533,6 +2564,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     // Reseta controllers e variáveis de controle
     comandaController.clear();
     mesaController.clear();
+    nomeClienteController.clear();
     numeroComandaEmUso = "";
     numeroMesaEmUso = "";
     
@@ -2575,13 +2607,17 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   void chamarFocoInicial() {
     if(garcomController.retirarBalcaoRota.value){
+      setState(() {
+        showKeyboardNumero = true;
+        empurrarBotoes = false;
+        _campoAtivo = 'clienteController';
+      });
       Future.delayed(Duration(milliseconds: 300), () {
         if (nomeClienteFocus.canRequestFocus) {
           nomeClienteFocus.requestFocus();
         }
       });
-    }
-    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+    } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
       setState(() {
         showKeyboardNumero = true;
         empurrarBotoes = false;
@@ -2616,7 +2652,18 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       iniciaComCarrinho();
       return;
     }
-    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+    if (garcomController.retirarBalcaoRota.value){
+      setState(() {
+        showKeyboardNumero = true;
+        _campoAtivo = 'clienteController';
+        empurrarBotoes = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_bloqueandoFoco && mounted && nomeClienteFocus.canRequestFocus) {
+          nomeClienteFocus.requestFocus();
+        }
+      });
+    } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
         (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
       setState(() {
         showKeyboardNumero = true;
@@ -2633,7 +2680,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         showKeyboardNumero = true;
         _campoAtivo = 'mesaController';
         empurrarBotoes = false;
-      });
+      }); 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_bloqueandoFoco && mounted && mesaFocus.canRequestFocus) {
           mesaFocus.requestFocus();
@@ -2663,15 +2710,18 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
             comandaController.text = numeroComandaEmUso;
             mesaController.text = numeroMesaEmUso;
+            nomeClienteController.text = carrinhoController.nomeCliente.value;
 
             comandaController.addListener(_onComandaChanged);
             mesaController.addListener(_onMesaChanged);
+            nomeClienteFocus.unfocus();
 
             setState(() {
               aparecerCardapio = true;
               aparecerCarrinho = true;
               aparecerLista = false;
               aparecerConfiguracaoProduto = false;
+              clienteValido = true;
             });
           },
         );
@@ -2707,6 +2757,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     } catch (e) {
       print("Erro ao zerar atendimento no banco: $e");
     }
+
+    nomeClienteController.clear();
 
     nomeClienteDialogoController.clear();
     telefoneClienteDialogoController.clear();
@@ -2746,6 +2798,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     if (mounted) {
       setState(() {
 
+        clienteValido = false;
+
         carrinhoController.numeroComanda.value = "";
         carrinhoController.numeroMesa.value = "";
         carrinhoController.numeroPedido.value = "";
@@ -2777,7 +2831,11 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         // Só solicita foco se o bloqueio global NÃO estiver ativo
         // (ex: diálogo de sucesso/erro ainda visível)
         if (!_bloqueandoFoco) {
-          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
+          if (garcomController.retirarBalcaoRota.value) {
+            showKeyboardAlfa = false;
+            showKeyboardNumero = true;
+            _campoAtivo = 'clienteController';
+          } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
               (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
@@ -2790,7 +2848,15 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           
           WidgetsBinding.instance.addPostFrameCallback((_) {
              if (!_bloqueandoFoco && mounted) {
-                FocusNode node = (garcomController.vendaMesa.value) ? mesaFocus : comandaFocus;
+                FocusNode node;
+                if (garcomController.retirarBalcaoRota.value) {
+                  node = nomeClienteFocus;
+                } else if (garcomController.vendaMesa.value) {
+                  node = mesaFocus;
+                } else {
+                  node = comandaFocus;
+                }
+                
                 if (node.canRequestFocus) {
                   node.requestFocus();
                 }
@@ -2999,6 +3065,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 'comanda': numeroComanda,
                 'mesa': comanda['numeromesa'],
                 'page': "garcom",
+                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
               },
             );
             comandaController.clear();
@@ -3238,6 +3305,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 'comanda': mesa['comandavinculada'],
                 'mesa': numeroMesa,
                 'page': "garcom",
+                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
               },
             );
             mesaController.clear();
@@ -6159,6 +6227,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
       // re for retirada no balcao 
       if(garcomController.retirarBalcaoRota.value){
+        clienteValido = true;
         await _fluxoRetirarBalcao();
         return; 
       }
@@ -8425,6 +8494,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'comanda': numeroComandaEmUso,
                                                 'mesa': '0',
                                                 'page': "garcom",
+                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
                                               },
                                             );
                                           } else if ((garcomController.vendaMesa.value)) {
@@ -8435,6 +8505,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'comanda': '0',
                                                 'mesa': numeroMesaEmUso,
                                                 'page': "garcom",
+                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
                                               },
                                             );
                                           } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
@@ -8445,6 +8516,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'comanda': numeroComandaEmUso,
                                                 'mesa': numeroMesaEmUso,
                                                 'page': "garcom",
+                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
                                               },
                                             );
                                           }
@@ -9780,11 +9852,11 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                 children: [
                                   // botão de cliente 
                                   GestureDetector(
-                                    onTap: () async {
+                                    /* onTap: () {
                                       if (carrinhoController.carrinho.isNotEmpty) {
-                                        await zerarAtendimento();
+                                        zerarAtendimento();
                                       } else {
-                                        await zerarAtendimento();
+                                        zerarAtendimento();
                                         nomeClienteController.clear();
                                         setState(() {
                                           aparecerCardapio = false;
@@ -9792,15 +9864,48 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                           aparecerLista = false;
                                           aparecerConfiguracaoProduto = false;
                                           aparecerBotoes = true;
-                                          empurrarBotoes = true;
+                                        });
+                                      }
+                                    }, */
+                                    onTap: () async {
+                                      if (carrinhoController.carrinho.isNotEmpty) {
+                                        await zerarAtendimento();;
+
+                                        setState(() {
+                                          aparecerCardapio = false;
+                                          aparecerCarrinho = false;
+                                          aparecerLista = false;
+                                          aparecerConfiguracaoProduto = false;
+                                          aparecerBotoes = true;
+                                          showKeyboardNumero = true;
+                                          showKeyboardAlfa = false;
+                                          _campoAtivo = 'clienteController';
                                         });
 
-                                        _selecionarPrimeiroGrupo();
-                                        
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                                          if (!_bloqueandoFoco && mounted && nomeClienteFocus.canRequestFocus) {
-                                            nomeClienteFocus.requestFocus();
-                                          }
+                                          if (!mounted || _bloqueandoFoco) return;
+
+                                          nomeClienteFocus.requestFocus();
+                                        });
+                                      } else {
+                                        nomeClienteController.clear();
+
+                                        setState(() {
+                                          aparecerCardapio = false;
+                                          aparecerCarrinho = false;
+                                          aparecerLista = false;
+                                          aparecerConfiguracaoProduto = false;
+                                          aparecerBotoes = true;
+                                          showKeyboardNumero = true;
+                                          showKeyboardAlfa = false;
+                                          _campoAtivo = 'clienteController';
+                                          clienteValido = false;
+                                        });
+
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (!mounted || _bloqueandoFoco) return;
+
+                                          nomeClienteFocus.requestFocus();
                                         });
                                       }
                                     },
@@ -9839,7 +9944,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                             nextFocus: false,
                                             actions: [
                                               KeyboardActionsItem(
-                                                focusNode: comandaFocus,
+                                                focusNode: nomeClienteFocus,
                                                 toolbarButtons: [
                                                   (node) {
                                                     return Expanded(
@@ -9895,11 +10000,26 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                               if (value.isNotEmpty && clienteValido) {
                                                 FocusScope.of(context).unfocus();
                                                 zerarAtendimento();
-                                                limparAmbas();
-                                                limparInformacoesProduto();
-                                                chamarFoco();
+                                                /* limparAmbas();
+                                                limparInformacoesProduto(); */
+                                                Future.delayed(const Duration(milliseconds: 2000), () {
+                                                  chamarFoco();
+                                                });
+                                                empurrarBotoes = true;
                                               }
                                             },
+                                            /* onChanged: (value) async {
+                                              if (value.isNotEmpty && clienteValido) {
+                                                // FocusScope.of(context).unfocus();
+                                                zerarAtendimento();
+                                                limparAmbas();
+                                                limparInformacoesProduto();
+                                                Future.delayed(const Duration(milliseconds: 2000), () {
+                                                  chamarFoco();
+                                                });
+                                                empurrarBotoes = true;
+                                              }
+                                            }, */
 
                                             inputFormatters: [
                                               FilteringTextInputFormatter.deny(RegExp(r'[.,;]')),
@@ -11413,6 +11533,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                     quantidadeInicial = 1;
                                     cliqueiEditarProduto = false;
                                     meiaPorcaoProduto = false;
+                                    aparecerFazerPedido = true;
                                   // });
                                   limparInformacoesProduto();
 

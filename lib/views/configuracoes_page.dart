@@ -2540,7 +2540,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                        if(funcoesController.vendaBalcao.value)
+                        // if(funcoesController.vendaBalcao.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
