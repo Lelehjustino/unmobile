@@ -1536,6 +1536,7 @@ class PagamentoPageState extends State<PagamentoPage>
   }
 
   // Funcao chamada quando clicar em pagar e eu estiver dentro de uma maquininha da pagbank
+  // Segue o fluxo oficial SmartCoffee: doPayment bloqueante + PlugPagEventListener
   Future<bool> pagarPedidoPagBank(List<dynamic> listaPagamento) async {
     // Filtra apenas formas suportadas antes de iniciar qualquer transação
     final List<Map<String, dynamic>> formasSuportadas = [];
@@ -1553,11 +1554,12 @@ class PagamentoPageState extends State<PagamentoPage>
     if (formasSuportadas.isEmpty) {
       return true;
     }
+
     for (var item in formasSuportadas) {
       final String tipoPagamentoPagBank = item['tipo'] as String;
       final int valorPagamentoPagBank = item['valor'] as int;
 
-      // Referência da venda: usa o número do pedido se disponível
+      // Referência da venda: usa o número do pedido real
       final String referencia = (numeropedido.isNotEmpty && numeropedido != '0') ? 'PED$numeropedido' : 'UNMOBILE${DateTime.now().millisecondsSinceEpoch}';
 
       // Formata o valor em reais para exibição no diálogo
@@ -1565,12 +1567,13 @@ class PagamentoPageState extends State<PagamentoPage>
       final String valorExibicao = 'R\$ ${valorEmReais.toStringAsFixed(2).replaceAll('.', ',')}';
 
       // Estado interno do diálogo de pagamento
-      String _statusMensagem = 'Iniciando pagamento...';
-      bool _cancelando = false;
-      StateSetter? _setDialogState;
+      String statusMensagem = 'Iniciando pagamento...';
+      String senhaDigitos = ''; // SmartCoffee: acumula '●' para EVENT_CODE_DIGIT_PASSWORD
+      bool cancelando = false;
+      StateSetter? setDialogStateFn;
 
       // Ouve o EventChannel para capturar mensagens reais do PlugPag em tempo real
-      StreamSubscription<Map<String, dynamic>>? _sub;
+      StreamSubscription<Map<String, dynamic>>? sub;
 
       // Abre o diálogo de status ANTES de iniciar o pagamento
       // para que o usuário veja as mensagens desde o início
@@ -1580,18 +1583,18 @@ class PagamentoPageState extends State<PagamentoPage>
         builder: (dialogContext) {
           return StatefulBuilder(
             builder: (ctx, setDialogState) {
-              _setDialogState = setDialogState;
+              setDialogStateFn = setDialogState;
               final theme = Theme.of(ctx);
 
-              return WillPopScope(
-                onWillPop: () async => false,
+              return PopScope(
+                canPop: false,
                 child: Dialog(
                   backgroundColor: theme.colorScheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         horizontal: 24, vertical: 32),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1606,7 +1609,7 @@ class PagamentoPageState extends State<PagamentoPage>
                                 .withOpacity(0.6),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         Text(
                           valorExibicao,
                           style: TextStyle(
@@ -1615,7 +1618,7 @@ class PagamentoPageState extends State<PagamentoPage>
                             color: theme.colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24),
                         SizedBox(
                           height: 36,
                           width: 36,
@@ -1624,26 +1627,38 @@ class PagamentoPageState extends State<PagamentoPage>
                             color: theme.colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20),
                         Text(
-                          _statusMensagem,
+                          statusMensagem,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 16,
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 28),
+                        // Exibe os dígitos da senha quando houver
+                        if (senhaDigitos.isNotEmpty) ...[
+                          SizedBox(height: 8),
+                          Text(
+                            senhaDigitos,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 8,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: 28),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
-                            onPressed: _cancelando
+                            onPressed: cancelando
                                 ? null
                                 : () async {
                                     setDialogState(() {
-                                      _cancelando = true;
-                                      _statusMensagem =
-                                          'Cancelando...';
+                                      cancelando = true;
+                                      statusMensagem = 'Cancelando...';
                                     });
                                     await PagBankSmartPOS
                                         .cancelarPagamento();
@@ -1652,9 +1667,9 @@ class PagamentoPageState extends State<PagamentoPage>
                               foregroundColor: theme.colorScheme.error,
                               side: BorderSide(color: theme.colorScheme.error),
                               shape: RoundedRectangleBorder(
-                                borderRadius:BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                   vertical: 14),
                             ),
                             child: Text(
@@ -1676,11 +1691,23 @@ class PagamentoPageState extends State<PagamentoPage>
       );
 
       // Inscreve no stream de eventos do PlugPag
-      _sub = PagBankSmartPOS.eventos.listen((evento) {
+      // SmartCoffee: EVENT_CODE_DIGIT_PASSWORD → acumula '●'
+      // SmartCoffee: EVENT_CODE_NO_PASSWORD → "Digite a senha"
+      // Outros → customMessage do PlugPag
+      sub = PagBankSmartPOS.eventos.listen((evento) {
         final String msg = evento['mensagem']?.toString() ?? '';
-        if (msg.isNotEmpty && _setDialogState != null && mounted) {
-          _setDialogState!(() {
-            _statusMensagem = msg;
+        final String tipo = evento['tipo']?.toString() ?? '';
+
+        if (msg.isNotEmpty && setDialogStateFn != null && mounted) {
+          setDialogStateFn!(() {
+            if (msg == '●') {
+              // SmartCoffee: EVENT_CODE_DIGIT_PASSWORD → acumula caractere
+              senhaDigitos += '●';
+            } else {
+              // Qualquer outra mensagem reseta a senha e atualiza a mensagem
+              senhaDigitos = '';
+              statusMensagem = msg;
+            }
           });
         }
       });
@@ -1702,7 +1729,7 @@ class PagamentoPageState extends State<PagamentoPage>
       }
 
       // Cancela a inscrição no stream de eventos
-      await _sub.cancel();
+      await sub.cancel();
 
       // Fecha o diálogo de status
       if (mounted && Navigator.canPop(context)) {
@@ -1713,7 +1740,60 @@ class PagamentoPageState extends State<PagamentoPage>
       final bool aprovado = resultado['aprovado'] == true;
 
       if (aprovado) {
-        // Pagamento aprovado: continua o fluxo normalmente
+        // Pagamento aprovado: mostra diálogo de sucesso brevemente
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) {
+              final theme = Theme.of(ctx);
+              // Fecha automaticamente após 2 segundos
+              Future.delayed(Duration(seconds: 2), () {
+                if (Navigator.canPop(ctx)) {
+                  Navigator.of(ctx).pop();
+                }
+              });
+              return Dialog(
+                backgroundColor: theme.colorScheme.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline,
+                          color: Colors.green, size: 64),
+                      SizedBox(height: 16),
+                      Text(
+                        'Pagamento aprovado',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      if (resultado['mensagem']?.toString().isNotEmpty == true) ...[
+                        SizedBox(height: 10),
+                        Text(
+                          resultado['mensagem'].toString(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        }
+        // Pagamento aprovado: continua o fluxo normalmente para próxima forma
         continue;
       }
 
@@ -1807,7 +1887,7 @@ class PagamentoPageState extends State<PagamentoPage>
                         padding:
                             EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child:   Text(
+                      child: Text(
                         'OK',
                         style: TextStyle(
                             fontSize: 15, fontWeight: FontWeight.w600),
@@ -1828,7 +1908,7 @@ class PagamentoPageState extends State<PagamentoPage>
   }
 
   // Funcoo chamanda quando clicar em pagar
-  pagarPedido() async {
+  Future<void> pagarPedido() async {
     // com a conta pedida / sem conta
     double faltaReceber = double.tryParse(valorAReceber) ?? 0;
     if (faltaReceber > 0) {
@@ -1926,14 +2006,18 @@ class PagamentoPageState extends State<PagamentoPage>
           final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
 
           await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
-          await pagarPedido(); 
+          await pagarPedido();
 
           /* if (maquininhaDisponivel) {
+            // SmartPOS disponível: executa pagamento PagBank primeiro
             final bool pagBankAprovado = await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
             if (pagBankAprovado) {
+              // Todas as formas PagBank aprovadas: finaliza o pedido
               await pagarPedido();
             }
+            // Se não aprovado, não finaliza — o diálogo de erro já foi exibido
           } else {
+            // Sem SmartPOS: finaliza o pedido diretamente
             await pagarPedido();
           } */
 

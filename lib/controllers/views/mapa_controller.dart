@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:un_recepcao/data/data_class.dart';
 
 class MapaController extends GetxController {
@@ -11,6 +12,12 @@ class MapaController extends GetxController {
   RxList<dynamic> abertasMesas = <dynamic>[].obs;
   RxList<dynamic> fechadasComandas = <dynamic>[].obs;
   RxList<dynamic> fechadasMesas = <dynamic>[].obs;
+  RxList<dynamic> balcao = <dynamic>[].obs;
+
+  RxBool vendaBalcao = false.obs;
+  RxBool vendaComanda = false.obs;
+  RxBool vendaComandaNaMesa = false.obs;
+  RxBool vendaMesa = false.obs;
 
   @override
   void onInit() {
@@ -19,12 +26,70 @@ class MapaController extends GetxController {
   }
 
   Future<void> carregarTudo() async {
+    await carregarConfiguracoesVendas();
     await carregarTodasAsComandas();
     await carregarTodasAsMesas();
     await carregarAsComandasAbertas();
     await carregarAsMesasAbertas();
     await carregarAsComandasFechadas();
     await carregarAsMesasFechadas();
+    await carregarBalcao();
+  }
+
+  Future<void> carregarConfiguracoesVendas() async {
+    final prefs = await SharedPreferences.getInstance();
+    final vendasJson = prefs.getString('vendas_selecionados');
+
+    if (vendasJson != null) {
+      final vendasSalvos = Set<String>.from(jsonDecode(vendasJson));
+
+      if (vendasSalvos.contains('0')) {
+        // se recepcao selecionado
+        vendaBalcao.value = true;
+      } else {
+        vendaBalcao.value = false;
+      }
+      
+      if (vendasSalvos.contains('1')){
+        vendaComanda.value = true;
+      } else {
+        vendaComanda.value = false;
+      }
+
+      if (vendasSalvos.contains('2')){
+        vendaComandaNaMesa.value = true;
+      } else {
+        vendaComandaNaMesa.value = false;
+      }
+      
+      if (vendasSalvos.contains('3')){
+        vendaMesa.value = true;
+      } else {
+        vendaMesa.value = false;
+      }
+    } else {
+      // configuração padrao
+      vendaBalcao.value = false;
+      vendaComanda.value = false;
+      vendaComandaNaMesa.value = false;
+      vendaMesa.value = false;
+    }
+  }
+
+  // Função carregar TODAS as comandas
+  Future<void> carregarBalcao() async {
+    try {
+      await Future.delayed(Duration.zero);
+
+      String dadosJson = await Connection().select(
+        "SELECT numerodelivery, atendimento, statuspedido, statusentrega, nomecliente, valorliquidopedido, balcao, datahoraabertura, integrador FROM delivery WHERE (statuspedido='1' OR statuspedido='2') AND balcao='1' ORDER BY numerodelivery",
+      );
+
+      final List<dynamic> lista = jsonDecode(dadosJson);
+      balcao.assignAll(lista);
+    } catch (e) {
+      balcao.assignAll([]);
+    }
   }
 
   // Função carregar TODAS as comandas

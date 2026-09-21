@@ -64,8 +64,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   Set<String> recepcaoSelecionados = {};
 
   List<String> modos = ['Mapa'];
-  // Set<String> modosSelecionados = {'Mesa', 'Comanda'};
   Set<String> modosSelecionados = {};
+
+  List<String> vendas = ['Venda Balcão', 'Venda Comanda', 'Venda Comanda Na Mesa','Venda Mesa'];
+  Set<String> vendasSelecionados = {};
 
   List<String> notes = ['Fila de espera'];
   Set<String> notesSelecionados = {};
@@ -76,8 +78,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> vendaComanda = ['Venda comanda'];
   Set<String> vendaComandaSelecionados = {'0'};
 
-    List<String> vendaMesa = ['Venda mesa'];
-  Set<String> vendaMesaSelecionados = {'0'};
+  List<String> vendaMesa = ['Venda mesa'];
+  Set<String> vendaMesaSelecionados = {};
 
   // List<String> paineis = ['KDS', 'Pedidos', 'Expedição motoboy'];
   List<String> paineis = ['Expedição cliente', 'Expedição motoboy', 'KDS'];
@@ -240,6 +242,9 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadFocarCadastroClienteSalvo();
     _loadModoCarrinhoComandasSalvo();
     _loadRetirarBalcao();
+    _loadVendas();
+
+   arrumarListaVendas();
   }
 
   @override
@@ -255,6 +260,29 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {}
+
+  arrumarListaVendas(){
+    if(!funcoesController.vendaBalcao.value){
+      // venda balcao 
+      vendas.remove('Venda Balcão');
+      vendasSelecionados.remove('0');
+    }
+    if (!funcoesController.vendaComanda.value){
+      // venda comanda
+      vendas.remove('Venda Comanda');
+      vendasSelecionados.remove('1');
+    }
+    if (!garcomController.vendaComandaNaMesa.value){
+      // venda comanda na mesa 
+      vendas.remove('Venda Comanda Na Mesa');
+      vendasSelecionados.remove('2');
+    }
+    if (!funcoesController.vendaMesa.value){
+      // venda mesa 
+      vendas.remove('Venda Mesa');
+      vendasSelecionados.remove('3');
+    } 
+  }
 
   navegar() async {
     if (footerButtonsController.rotaPainelCliente.value) {
@@ -424,6 +452,37 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     setState(() {
       modoCarrinhoComandasSelecionados = setLocal;
     });
+  }
+
+  // Carrega se retirar balcao esta marcado 
+  Future<void> _loadVendas() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString('vendas_selecionados');
+
+    if (valor == null || valor.isEmpty) return;
+
+    Set<String> setLocal;
+
+    if (valor.startsWith('[')) {
+      setLocal = Set<String>.from(jsonDecode(valor));
+    } else {
+      setLocal = {valor};
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      vendasSelecionados = setLocal;
+    });
+  }
+
+  // salvar retirar balcao 
+  _saveVendas(Set<String> vendasSelecionados) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'vendas_selecionados',
+      jsonEncode(vendasSelecionados.toList()),
+    );
   }
 
   // Carrega se retirar balcao esta marcado 
@@ -1442,6 +1501,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await _saveForcarCadastroCliente(forcarCadastroClienteSelecionados);
     await _saveModoCarrinhoComandas(modoCarrinhoComandasSelecionados);
     await _saveRetirarBalcao(retirarBalcaoSelecionados);
+    await _saveVendas(vendasSelecionados);
   }
 
   // Deriva as variáveis booleanas de navegação diretamente dos Sets já em memória.
@@ -2698,6 +2758,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ],
                       ), */
                       // SizedBox(height: 2),
+                      // MAPA 
                       if (modos.isEmpty)
                         Padding(
                           padding: EdgeInsets.all(10.0),
@@ -2735,6 +2796,51 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                         modosSelecionados.add(indexStr);
                                     } else {
                                       modosSelecionados.remove(indexStr);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        // CONFIGURACOES DO MAPA 
+                        if (modosSelecionados.contains('0'))
+                        Padding(
+                          padding: EdgeInsets.only(right: 8, left: 20),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: vendas.length,
+                            itemBuilder: (context, index) {
+                              String modo = vendas[index];
+                              String indexStr = "";
+                              if (modo == 'Venda Balcão') indexStr = '0';
+                              else if (modo == 'Venda Comanda') indexStr = '1';
+                              else if (modo == 'Venda Comanda Na Mesa') indexStr = '2';
+                              else if (modo == 'Venda Mesa') indexStr = '3';
+                              bool isChecked = vendasSelecionados.contains(indexStr);
+                              return CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                // Diminui o espaço vertical
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  horizontal: -2,
+                                  vertical: -3,
+                                ),
+                                activeColor: colorScheme.tertiary,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                title: Text(modo, style: TextStyle(
+                                  fontSize: 15
+                                ),),
+                                value: isChecked,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      vendasSelecionados.add(indexStr);
+                                    } else {
+                                      vendasSelecionados.remove(indexStr);
                                     }
                                   });
                                 },

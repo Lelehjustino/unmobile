@@ -467,10 +467,17 @@ class SideNavState extends State<SideNav> {
 
   Widget retirarBalcao(String? currentRoute, ColorScheme colorScheme){
     return ListTile(
-      leading: Icon(
-        Icons.room_service,
+      leading: 
+      Image.asset(
+        'assets/retirada_balcao_icone.png',
+        width: MediaQuery.of(context).size.width * 0.060,
+        height: MediaQuery.of(context).size.width * 0.060,
         color: colorScheme.onSurface,
       ),
+      /* Icon(
+        Icons.room_service,
+        color: colorScheme.onSurface,
+      ), */
       title: Text(
         "Venda balcão",
         style: TextStyle(

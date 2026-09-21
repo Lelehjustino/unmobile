@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
+import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/views/mapa_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
@@ -30,12 +31,13 @@ class MapaPage extends StatefulWidget {
 class MapaPageState extends State<MapaPage> {
 
   String versaoAplicacao = FuncoesController().versaoDoApp;
-  final FuncoesController funcoesController = Get.put(FuncoesController());
   final MapaController mapaController = Get.put(MapaController());
   final painelController = Get.put(PainelController());
   final footerButtonsController = Get.find<FooterButtonsController>();
 
   final TextEditingController comandaController = TextEditingController();
+  final GarcomController garcomController = Get.find<GarcomController>();
+  final FuncoesController funcoesController = Get.find<FuncoesController>();
   // final FocusNode _focusNode = FocusNode();
 
   // Teclado barra de busca
@@ -80,9 +82,6 @@ class MapaPageState extends State<MapaPage> {
   // final variaveis = Get.find<VariaveisController>();
 
   String tipoDoPedido = "";
-  bool logicaPorMesa = false;
-  bool logicaPorComanda = false;
-  bool logicaPorComandaNaMesa = false;
 
   String nomeEmpresaLoad = '';
   String numeroDaLicencaSelecionada = '';
@@ -104,6 +103,11 @@ class MapaPageState extends State<MapaPage> {
 
   bool modoCarrossel = false;
 
+  bool vendaBalcaoClicado = false;
+  bool vendaComandaClicado = false;
+  bool vendaComandaNaMesaClicado = false;
+  bool vendaMesaClicado = false;
+
   @override
   void initState() {
     super.initState();
@@ -114,14 +118,81 @@ class MapaPageState extends State<MapaPage> {
 
     _atualizarHora();
     _timer = Timer.periodic(Duration(seconds: 1), (_) => _atualizarHora());
-
-    /* carregarTodasAsComandas();
-    carregarAsComandasAbertas();
-    carregarAsComandasFechadas(); */
-    buscarTipoPedido();
     _loadNomeEmpresa();
     _loadNumeroLicenca();
-    mapaController.carregarTudo();
+    carregar();
+  }
+
+  void carregar() async {
+    await mapaController.carregarTudo();
+    clicarAutomaticamente();
+  }
+
+  void clicarAutomaticamente(){
+    if(mapaController.vendaBalcao.value){
+      vendaBalcao();
+    } else if (mapaController.vendaComanda.value){
+      vendaComanda();
+    } else if (mapaController.vendaComandaNaMesa.value){
+      vendaComandaNaMesa();
+    } else if (mapaController.vendaMesa.value){
+      vendaMesa();
+    } else {
+      vendaComanda();
+    }
+  }
+
+  void vendaComanda(){
+    setState(() {
+      vendaComandaClicado = true;
+      vendaComandaNaMesaClicado = false;
+      vendaMesaClicado = false;
+      vendaBalcaoClicado = false;
+      mostrarMesas = false;
+    });
+  }
+
+  void vendaComandaNaMesa(){
+    _selecionarNenhumGrupo();
+    setState(() {
+      modoCarrossel = true;
+      vendaComandaClicado = false;
+      vendaComandaNaMesaClicado = true;
+      vendaMesaClicado = false;
+      vendaBalcaoClicado = false;
+      mostrarMesas = false;
+    });
+
+    /* if(modoCarrossel){
+      setState(() {
+        modoCarrossel = false;
+      });
+    }else{
+      _selecionarNenhumGrupo();
+      setState(() {
+        modoCarrossel = true;
+      });
+    } */
+  }
+
+  void vendaBalcao(){
+    setState(() {
+      vendaBalcaoClicado = true;
+      vendaComandaClicado = false;
+      vendaComandaNaMesaClicado = false;
+      vendaMesaClicado = false;
+      mostrarMesas = false;
+    });
+  }
+
+  void vendaMesa(){
+    setState(() {
+      vendaComandaClicado = false;
+      vendaComandaNaMesaClicado = false;
+      vendaMesaClicado = true;
+      vendaBalcaoClicado = false;
+      mostrarMesas = true;
+    });
   }
 
   void arrumarFoco() {
@@ -159,63 +230,6 @@ class MapaPageState extends State<MapaPage> {
     if (nomeEmpresaSalvo != null) {
       setState(() {
         nomeEmpresaLoad = nomeEmpresaSalvo;
-      });
-    }
-  }
-
-  // Buscar tipo do pedido
-  // Função para descobrir tipo do pedido
-  Future<void> buscarTipoPedido() async {
-    try {
-      String dadosJson = await Connection().select(
-        "SELECT resultado FROM configuracoes WHERE numero='23';",
-      );
-
-      List<dynamic> lista = jsonDecode(dadosJson);
-
-      if (lista.isNotEmpty) {
-        // pega apenas o campo resultado
-        String valor = lista[0]['resultado'].toString();
-
-        setState(() {
-          tipoDoPedido = valor;
-          if (tipoDoPedido == "100") {
-            logicaPorMesa = true;
-            logicaPorComanda = false;
-            logicaPorComandaNaMesa = false;
-            setState(() {
-              mostrarMesas = true;
-              mostrarMesaseComandas = false;
-            });
-          } else if (tipoDoPedido == "010") {
-            logicaPorComanda = true;
-            logicaPorMesa = false;
-            logicaPorComandaNaMesa = false;
-            setState(() {
-              mostrarMesas = false;
-              mostrarMesaseComandas = false;
-            });
-          } else if (tipoDoPedido == "011") {
-            logicaPorComandaNaMesa = true;
-            logicaPorMesa = false;
-            logicaPorComanda = false;
-            setState(() {
-              mostrarMesas = false;
-              mostrarMesaseComandas = true;
-            });
-          }
-        });
-        print("Tipo do pedido: $tipoDoPedido");
-      } else {
-        // se a lista vier vazia
-        setState(() {
-          tipoDoPedido = "Não foi possível buscar tipo do pedido";
-        });
-      }
-    } catch (e) {
-      print("Erro ao carregar configuracaoServico: $e");
-      setState(() {
-        tipoDoPedido = "0";
       });
     }
   }
@@ -554,7 +568,7 @@ class MapaPageState extends State<MapaPage> {
   } */
 
   Future<void> _selecionarPrimeiroGrupo(List<dynamic> mesas) async {
-    if(logicaPorComandaNaMesa){
+    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
       final primeiro = mesas.first;
       indexMesa = 0;
       setState(() {
@@ -565,7 +579,7 @@ class MapaPageState extends State<MapaPage> {
   }
 
   Future<void> _selecionarNenhumGrupo() async {
-    if(logicaPorComandaNaMesa){
+    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
       indexMesa = 0;
       setState(() {
         mesaSelecionada = null;
@@ -578,7 +592,7 @@ class MapaPageState extends State<MapaPage> {
     setState(() {
       modoCarrossel = true;
     });
-    if(logicaPorComandaNaMesa){
+    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
       final mesa = mesas[index];
       setState(() {
         mesaSelecionada = mesa['numero'].toString();
@@ -787,7 +801,7 @@ class MapaPageState extends State<MapaPage> {
                                     return InkWell(
                                       borderRadius: BorderRadius.circular(10),
                                       onTap: () async {
-                                        if (logicaPorComandaNaMesa) {
+                                        if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
                                           await validarComanda(numeroComanda);
                                         }
                                       },
@@ -942,7 +956,7 @@ class MapaPageState extends State<MapaPage> {
                                         return InkWell(
                                           borderRadius: BorderRadius.circular(10),
                                           onTap: () async {
-                                            if (logicaPorComandaNaMesa) {
+                                            if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
                                               await validarComanda(numeroComanda);
                                             }
                                           },
@@ -1091,6 +1105,214 @@ class MapaPageState extends State<MapaPage> {
     );
   }
 
+  Widget _buildGridBalcao(List<dynamic> items) {
+    return Expanded(
+      child: GridView.builder(
+        padding: EdgeInsets.all(8),
+        itemCount: items.length,
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 165,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.85,
+        ),
+        itemBuilder: (context, index) {
+          final item = items[index];
+
+          final numeroDelivery = item['numerodelivery']?.toString() ?? '0';
+          final statusPedido =int.tryParse(item['statuspedido']?.toString() ?? '0') ?? 0;
+
+          final statusEntrega =int.tryParse(item['statusentrega']?.toString() ?? '0') ?? 0;
+
+          final nomeCliente =item['nomecliente']?.toString() ?? '';
+
+          final atendimento = item['atendimento']?.toString() ?? '';
+
+          final integrador = item['integrador']?.toString() ?? '';
+
+          final dataHoraAbertura =item['datahoraabertura']?.toString() ?? '';
+
+          final valorContaRaw = item['valorliquidopedido'];
+
+          final valorConta = (valorContaRaw != null && valorContaRaw.toString() != 'null' &&  valorContaRaw.toString() != '0' && valorContaRaw.toString() != '0.00')
+            ? valorContaRaw.toString()
+            : null;
+
+          // Pedido aberto
+          final aberto = statusPedido == 1;
+
+          // Pedido pronto
+          final pronto = statusPedido == 2;
+
+          // Cor base
+          Color corDelivery = Theme.of(context).colorScheme.tertiary;
+          Color corTexto = Theme.of(context).colorScheme.onPrimary;
+
+          corDelivery = integrador.contains("PEDEAQUI") 
+              ? const Color.fromARGB(255, 177, 167, 179)
+              : integrador.contains("IFOOD")
+              ? const Color.fromARGB(255, 240, 147, 140)
+              : Theme.of(context).colorScheme.tertiary;
+
+          corDelivery = integrador.contains("PEDEAQUI")
+              ? const Color.fromARGB(255, 73, 21, 82)
+              : integrador.contains("IFOOD") || integrador.contains("P10") || integrador.contains("P 10")
+              ? const Color.fromARGB(255, 154, 33, 24)
+              : integrador.contains("NEEMO")
+              ? Theme.of(context).colorScheme.scrim
+              : integrador.contains("99FOOD")
+              ? const Color.fromARGB(255, 236, 162, 2)
+              : integrador.contains("ANOTA AI")
+              ? const Color.fromARGB(255, 27, 88, 220)
+              : Theme.of(context).colorScheme.tertiary;
+          
+          // se tiver vazio n escreve gourmet 
+          String nomeIntegrador = integrador.contains("PEDEAQUI")
+              ? "PEDEAQUI"
+              : integrador.contains("IFOOD")
+              ? "IFOOD"
+              : integrador.contains("P10") || integrador.contains("P 10")
+              ? "P10"
+              : integrador.contains("NEEMO")
+              ? "NEEMO"
+              : integrador.contains("99FOOD")
+              ? "99FOOD"
+              : integrador.contains("ANOTA AI")
+              ? "ANOTA AI"
+              : "";
+
+          return InkWell(
+            onTap: () {
+              // Coloque aqui a navegação do delivery
+              // Exemplo:
+              //
+              // Get.to(
+              //   () => GarcomPage(),
+              //   arguments: {
+              //     'numerodelivery': numeroDelivery,
+              //     'page': 'delivery',
+              //   },
+              // );
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: corDelivery,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: EdgeInsets.all(4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      double iconSize = constraints.maxWidth * 0.20;
+
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/retirada_balcao_icone.png',
+                              width: MediaQuery.of(context).size.width * 0.080,
+                              height: MediaQuery.of(context).size.width * 0.080,
+                              color: corTexto,
+                            ),
+                            /* Icon(
+                              Icons.delivery_dining,
+                              size: iconSize,
+                              color: corTexto,
+                            ), */
+
+                            SizedBox(height: 4),
+
+                            Text(
+                              '#$numeroDelivery',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                // fontWeight: FontWeight.bold,
+                                fontSize: constraints.maxWidth * 0.20,
+                                color: corTexto,
+                              ),
+                            ),
+
+                            if (nomeCliente.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(
+                                  nomeCliente,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    // fontWeight: FontWeight.bold,
+                                    fontSize: constraints.maxWidth * 0.09,
+                                    color: corTexto,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: 4),
+
+                  Column(
+                    children: [
+                      /* Text(
+                        pronto
+                            ? 'Pronto'
+                            : aberto
+                                ? 'Em preparo'
+                                : 'Aberto',
+                        style: TextStyle(
+                          // fontWeight: FontWeight.bold,
+                          color: corTexto,
+                        ),
+                      ), */
+                      if(nomeIntegrador != "")
+                      Text(
+                        nomeIntegrador,
+                        style: TextStyle(
+                          // fontWeight: FontWeight.bold,
+                          color: corTexto,
+                        ),
+                      ),
+
+                      if (atendimento.isNotEmpty && atendimento != '0')
+                      Text(
+                        atendimento,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: corTexto,
+                        ),
+                      ),
+
+                      if (valorConta != null)
+                        Text(
+                          'R\$ $valorConta',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            // fontWeight: FontWeight.bold,
+                            color: corTexto,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // Grid de mesas
   Widget _buildGridMesas(List<dynamic> items, bool isMesa) {
     return Expanded(
@@ -1135,7 +1357,7 @@ class MapaPageState extends State<MapaPage> {
 
           return InkWell(
             onTap: () {
-              if (logicaPorMesa) {
+              if ((vendaMesaClicado && mapaController.vendaMesa.value)) {
                 if (comandavinculada) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -1518,7 +1740,7 @@ class MapaPageState extends State<MapaPage> {
               });
             }
 
-            if (logicaPorComanda) {
+            if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
               setState(() {
                 Get.to(
                   () => GarcomPage(),
@@ -1529,7 +1751,7 @@ class MapaPageState extends State<MapaPage> {
                   },
                 );
               });
-            } else if (logicaPorComandaNaMesa) {
+            } else if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
               setState(() {
                 Get.to(
                   () => GarcomPage(),
@@ -1579,7 +1801,7 @@ class MapaPageState extends State<MapaPage> {
         double valorLiquido =
             double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
-        if (logicaPorComanda) {
+        if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
           setState(() {
             Get.to(
               () => GarcomPage(),
@@ -1590,7 +1812,7 @@ class MapaPageState extends State<MapaPage> {
               },
             );
           });
-        } else if (logicaPorComandaNaMesa) {
+        } else if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
           setState(() {
             Get.to(
               () => GarcomPage(),
@@ -1703,7 +1925,7 @@ class MapaPageState extends State<MapaPage> {
 
           return InkWell(
             onTap: () async {
-              if (logicaPorComanda || logicaPorComandaNaMesa) {
+              if ((vendaComandaClicado && mapaController.vendaComanda.value) || vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
                 await validarComanda(numeroComanda);
 
                 /* if (temConta) {
@@ -1972,7 +2194,7 @@ class MapaPageState extends State<MapaPage> {
     List<dynamic> itensParaMostrarMesa = [];
     List<dynamic> itensParaMostrarComanda = [];
 
-    if(logicaPorComanda || logicaPorMesa){
+    if((vendaComandaClicado && mapaController.vendaComanda.value) || (vendaMesaClicado && mapaController.vendaMesa.value)){
       // 1. Determina qual lista de DADOS usar (mesas ou comandas)
       if (mostrarMesas) {
         // 2. Filtra a lista com base no botão selecionado (Todas, Abertas, Fechadas)
@@ -2008,7 +2230,7 @@ class MapaPageState extends State<MapaPage> {
       }).toList();
     }
 
-    if(logicaPorComandaNaMesa){
+    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
       if (mostrarMesas) {
         // 2. Filtra a lista com base no botão selecionado (Todas, Abertas, Fechadas)
         if (mostrarTodas) {
@@ -2195,7 +2417,7 @@ class MapaPageState extends State<MapaPage> {
                   padding: EdgeInsets.symmetric(horizontal: 8.0),
                   child: Row(
                     children: [
-                      // if(!modoCarrossel)
+                      // f(vendaComandaClicado || vendaMesaClicado)
                       Expanded(
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height * 0.06,
@@ -2286,7 +2508,7 @@ class MapaPageState extends State<MapaPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Column(
+                        /* Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -2337,11 +2559,11 @@ class MapaPageState extends State<MapaPage> {
                               ),
                             )
                           ],
-                        ),
+                        ), */
                         if(!modoCarrossel)
                         SizedBox(width: 3),
                         // Botao tres funções - abertas - fechadas - todas
-                        if(!modoCarrossel && !logicaPorComandaNaMesa)
+                        if(vendaComandaClicado || vendaMesaClicado)
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -2392,49 +2614,8 @@ class MapaPageState extends State<MapaPage> {
                             )
                           ],
                         ),
-                        // SizedBox(width: 3),
-                        /* if(logicaPorComandaNaMesa && !modoCarrossel)
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            ElevatedButton(
-                              onPressed: () async {
-                                if(mostrarMesas){
-                                  setState(() {
-                                    mostrarMesas = false;
-                                  });
-                                }else{
-                                  setState(() {
-                                    mostrarMesas = true;
-                                  });
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                shape: CircleBorder(),
-                                padding: EdgeInsets.all(20), // tamanho do círculo
-                                backgroundColor: mostrarMesas ? colorScheme.primary : colorScheme.tertiary,
-                                elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
-                                shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
-                              ),
-                              child: Icon(
-                                mostrarMesas ? Icons.description :  Icons.table_bar,
-                                size: 30,
-                                color: colorScheme.onPrimary,
-                              ),
-                            ),
-                            Text(
-                              mostrarMesas ? 'Comandas' : 'Mesas',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: mostrarMesas ? colorScheme.primary : colorScheme.tertiary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          ],
-                        ), */
-                        SizedBox(width: 3),
-                        if(logicaPorComandaNaMesa)
+                        /* SizedBox(width: 3),
+                        if(mapaController.vendaComandaNaMesa.value)
                         Column(
                           children: [
                             ElevatedButton(
@@ -2472,58 +2653,152 @@ class MapaPageState extends State<MapaPage> {
                               ),
                             )
                           ],
+                        ), */
+                        SizedBox(width: 3),
+                        if(mapaController.vendaComandaNaMesa.value)
+                        Column(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () async {
+                                vendaComandaNaMesa();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                shape: CircleBorder(),
+                                padding: EdgeInsets.all(20), // tamanho do círculo
+                                backgroundColor: !vendaComandaNaMesaClicado ? colorScheme.surfaceDim : colorScheme.primary,
+                                elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
+                                shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
+                              ),
+                              child: Icon(
+                                Icons.grid_view,
+                                // modoCarrossel ? Icons.grid_view :  Icons.list,
+                                size: 25,
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                            Text(
+                              'Touch',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: !vendaComandaNaMesaClicado ? colorScheme.surfaceDim : colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          ],
                         ),
                         SizedBox(width: 3),
                         // botão mesa
-                        if (mostrarMesaseComandas && logicaPorMesa)
-                          ElevatedButton(
-                            onPressed: () async {
-                              // mapaController.carregarTudo();
-                              setState(() {
-                                mostrarMesas = true;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: CircleBorder(),
-                              padding: EdgeInsets.all(20), // tamanho do círculo
-                              backgroundColor: mostrarMesas ? colorScheme.tertiary : colorScheme.surfaceDim,
-                              elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
-                              shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
-                            ),
-                            child: Icon(
-                              Icons.table_restaurant,
-                              size: 30,
-                              color: colorScheme.onPrimary,
-                            ),
+                        if (mapaController.vendaMesa.value)
+                          Column(
+                            children: [
+                              ElevatedButton(
+                                onPressed: () async {
+                                  // mapaController.carregarTudo();
+                                  vendaMesa();
+                                  setState(() {
+                                    vendaComandaClicado = false;
+                                    vendaComandaNaMesaClicado = false;
+                                    vendaMesaClicado = true;
+                                    vendaBalcaoClicado = false;
+                                    mostrarMesas = true;
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  shape: CircleBorder(),
+                                  padding: EdgeInsets.all(20), // tamanho do círculo
+                                  backgroundColor: mostrarMesas ? colorScheme.tertiary : colorScheme.surfaceDim,
+                                  elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
+                                  shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
+                                ),
+                                child: Icon(
+                                  Icons.table_restaurant,
+                                  size: 30,
+                                  color: colorScheme.onPrimary,
+                                ),
+                              ),
+                              Text(
+                              'Mesa',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: mostrarMesas ? colorScheme.tertiary : colorScheme.surfaceDim,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            ],
                           ),
 
                         SizedBox(width: 3),
                         // botão comanda
-                        if (mostrarMesaseComandas && logicaPorComanda)
-                          ElevatedButton(
-                            onPressed: () async {
-                              // mapaController.carregarTudo();
-                              setState(() {
-                                mostrarMesas = false;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: CircleBorder(),
-                              padding: EdgeInsets.all(20),
-                              iconColor: colorScheme.secondary,
-                              backgroundColor: mostrarMesas
-                                  ? colorScheme.surfaceDim
-                                  : colorScheme.primaryContainer,
-                              elevation:
-                                  8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
-                              shadowColor: Colors
-                                  .black, // Cor da sombra com opacidade (ajuste conforme necessário)
-                            ),
-                            child: Icon(
-                              Icons.description,
-                              size: 30,
-                              color: colorScheme.onTertiary,
-                            ),
+                        if (mapaController.vendaComanda.value)
+                          Column(
+                            children: [
+                              ElevatedButton(
+                                onPressed: () async {
+                                  // mapaController.carregarTudo();
+                                  vendaComanda();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  shape: CircleBorder(),
+                                  padding: EdgeInsets.all(20),
+                                  iconColor: colorScheme.secondary,
+                                  backgroundColor: !vendaComandaClicado ? colorScheme.surfaceDim : colorScheme.primaryContainer,
+                                  elevation:8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
+                                  shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
+                                ),
+                                child: Icon(
+                                  Icons.description,
+                                  size: 30,
+                                  color: colorScheme.onTertiary,
+                                ),
+                              ),
+                              Text(
+                                'Comanda',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: !vendaComandaClicado ? colorScheme.surfaceDim : colorScheme.primaryContainer,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              ],
+                          ),
+                          SizedBox(width: 3),
+                        // botão balcao
+                        if (mapaController.vendaBalcao.value)
+                          Column(
+                            children: [
+                              ElevatedButton(
+                                onPressed: () async {
+                                  vendaBalcao();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  shape: CircleBorder(),
+                                  padding: EdgeInsets.all(20),
+                                  iconColor: colorScheme.secondary,
+                                  backgroundColor: !vendaBalcaoClicado ? colorScheme.surfaceDim : colorScheme.tertiary,
+                                  elevation:8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
+                                  shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
+                                ),
+                                child: Image.asset(
+                                  'assets/retirada_balcao_icone.png',
+                                  width: MediaQuery.of(context).size.width * 0.070,
+                                  height: MediaQuery.of(context).size.width * 0.070,
+                                  color: colorScheme.onTertiary,
+                                ),
+                                /*  Icon(
+                                  Icons.room_service,
+                                  size: 30,
+                                  color: colorScheme.onTertiary,
+                                ), */
+                              ),
+                              Text(
+                                'Balcão',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: !vendaBalcaoClicado ? colorScheme.surfaceDim : colorScheme.tertiary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              ],
                           ),
                       ],
                     ),
@@ -2532,21 +2807,21 @@ class MapaPageState extends State<MapaPage> {
               ),
             ),
             // body
-            if(logicaPorComanda || logicaPorMesa)
-            if (mostrarMesas)
-              _buildGridMesas(itensParaMostrar, true)
-            else
-              _buildGridComandas(itensParaMostrar, false),
+            // mapa mesa 
+            if(mapaController.vendaMesa.value && vendaMesaClicado)
+            _buildGridMesas(itensParaMostrar, true),
 
-            if(logicaPorComandaNaMesa && modoCarrossel)
-              _buildGridComandaNaMesa(mapaController.abertasMesas.toList(), mapaController.abertasComandas.toList()),
+            // mapa comanda 
+            if(mapaController.vendaComanda.value && vendaComandaClicado)
+            _buildGridComandas(itensParaMostrar, false),
 
-            if(logicaPorComandaNaMesa && !modoCarrossel)
-              _buildGridComandas(mapaController.abertasComandas.toList(), false)
-              /* if (mostrarMesas)
-                _buildGridMesas(itensParaMostrar, true)
-              else
-                _buildGridComandas(itensParaMostrar, false), */
+            // mapa comanda na mesa 
+            if(mapaController.vendaComandaNaMesa.value && vendaComandaNaMesaClicado && modoCarrossel)
+            _buildGridComandaNaMesa(mapaController.abertasMesas.toList(), mapaController.abertasComandas.toList()),
+
+            // mapa balcao (corrigido duplicidade)
+            if(mapaController.vendaBalcao.value && vendaBalcaoClicado)
+            _buildGridBalcao(mapaController.balcao.toList())
             ],
           ),
         ],
