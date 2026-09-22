@@ -2332,6 +2332,16 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                 ? "ANOTA AI"
                 : "";
 
+            // Pega o conteúdo que estiver entre # e #
+            final match = RegExp(r'#([^#]*)#').firstMatch(integrador);
+
+            final codigoIntegrador = match?.group(1)?.trim() ?? '';
+
+            // Adiciona o código somente se existir
+            if (codigoIntegrador.isNotEmpty && nomeIntegrador.isNotEmpty) {
+              nomeIntegrador = '$nomeIntegrador - $codigoIntegrador';
+            }
+
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
@@ -2569,6 +2579,16 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                 : integrador.contains("ANOTA AI")
                 ? "ANOTA AI"
                 : "";
+
+            // Pega o conteúdo que estiver entre # e #
+            final match = RegExp(r'#([^#]*)#').firstMatch(integrador);
+
+            final codigoIntegrador = match?.group(1)?.trim() ?? '';
+
+            // Adiciona o código somente se existir
+            if (codigoIntegrador.isNotEmpty && nomeIntegrador.isNotEmpty) {
+              nomeIntegrador = '$nomeIntegrador - $codigoIntegrador';
+            }
 
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
