@@ -36,6 +36,7 @@ class PagamentoPageState extends State<PagamentoPage>
   String numeropedido = Get.arguments['numeropedido'];
   String comandaDoPedido = Get.arguments['comanda'];
   String mesaDoPedido = Get.arguments['mesa'];
+  String nomeClienteDoPedido = Get.arguments['nome'];
   String numeroTurnoCaixa = Get.arguments['numeroTurnoCaixa'];
   String statusCaixa = Get.arguments['statusCaixa'];
   String numeroCaixa = Get.arguments['numeroCaixa'];
@@ -351,6 +352,9 @@ class PagamentoPageState extends State<PagamentoPage>
     }
     if (mesaDoPedido == "") {
       mesaDoPedido = "0";
+    }
+    if(nomeClienteDoPedido == ""){
+      nomeClienteDoPedido = "0";
     }
   }
 
@@ -2990,16 +2994,18 @@ class PagamentoPageState extends State<PagamentoPage>
                                 ),
                               ),
                               Text(
-                               (comandaDoPedido == "0")
+                               (comandaDoPedido == "0" && mesaDoPedido != "0")
                                   ? 'MESA: $mesaDoPedido'
-                                  : (mesaDoPedido == "0")
+                                  : (mesaDoPedido == "0" && comandaDoPedido != "0")
                                   ? 'COMANDA: $comandaDoPedido'
-                                  : comandaDoPedido != "0" && mesaDoPedido != "0"
+                                  : (comandaDoPedido != "0" && mesaDoPedido != "0")
                                   ? 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
-                                  : comandaDoPedido != "0"
+                                  : (comandaDoPedido != "0")
                                   ? 'COMANDA: $comandaDoPedido'
-                                  : mesaDoPedido != "0"
+                                  : (mesaDoPedido != "0")
                                   ? 'MESA: $mesaDoPedido'
+                                  : (nomeClienteDoPedido != "0")
+                                  ? 'NOME: $nomeClienteDoPedido'
                                   : '',
                                 style: const TextStyle(
                                   color: Colors.white,

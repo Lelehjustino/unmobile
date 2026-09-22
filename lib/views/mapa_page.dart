@@ -1182,7 +1182,7 @@ class MapaPageState extends State<MapaPage> {
               : "";
 
           // informacoes pagamento 
-          final numeroPedidoBalcao = "";
+          final numeroPedidoBalcao = item['numeropedido_FK'].toString();
 
           return InkWell(
             onTap: () {

@@ -34,6 +34,7 @@ class ContaPageState extends State<ContaPage>
   String comandaDoPedido = Get.arguments['comanda'];
   String mesaDoPedido = Get.arguments['mesa'];
   String rotaAnterior = Get.arguments['page'];
+  String nomeClienteDoPedido = Get.arguments['nome'];
   String comandaDoPedidoParaInsert = "";
   String mesaDoPedidoParaInsert = "";
   String rotaAnteriorPage = "";
@@ -233,6 +234,9 @@ class ContaPageState extends State<ContaPage>
     }
     if (mesaDoPedido == "") {
       mesaDoPedido = "0";
+    }
+    if(nomeClienteDoPedido == ""){
+      nomeClienteDoPedido = "0";
     }
   }
 
@@ -963,6 +967,7 @@ class ContaPageState extends State<ContaPage>
             'numeroCaixa': funcoesController.numeroCaixa.value,
             'nomeCaixa': funcoesController.nomeCaixa.value,
             'pageAnterior': rotaAnteriorPage,
+            'nome': nomeClienteDoPedido
           },
         );
       } else {
@@ -1026,6 +1031,7 @@ class ContaPageState extends State<ContaPage>
                                 'numeroCaixa': funcoesController.numeroCaixa.value,
                                 'nomeCaixa': funcoesController.nomeCaixa.value,
                                 'pageAnterior': rotaAnteriorPage,
+                                'nome': nomeClienteDoPedido
                               },
                             );
                           },
@@ -1636,17 +1642,18 @@ class ContaPageState extends State<ContaPage>
                               ),
                               Flexible(
                                 child: Text(
-                                  (comandaDoPedido == "0")
+                                  (comandaDoPedido == "0" && mesaDoPedido != "0")
                                       ? 'MESA: $mesaDoPedido'
-                                      : (mesaDoPedido == "0")
+                                      : (mesaDoPedido == "0" && comandaDoPedido != "0")
                                       ? 'COMANDA: $comandaDoPedido'
-                                      : comandaDoPedido != "0" &&
-                                            mesaDoPedido != "0"
+                                      : (comandaDoPedido != "0" && mesaDoPedido != "0")
                                       ? 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
-                                      : comandaDoPedido != "0"
+                                      : (comandaDoPedido != "0")
                                       ? 'COMANDA: $comandaDoPedido'
-                                      : mesaDoPedido != "0"
+                                      : (mesaDoPedido != "0")
                                       ? 'MESA: $mesaDoPedido'
+                                      : (nomeClienteDoPedido != "0")
+                                      ? 'NOME: $nomeClienteDoPedido'
                                       : '',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

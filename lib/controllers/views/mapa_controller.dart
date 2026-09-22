@@ -81,8 +81,12 @@ class MapaController extends GetxController {
     try {
       await Future.delayed(Duration.zero);
 
-      String dadosJson = await Connection().select(
+      /* String dadosJson = await Connection().select(
         "SELECT numerodelivery, atendimento, statuspedido, statusentrega, nomecliente, valorliquidopedido, balcao, datahoraabertura, integrador FROM delivery WHERE (statuspedido='1' OR statuspedido='2') AND balcao='1' ORDER BY numerodelivery",
+      ); */
+
+      String dadosJson = await Connection().select(
+        "SELECT numeropedido_FK, numerodelivery, atendimento, statuspedido, statusentrega, nomecliente, valorliquidopedido, balcao, datahoraabertura, integrador FROM delivery WHERE (statuspedido='1' OR statuspedido='2') AND balcao='1' ORDER BY numerodelivery",
       );
 
       final List<dynamic> lista = jsonDecode(dadosJson);
