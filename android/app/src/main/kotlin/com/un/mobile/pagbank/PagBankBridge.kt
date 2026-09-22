@@ -117,8 +117,8 @@ class PagBankBridge {
         private fun montarResposta(tr: PlugPagTransactionResult): Map<String, Any?> {
             val errorCode = tr.errorCode ?: ""
 
-            // "0000" = pagamento aprovado (SmartCoffee)
-            val aprovado = errorCode == "0000"
+            // Resultado oficial da transação
+            val aprovado = tr.result == PlugPag.RET_OK
 
             val status = when {
                 aprovado -> "APROVADO"
@@ -265,7 +265,7 @@ class PagBankBridge {
                                 val pm = context.packageManager
                                 val erro = verificarRequisitos(pp, pm)
 
-                                val disponivel = erro == null && !pp.isServiceBusy
+                                val disponivel = erro == null && !pp.isServiceBusy()
                                 responderUiThread(result) { result.success(disponivel) }
                             } catch (e: Exception) {
                                 println("PAGBANK: verificarSmartPOS erro: ${e.message}")
@@ -330,7 +330,7 @@ class PagBankBridge {
                         thread {
                             try {
                                 val pp = getPlugPag(context)
-                                val busy = pp.isServiceBusy
+                                val busy = pp.isServiceBusy()
                                 responderUiThread(result) { result.success(busy) }
                             } catch (e: Exception) {
                                 println("PAGBANK: verificarServicoBusy erro: ${e.message}")
