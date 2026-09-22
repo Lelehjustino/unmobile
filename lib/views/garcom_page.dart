@@ -1174,7 +1174,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
         comandaController.text = numeroComandaEmUso;
         mesaController.text = numeroMesaEmUso;
-        nomeClienteController.text = carrinhoController.nomeCliente.value;
+        nomeClienteController.text = carrinhoController.nomeClienteBalcao.value;
 
         comandaController.addListener(_onComandaChanged);
         mesaController.addListener(_onMesaChanged);
@@ -1292,7 +1292,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       }
 
       if(nomeCliente == ""){
-        nomeCliente = carrinhoController.nomeCliente.value;
+        nomeCliente = carrinhoController.clienteNome.value;
       }
 
       carrinhoController.clienteId.value = clienteId;
@@ -1369,6 +1369,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         String comandaDoPedido = carrinhoController.numeroComanda.value;
         String mesaDoPedido = carrinhoController.numeroMesa.value;
         String numeropedido = "";
+        String nomeCliente = carrinhoController.nomeClienteBalcao.value;
 
         String clienteId = carrinhoController.clienteId.value;
         String clienteNome = carrinhoController.clienteNome.value;
@@ -1411,6 +1412,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         telefoneClienteDialogoController.text = clienteTelefone;
         cpfClienteDialogoController.text = clienteCpf;
         dataNascimentoClienteDialogoController.text = clienteDataNascimento;
+
+        nomeClienteController.text = carrinhoController.nomeClienteBalcao.value;
 
         // await buscarTipoPedido();
 
@@ -2710,7 +2713,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
             comandaController.text = numeroComandaEmUso;
             mesaController.text = numeroMesaEmUso;
-            nomeClienteController.text = carrinhoController.nomeCliente.value;
+            nomeClienteController.text = carrinhoController.nomeClienteBalcao.value;
 
             comandaController.addListener(_onComandaChanged);
             mesaController.addListener(_onMesaChanged);
@@ -6313,12 +6316,12 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
   // Funcao para logica de retirar balcao 
   Future <void> _fluxoRetirarBalcao () async {
     if (nomeClienteController.text.isNotEmpty){
-      carrinhoController.nomeCliente.value = nomeClienteController.text;
+      carrinhoController.nomeClienteBalcao.value = nomeClienteController.text;
       clienteValido = true;
       _irParaCardapio();
       return;
     } else {
-      carrinhoController.nomeCliente.value = "";
+      carrinhoController.nomeClienteBalcao.value = "";
       clienteValido = false;
       // mostrar mensagem de erro 
       return;

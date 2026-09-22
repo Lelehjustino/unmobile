@@ -1181,6 +1181,9 @@ class MapaPageState extends State<MapaPage> {
               ? "ANOTA AI"
               : "";
 
+          // informacoes pagamento 
+          final numeroPedidoBalcao = "";
+
           return InkWell(
             onTap: () {
               // Coloque aqui a navegação do delivery
@@ -1193,6 +1196,16 @@ class MapaPageState extends State<MapaPage> {
               //     'page': 'delivery',
               //   },
               // );
+              Get.to(
+                () => ContaPage(),
+                arguments: {
+                  'numeropedido': numeroPedidoBalcao,
+                  'comanda': '0',
+                  'mesa': '0',
+                  'page': "mapa",
+                  'nome': nomeCliente
+                },
+              );
             },
             child: Container(
               decoration: BoxDecoration(

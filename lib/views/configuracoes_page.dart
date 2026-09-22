@@ -244,7 +244,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadRetirarBalcao();
     _loadVendas();
 
-   arrumarListaVendas();
+   // arrumarListaVendas();
   }
 
   @override
@@ -2600,7 +2600,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                        if(funcoesController.vendaBalcao.value)
+                        // if(funcoesController.vendaBalcao.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
