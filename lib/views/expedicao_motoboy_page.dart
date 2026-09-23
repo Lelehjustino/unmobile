@@ -2319,28 +2319,18 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
 
             // se tiver vazio n escreve gourmet 
             String nomeIntegrador = integrador.contains("PEDEAQUI")
-                ? "PEDEAQUI"
+                ? integrador
                 : integrador.contains("IFOOD")
-                ? "IFOOD"
+                ? integrador
                 : integrador.contains("P10") || integrador.contains("P 10")
-                ? "P10"
+                ? integrador
                 : integrador.contains("NEEMO")
-                ? "NEEMO"
+                ? integrador
                 : integrador.contains("99FOOD")
-                ? "99FOOD"
+                ? integrador
                 : integrador.contains("ANOTA AI")
-                ? "ANOTA AI"
+                ? integrador
                 : "";
-
-            // Pega o conteúdo que estiver entre # e #
-            final match = RegExp(r'#([^#]*)#').firstMatch(integrador);
-
-            final codigoIntegrador = match?.group(1)?.trim() ?? '';
-
-            // Adiciona o código somente se existir
-            if (codigoIntegrador.isNotEmpty && nomeIntegrador.isNotEmpty) {
-              nomeIntegrador = '$nomeIntegrador - $codigoIntegrador';
-            }
 
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -2437,7 +2427,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: fontPadraoLetras * 0.6,
+                            fontSize: fontPadraoLetras * 0.9,
                             fontWeight: FontWeight.w600,
                             color: corTexto,
                           ),
@@ -2587,7 +2577,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
 
             // Adiciona o código somente se existir
             if (codigoIntegrador.isNotEmpty && nomeIntegrador.isNotEmpty) {
-              nomeIntegrador = '$nomeIntegrador - $codigoIntegrador';
+              nomeIntegrador = '$nomeIntegrador #$codigoIntegrador#';
             }
 
             return GestureDetector(
@@ -2685,7 +2675,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: fontPadraoLetras * 0.6,
+                            fontSize: fontPadraoLetras * 0.9,
                             fontWeight: FontWeight.w600,
                             color: corTexto,
                           ),

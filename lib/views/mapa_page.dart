@@ -631,6 +631,7 @@ class MapaPageState extends State<MapaPage> {
                                 children: [
                                   Text(
                                     'Nenhuma mesa',
+                                    textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: Theme.of(context).colorScheme.surfaceDim,
                                       fontSize: 13,
@@ -723,6 +724,7 @@ class MapaPageState extends State<MapaPage> {
                                                     color: textColor,
                                                   ),
                                                 ),
+                                                if(comandasDaMesaItem.length != 0)
                                                 Text(
                                                   "Qtd: ${comandasDaMesaItem.length}",
                                                   maxLines: 1,
@@ -730,6 +732,20 @@ class MapaPageState extends State<MapaPage> {
                                                   style: TextStyle(
                                                     fontSize: cons.maxWidth * 0.18,
                                                     color: textColor,
+                                                  ),
+                                                ),
+
+                                                if(comandasDaMesaItem.length == 0)
+                                                Flexible(
+                                                  child: Text(
+                                                    "Sem comanda",
+                                                    textAlign: TextAlign.center,
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: cons.maxWidth * 0.18,
+                                                      color: textColor,
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -764,7 +780,19 @@ class MapaPageState extends State<MapaPage> {
                       child: mesaSelecionada == null
                           // NAO TEM MESA SELECIONADA
                           // mostrar todas as comandas abertas
-                          ? LayoutBuilder(
+                          ?  mapaController.abertasComandas.isEmpty
+                          ?  
+                          Center(
+                            child: Text(
+                              'Nenhuma comanda',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.surfaceDim,
+                                fontSize: 13,
+                              ),
+                            ),
+                          )
+                          : LayoutBuilder(
                               builder: (context, constraints) {
                                 const double itemMinWidth = 110.0;
                                 final int cols = (constraints.maxWidth / itemMinWidth)
@@ -906,6 +934,7 @@ class MapaPageState extends State<MapaPage> {
                                     children: [
                                       Text(
                                         'Nenhuma comanda nesta mesa',
+                                        textAlign: TextAlign.center,
                                         style: TextStyle(
                                           color: Theme.of(context).colorScheme.surfaceDim,
                                           fontSize: 15,
@@ -1106,7 +1135,20 @@ class MapaPageState extends State<MapaPage> {
   }
 
   Widget _buildGridBalcao(List<dynamic> items) {
-    return Expanded(
+    return items.isEmpty ?
+      Expanded(
+        child: Center(
+          child: Text(
+            'Nenhum pedido balcão',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.surfaceDim,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      )
+    : Expanded(
       child: GridView.builder(
         padding: EdgeInsets.all(8),
         itemCount: items.length,
@@ -1114,7 +1156,7 @@ class MapaPageState extends State<MapaPage> {
           maxCrossAxisExtent: 165,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          childAspectRatio: 0.85,
+          childAspectRatio: 0.70,
         ),
         itemBuilder: (context, index) {
           final item = items[index];
@@ -1186,17 +1228,8 @@ class MapaPageState extends State<MapaPage> {
 
           return InkWell(
             onTap: () {
-              // Coloque aqui a navegação do delivery
-              // Exemplo:
-              //
-              // Get.to(
-              //   () => GarcomPage(),
-              //   arguments: {
-              //     'numerodelivery': numeroDelivery,
-              //     'page': 'delivery',
-              //   },
-              // );
-              Get.to(
+              // Coloque aqui a navegação do balcao
+              /* Get.to(
                 () => ContaPage(),
                 arguments: {
                   'numeropedido': numeroPedidoBalcao,
@@ -1205,7 +1238,7 @@ class MapaPageState extends State<MapaPage> {
                   'page': "mapa",
                   'nome': nomeCliente
                 },
-              );
+              ); */
             },
             child: Container(
               decoration: BoxDecoration(
@@ -1328,7 +1361,20 @@ class MapaPageState extends State<MapaPage> {
 
   // Grid de mesas
   Widget _buildGridMesas(List<dynamic> items, bool isMesa) {
-    return Expanded(
+    return items.isEmpty ?
+      Expanded(
+        child: Center(
+          child: Text(
+            'Nenhuma mesa',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.surfaceDim,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      )
+    : Expanded(
       child: GridView.builder(
         padding: EdgeInsets.all(8),
         itemCount: items.length,
@@ -1883,7 +1929,20 @@ class MapaPageState extends State<MapaPage> {
 
   // Build Grid comandas
   Widget _buildGridComandas(List<dynamic> items, bool isMesa) {
-    return Expanded(
+    return items.isEmpty ?
+      Expanded(
+        child: Center(
+          child: Text(
+            'Nenhuma comanda',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.surfaceDim,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      )
+    : Expanded(
       child: GridView.builder(
         padding: EdgeInsets.all(8),
         itemCount: items.length,
@@ -2184,7 +2243,7 @@ class MapaPageState extends State<MapaPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 30, color: Colors.white),
+                Icon(icon, size: 24, color: Colors.white),
                 SizedBox(height: 4),
                 Text(
                   label,
@@ -2206,6 +2265,7 @@ class MapaPageState extends State<MapaPage> {
 
     List<dynamic> itensParaMostrarMesa = [];
     List<dynamic> itensParaMostrarComanda = [];
+    List<dynamic> itensParaMostrarBalcao = [];
 
     if((vendaComandaClicado && mapaController.vendaComanda.value) || (vendaMesaClicado && mapaController.vendaMesa.value)){
       // 1. Determina qual lista de DADOS usar (mesas ou comandas)
@@ -2292,6 +2352,17 @@ class MapaPageState extends State<MapaPage> {
       }).toList();
     }
 
+    if(vendaBalcaoClicado && mapaController.vendaBalcao.value){
+      itensParaMostrarBalcao = mapaController.balcao.toList();
+
+      // Busca na barra de pesquisa
+      if (comandaController.text.isNotEmpty) {
+        itensParaMostrarBalcao = itensParaMostrarBalcao.where((item) {
+          return item['numerodelivery'].toString().contains(comandaController.text);
+        }).toList();
+      }
+    }
+    final orientation = MediaQuery.of(context).orientation;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       drawer: SideNav(),
@@ -2501,7 +2572,9 @@ class MapaPageState extends State<MapaPage> {
                                 });
                               },
                               decoration: InputDecoration(
-                                hintText: mostrarMesas
+                                hintText: vendaBalcaoClicado ? 
+                                'Busque por balcão'
+                                : mostrarMesas
                                     ? 'Busque por mesas...'
                                     : 'Busque por comandas...',
                                 filled: true,
@@ -2551,7 +2624,7 @@ class MapaPageState extends State<MapaPage> {
                                   },
                                   style: ElevatedButton.styleFrom(
                                     shape: CircleBorder(),
-                                    padding: EdgeInsets.all(20),
+                                    padding: EdgeInsets.all(18),
                                     backgroundColor: colorScheme.shadow,
                                     elevation: 8,
                                     shadowColor: Colors.black,
@@ -2606,14 +2679,14 @@ class MapaPageState extends State<MapaPage> {
                               },
                               style: ElevatedButton.styleFrom(
                                 shape: CircleBorder(),
-                                padding: EdgeInsets.all(20), // tamanho do círculo
+                                padding: EdgeInsets.all(18), // tamanho do círculo
                                 backgroundColor: colorScheme.scrim,
                                 elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
                                 shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
                               ),
                               child: Icon(
                                 mostrarAbertas ? Icons.lock_open : mostrarFechadas ? Icons.lock : Icons.list,
-                                size: 30,
+                                size: 24,
                                 color: colorScheme.onPrimary,
                               ),
                             ),
@@ -2646,7 +2719,7 @@ class MapaPageState extends State<MapaPage> {
                               },
                               style: ElevatedButton.styleFrom(
                                 shape: CircleBorder(),
-                                padding: EdgeInsets.all(20), // tamanho do círculo
+                                padding: EdgeInsets.all(18), // tamanho do círculo
                                 backgroundColor: colorScheme.primary,
                                 elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
                                 shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
@@ -2668,7 +2741,7 @@ class MapaPageState extends State<MapaPage> {
                           ],
                         ), */
                         SizedBox(width: 3),
-                        if(mapaController.vendaComandaNaMesa.value)
+                        if(mapaController.vendaComandaNaMesa.value && garcomController.vendaComandaNaMesa.value)
                         Column(
                           children: [
                             ElevatedButton(
@@ -2677,7 +2750,7 @@ class MapaPageState extends State<MapaPage> {
                               },
                               style: ElevatedButton.styleFrom(
                                 shape: CircleBorder(),
-                                padding: EdgeInsets.all(20), // tamanho do círculo
+                                padding: EdgeInsets.all(18), // tamanho do círculo
                                 backgroundColor: !vendaComandaNaMesaClicado ? colorScheme.surfaceDim : colorScheme.primary,
                                 elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
                                 shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
@@ -2701,7 +2774,7 @@ class MapaPageState extends State<MapaPage> {
                         ),
                         SizedBox(width: 3),
                         // botão mesa
-                        if (mapaController.vendaMesa.value)
+                        if (mapaController.vendaMesa.value && garcomController.vendaComandaNaMesa.value)
                           Column(
                             children: [
                               ElevatedButton(
@@ -2718,14 +2791,14 @@ class MapaPageState extends State<MapaPage> {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   shape: CircleBorder(),
-                                  padding: EdgeInsets.all(20), // tamanho do círculo
+                                  padding: EdgeInsets.all(18), // tamanho do círculo
                                   backgroundColor: mostrarMesas ? colorScheme.tertiary : colorScheme.surfaceDim,
                                   elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
                                   shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
                                 ),
                                 child: Icon(
                                   Icons.table_restaurant,
-                                  size: 30,
+                                  size: 24,
                                   color: colorScheme.onPrimary,
                                 ),
                               ),
@@ -2742,7 +2815,7 @@ class MapaPageState extends State<MapaPage> {
 
                         SizedBox(width: 3),
                         // botão comanda
-                        if (mapaController.vendaComanda.value)
+                        if (mapaController.vendaComanda.value && funcoesController.vendaComanda.value)
                           Column(
                             children: [
                               ElevatedButton(
@@ -2752,7 +2825,7 @@ class MapaPageState extends State<MapaPage> {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   shape: CircleBorder(),
-                                  padding: EdgeInsets.all(20),
+                                  padding: EdgeInsets.all(18),
                                   iconColor: colorScheme.secondary,
                                   backgroundColor: !vendaComandaClicado ? colorScheme.surfaceDim : colorScheme.primaryContainer,
                                   elevation:8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
@@ -2760,7 +2833,7 @@ class MapaPageState extends State<MapaPage> {
                                 ),
                                 child: Icon(
                                   Icons.description,
-                                  size: 30,
+                                  size: 24,
                                   color: colorScheme.onTertiary,
                                 ),
                               ),
@@ -2785,7 +2858,7 @@ class MapaPageState extends State<MapaPage> {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   shape: CircleBorder(),
-                                  padding: EdgeInsets.all(20),
+                                  padding: EdgeInsets.all(18),
                                   iconColor: colorScheme.secondary,
                                   backgroundColor: !vendaBalcaoClicado ? colorScheme.surfaceDim : colorScheme.tertiary,
                                   elevation:8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
@@ -2793,13 +2866,13 @@ class MapaPageState extends State<MapaPage> {
                                 ),
                                 child: Image.asset(
                                   'assets/retirada_balcao_icone.png',
-                                  width: MediaQuery.of(context).size.width * 0.070,
-                                  height: MediaQuery.of(context).size.width * 0.070,
+                                  width: 24,
+                                  height: 24,
                                   color: colorScheme.onTertiary,
                                 ),
                                 /*  Icon(
                                   Icons.room_service,
-                                  size: 30,
+                                  size: 24,
                                   color: colorScheme.onTertiary,
                                 ), */
                               ),
@@ -2834,7 +2907,7 @@ class MapaPageState extends State<MapaPage> {
 
             // mapa balcao (corrigido duplicidade)
             if(mapaController.vendaBalcao.value && vendaBalcaoClicado)
-            _buildGridBalcao(mapaController.balcao.toList())
+            _buildGridBalcao(itensParaMostrarBalcao)
             ],
           ),
         ],
@@ -2883,7 +2956,7 @@ class MapaPageState extends State<MapaPage> {
                                 children: [
                                   Icon(
                                     Icons.login,
-                                    size: 30,
+                                    size: 24,
                                     color: colorScheme.onPrimary,
                                   ),
                                   SizedBox(height: 4),
@@ -2949,7 +3022,7 @@ class MapaPageState extends State<MapaPage> {
                                 children: [
                                   Icon(
                                     Icons.logout,
-                                    size: 30,
+                                    size: 24,
                                     color: Colors.white,
                                   ),
                                   SizedBox(height: 4),
@@ -3015,7 +3088,7 @@ class MapaPageState extends State<MapaPage> {
                                   Icon(
                                     // Icons.table_restaurant,
                                     Icons.note_add_sharp,
-                                    size: 30,
+                                    size: 24,
                                     color: Colors.white,
                                   ),
                                   SizedBox(height: 4),
@@ -3082,7 +3155,7 @@ class MapaPageState extends State<MapaPage> {
                                   Icon(
                                     // Icons.table_restaurant,
                                     Icons.person,
-                                    size: 30,
+                                    size: 24,
                                     color: Colors.white,
                                   ),
                                   SizedBox(height: 4),
@@ -3150,7 +3223,7 @@ class MapaPageState extends State<MapaPage> {
                                   Icon(
                                     // Icons.table_restaurant,
                                     Icons.map,
-                                    size: 30,
+                                    size: 24,
                                     color: Colors.white,
                                   ),
                                   SizedBox(height: 4),
@@ -3196,7 +3269,7 @@ class MapaPageState extends State<MapaPage> {
                                   Icon(
                                     Icons.table_restaurant,
                                     // Icons.person,
-                                    size: 30,
+                                    size: 24,
                                     color: Colors.white,
                                   ),
                                   SizedBox(height: 4),

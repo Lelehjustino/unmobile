@@ -9,8 +9,7 @@ import 'package:flutter/services.dart';
 /// Baseado no SmartCoffee oficial (versão 1.35.0 do Wrapper).
 class PagBankSmartPOS {
   static const MethodChannel _channel = MethodChannel('unmobile/pagbank');
-  static const EventChannel _eventosChannel =
-      EventChannel('unmobile/pagbank/eventos');
+  static const EventChannel _eventosChannel = EventChannel('unmobile/pagbank/eventos');
 
   /// Controle de concorrência no lado Flutter.
   static bool _processando = false;
@@ -23,16 +22,12 @@ class PagBankSmartPOS {
   static Stream<Map<String, dynamic>>? _eventosStream;
 
   static Stream<Map<String, dynamic>> get eventos {
-    _eventosStream ??= _eventosChannel
-        .receiveBroadcastStream()
-        .map((event) => Map<String, dynamic>.from(event as Map));
+    _eventosStream ??= _eventosChannel.receiveBroadcastStream().map((event) => Map<String, dynamic>.from(event as Map));
     return _eventosStream!;
   }
 
-  // ═══════════════════════════════════════════════════════════════
   // PAGAMENTO
   // SmartCoffee: doPay() → doPayment(PlugPagPaymentData) bloqueante
-  // ═══════════════════════════════════════════════════════════════
 
   /// Realiza um pagamento na SmartPOS.
   ///
@@ -88,10 +83,8 @@ class PagBankSmartPOS {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
   // VERIFICAÇÃO
   // SmartCoffee: hasRequirements + isServiceBusy
-  // ═══════════════════════════════════════════════════════════════
 
   /// Verifica se a SmartPOS está disponível e pronta.
   /// Checa: PlugPagService instalado + isAuthenticated + !isServiceBusy
@@ -135,10 +128,8 @@ class PagBankSmartPOS {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
   // ATIVAÇÃO
   // SmartCoffee: startOnBoarding()
-  // ═══════════════════════════════════════════════════════════════
 
   /// Inicia o processo de ativação/onboarding do terminal.
   /// Só deve ser chamado se isAuthenticated() retornar false.
@@ -154,10 +145,8 @@ class PagBankSmartPOS {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
   // CANCELAMENTO
   // SmartCoffee: abort()
-  // ═══════════════════════════════════════════════════════════════
 
   /// Cancela uma transação em andamento.
   /// SmartCoffee: "Após executar o abort aguardar o retorno da função que você quer executar"
@@ -184,10 +173,8 @@ class PagBankSmartPOS {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
   // ÚLTIMA TRANSAÇÃO
   // SmartCoffee OtherViewModel: getLastApprovedTransaction()
-  // ═══════════════════════════════════════════════════════════════
 
   /// Recupera os dados da última transação aprovada.
   /// Útil quando a comunicação Flutter-Kotlin é perdida após aprovação.
@@ -206,10 +193,8 @@ class PagBankSmartPOS {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
   // ESTORNO
   // SmartCoffee OtherViewModel: voidPayment(PlugPagVoidData)
-  // ═══════════════════════════════════════════════════════════════
 
   /// Realiza estorno de uma transação aprovada.
   ///
@@ -256,10 +241,8 @@ class PagBankSmartPOS {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
   // IMPRESSÃO
   // SmartCoffee OtherViewModel: reprintStablishmentReceipt / reprintCustomerReceipt
-  // ═══════════════════════════════════════════════════════════════
 
   /// Reimprime a via do estabelecimento da última transação.
   static Future<Map<String, dynamic>> reimprimirViaEstabelecimento() async {

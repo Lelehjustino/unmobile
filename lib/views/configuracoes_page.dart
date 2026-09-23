@@ -242,9 +242,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadFocarCadastroClienteSalvo();
     _loadModoCarrinhoComandasSalvo();
     _loadRetirarBalcao();
-    _loadVendas();
-
-   // arrumarListaVendas();
+    // _loadVendas();
+    _loadVendas().then((_) {
+      arrumarListaVendas();
+    });
   }
 
   @override
@@ -261,27 +262,32 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {}
 
-  arrumarListaVendas(){
+  arrumarListaVendas() {
+    bool changed = false;
     if(!funcoesController.vendaBalcao.value){
       // venda balcao 
       vendas.remove('Venda Balcão');
-      vendasSelecionados.remove('0');
+      if (vendasSelecionados.remove('0')) changed = true;
     }
     if (!funcoesController.vendaComanda.value){
       // venda comanda
       vendas.remove('Venda Comanda');
-      vendasSelecionados.remove('1');
+      if (vendasSelecionados.remove('1')) changed = true;
     }
     if (!garcomController.vendaComandaNaMesa.value){
       // venda comanda na mesa 
       vendas.remove('Venda Comanda Na Mesa');
-      vendasSelecionados.remove('2');
+      if (vendasSelecionados.remove('2')) changed = true;
     }
     if (!funcoesController.vendaMesa.value){
       // venda mesa 
       vendas.remove('Venda Mesa');
-      vendasSelecionados.remove('3');
+      if (vendasSelecionados.remove('3')) changed = true;
     } 
+    // Só salva novamente as configurações se alguma coisa realmente foi removida.
+    if (changed) {
+      _saveVendas(vendasSelecionados);
+    }
   }
 
   navegar() async {
@@ -2600,7 +2606,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                        // if(funcoesController.vendaBalcao.value)
+                        if(funcoesController.vendaBalcao.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(

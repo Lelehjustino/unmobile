@@ -76,9 +76,6 @@ void main() async {
   
   // Imprime e inicializa o MobileId
   final mobileId = await MobileIdService.getMobileId();
-  print('======================== MOBILE ID ========================');
-  print('ID: $mobileId');
-  print('===========================================================');
   
   ServicoNotificacao.configurarAudio();
 
