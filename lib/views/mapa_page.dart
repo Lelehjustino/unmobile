@@ -48,6 +48,7 @@ class MapaPageState extends State<MapaPage> {
   String? selectedModo;
 
   late Timer _timer;
+  late Timer _timerAtualizacao;
   String _horaAtual = '';
   String nomeEmpresa = '';
 
@@ -121,6 +122,10 @@ class MapaPageState extends State<MapaPage> {
     _loadNomeEmpresa();
     _loadNumeroLicenca();
     carregar();
+    _timerAtualizacao = Timer.periodic(
+      Duration(seconds: 15),
+      (_) => GarcomController().carregarTudo(),
+    );
   }
 
   void carregar() async {
@@ -543,6 +548,7 @@ class MapaPageState extends State<MapaPage> {
     barraBusca.dispose();
     // Para fazer requisições em determinado tempo (3/3)
     _timerMesas?.cancel();
+    _timerAtualizacao?.cancel();
     super.dispose();
   }
 
@@ -1162,9 +1168,9 @@ class MapaPageState extends State<MapaPage> {
           final item = items[index];
 
           final numeroDelivery = item['numerodelivery']?.toString() ?? '0';
-          final statusPedido =int.tryParse(item['statuspedido']?.toString() ?? '0') ?? 0;
+          final statusPedido = int.tryParse(item['statuspedido']?.toString() ?? '0') ?? 0;
 
-          final statusEntrega =int.tryParse(item['statusentrega']?.toString() ?? '0') ?? 0;
+          final statusEntrega = int.tryParse(item['statusentrega']?.toString() ?? '0') ?? 0;
 
           final nomeCliente =item['nomecliente']?.toString() ?? '';
 
@@ -1185,6 +1191,8 @@ class MapaPageState extends State<MapaPage> {
 
           // Pedido pronto
           final pronto = statusPedido == 2;
+
+          final temConta = item['numeropedido_FK'].toString() != '0' && statusPedido == 2;
 
           // Cor base
           Color corDelivery = Theme.of(context).colorScheme.tertiary;
@@ -1229,7 +1237,7 @@ class MapaPageState extends State<MapaPage> {
           return InkWell(
             onTap: () {
               // Coloque aqui a navegação do balcao
-              /* Get.to(
+              Get.to(
                 () => ContaPage(),
                 arguments: {
                   'numeropedido': numeroPedidoBalcao,
@@ -1238,11 +1246,12 @@ class MapaPageState extends State<MapaPage> {
                   'page': "mapa",
                   'nome': nomeCliente
                 },
-              ); */
+              );
+              // se for para garcom tem que deixar garcomController.retirarBalcaoRota.value;
             },
             child: Container(
               decoration: BoxDecoration(
-                color: corDelivery,
+                color: temConta ? Colors.red : corDelivery,
                 borderRadius: BorderRadius.circular(8),
               ),
               padding: EdgeInsets.all(4),
@@ -1348,6 +1357,16 @@ class MapaPageState extends State<MapaPage> {
                             color: corTexto,
                           ),
                         ),
+
+                      if (temConta)
+                      Text(
+                        'Em conta',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: corTexto,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -1443,6 +1462,7 @@ class MapaPageState extends State<MapaPage> {
                       'numeropedido': item['numeropedido_FK'].toString(),
                       'comanda': "0",
                       'mesa': item['numero'].toString(),
+                      'rota': 'mesa',
                     },
                   );
                 } else if (!aberto) {
@@ -1453,6 +1473,7 @@ class MapaPageState extends State<MapaPage> {
                       'numeropedido': "0",
                       'comanda': "0",
                       'mesa': item['numero'].toString(),
+                      'rota': 'mesa',
                     },
                   );
                 }
@@ -1799,18 +1820,7 @@ class MapaPageState extends State<MapaPage> {
               });
             }
 
-            if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
-              setState(() {
-                Get.to(
-                  () => GarcomPage(),
-                  arguments: {
-                    'numeropedido': comanda['numeropedido_FK'].toString(),
-                    'comanda': numeroComanda,
-                    'mesa': "",
-                  },
-                );
-              });
-            } else if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
+            if (vendaComandaNaMesaClicado && mapaController.vendaComandaNaMesa.value) {
               setState(() {
                 Get.to(
                   () => GarcomPage(),
@@ -1818,6 +1828,19 @@ class MapaPageState extends State<MapaPage> {
                     'numeropedido': comanda['numeropedido_FK'].toString(),
                     'comanda': numeroComanda,
                     'mesa': comanda['numeromesa'].toString(),
+                    'rota': 'comanda',
+                  },
+                );
+              });
+            } else if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
+              setState(() {
+                Get.to(
+                  () => GarcomPage(),
+                  arguments: {
+                    'numeropedido': comanda['numeropedido_FK'].toString(),
+                    'comanda': numeroComanda,
+                    'mesa': "",
+                    'rota': 'comanda',
                   },
                 );
               });
@@ -1860,18 +1883,7 @@ class MapaPageState extends State<MapaPage> {
         double valorLiquido =
             double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
-        if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
-          setState(() {
-            Get.to(
-              () => GarcomPage(),
-              arguments: {
-                'numeropedido': comanda['numeropedido_FK'].toString(),
-                'comanda': numeroComanda,
-                'mesa': "",
-              },
-            );
-          });
-        } else if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
+        if (vendaComandaNaMesaClicado && mapaController.vendaComandaNaMesa.value) {
           setState(() {
             Get.to(
               () => GarcomPage(),
@@ -1879,6 +1891,19 @@ class MapaPageState extends State<MapaPage> {
                 'numeropedido': comanda['numeropedido_FK'].toString(),
                 'comanda': numeroComanda,
                 'mesa': comanda['numeromesa'].toString(),
+                'rota': 'comanda',
+              },
+            );
+          });
+        } else if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
+          setState(() {
+            Get.to(
+              () => GarcomPage(),
+              arguments: {
+                'numeropedido': comanda['numeropedido_FK'].toString(),
+                'comanda': numeroComanda,
+                'mesa': comanda['numeromesa'].toString(),
+                'rota': 'comanda',
               },
             );
           });
@@ -1902,7 +1927,8 @@ class MapaPageState extends State<MapaPage> {
               arguments: {
                 'numeropedido': comanda['numeropedido_FK'].toString(),
                 'comanda': numeroComanda,
-                'mesa': "",
+                'mesa': (vendaComandaNaMesaClicado && mapaController.vendaComandaNaMesa.value) ? (mesaSelecionada ?? "") : "",
+                'rota': 'comanda',
               },
             );
           });
@@ -2594,7 +2620,7 @@ class MapaPageState extends State<MapaPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        /* Column(
+                        Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -2645,7 +2671,7 @@ class MapaPageState extends State<MapaPage> {
                               ),
                             )
                           ],
-                        ), */
+                        ),
                         if(!modoCarrossel)
                         SizedBox(width: 3),
                         // Botao tres funções - abertas - fechadas - todas

@@ -470,8 +470,10 @@ class SideNavState extends State<SideNav> {
       leading: 
       Image.asset(
         'assets/retirada_balcao_icone.png',
-        width: MediaQuery.of(context).size.width * 0.060,
-        height: MediaQuery.of(context).size.width * 0.060,
+        /* width: MediaQuery.of(context).size.width * 0.060,
+        height: MediaQuery.of(context).size.width * 0.060, */
+        width: 25,
+        height: 25,
         color: colorScheme.onSurface,
       ),
       /* Icon(
@@ -731,7 +733,7 @@ class SideNavState extends State<SideNav> {
                   if (footerButtonsController.vendaMesa.value && footerButtonsController.rotaHome.value && funcoesController.vendaMesa.value)
                   vendasMesaPage(currentRoute, colorScheme),
 
-                  if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value && funcoesController.vendaBalcao.value)
+                  // if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value && funcoesController.vendaBalcao.value)
                   retirarBalcao(currentRoute, colorScheme),
             
                   if (footerButtonsController.aparecerCheckIn.value && footerButtonsController.rotaHome.value)

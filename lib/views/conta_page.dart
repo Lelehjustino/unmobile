@@ -131,6 +131,7 @@ class ContaPageState extends State<ContaPage>
   // Variáveis para status do pedido
   bool mesaEmConta = false;
   bool comandaEmConta = false;
+  bool balcaoEmConta = false;
 
   // Variáveis para pessoas
   String pessoasSelect = '1';
@@ -192,6 +193,7 @@ class ContaPageState extends State<ContaPage>
     _loadNumeroGarcom();
     arrumaVazioComanda();
     arrumarVazioMesa();
+    arrumarVazioBalcao();
     zeraValores();
     _loadNomeEmpresa();
     numeroDePessoasInt = 1;
@@ -202,6 +204,7 @@ class ContaPageState extends State<ContaPage>
     buscarValoresDoPedido();
     // buscarPagamento();
     //buscarCaixas();
+    rotaAnteriorFuncao();
   }
 
   rotaAnteriorFuncao() {
@@ -303,6 +306,17 @@ class ContaPageState extends State<ContaPage>
     } else {
       mesaDoPedidoParaInsert = mesaDoPedido;
       buscarMesaEmConta(mesaDoPedidoParaInsert);
+    }
+  }
+
+  // Função para arrumar vazio do balcao
+  void arrumarVazioBalcao() {
+    if (nomeClienteDoPedido == "") {
+      buscarBalcaoConta(numeropedido);
+    } else if (nomeClienteDoPedido != "") {
+      buscarBalcaoConta(numeropedido);
+    } else {
+      buscarBalcaoConta(numeropedido);
     }
   }
 
@@ -576,6 +590,32 @@ class ContaPageState extends State<ContaPage>
     }
   }
 
+  // Buscar se comanda esta em conta
+  Future<void> buscarBalcaoConta(String numeroDelivery) async {
+    try {
+      String dadosJson = await Connection().select("""
+          SELECT statuspedido FROM delivery WHERE numeropedido_FK = '$numeroDelivery';
+        """);
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+
+      if (lista.isNotEmpty) {
+        if (lista[0]['statuspedido'] == '2') {
+          setState(() {
+            balcaoEmConta = true;
+          });
+        } else {
+          setState(() {
+            balcaoEmConta = false;
+          });
+        }
+      }
+    } catch (e) {
+      print("Erro ao buscar status: $e");
+      balcaoEmConta = false;
+    }
+  }
+
   // Função para buscar valores do pedido
   Future<void> buscarValoresDoPedido() async {
     // $numeropedido
@@ -631,6 +671,30 @@ class ContaPageState extends State<ContaPage>
         pessoasSelect = "1";
         totalPorPessoaSelect = "0.00";
       });
+    }
+  }
+
+  // Função para fazer fechar pedido
+  Future<void> updateContaBalcao (String numeroPedido) async {
+    String sql =
+    """
+      UPDATE delivery
+        SET
+          atendimento = '0',
+          statuspedido = '2'
+        WHERE numeropedido_FK = '$numeroPedido'
+        LIMIT 1;
+    """;
+    try {
+      String resultado = await Connection().ipd(sql);
+
+      if (resultado == 'sucesso') {
+        print("Sucesso");
+      } else {
+        print("Erro: $resultado");
+      }
+    } catch (e) {
+      print("Erro: $e");
     }
   }
 
@@ -1653,7 +1717,7 @@ class ContaPageState extends State<ContaPage>
                                       : (mesaDoPedido != "0")
                                       ? 'MESA: $mesaDoPedido'
                                       : (nomeClienteDoPedido != "0")
-                                      ? 'NOME: $nomeClienteDoPedido'
+                                      ? '$nomeClienteDoPedido'
                                       : '',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -2333,10 +2397,11 @@ class ContaPageState extends State<ContaPage>
           ),
 
           // Linha com botoes caso conta nao pedida
-          if (!mesaEmConta && !comandaEmConta)
+          if ((!mesaEmConta && !comandaEmConta))
             Row(
               children: [
                 // Botão pedir conta
+                if(!mesaEmConta && !comandaEmConta && !balcaoEmConta)
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.only(
@@ -2377,20 +2442,34 @@ class ContaPageState extends State<ContaPage>
                               confirmText: 'Sim',
                               onConfirm: () async {
                                 try {
-                                  await inserirConta(
-                                    numeroTradepointSelecionada,
-                                    numeroUsuario, // numero do nome selecionado
-                                    comandaDoPedidoParaInsert,
-                                    mesaDoPedidoParaInsert,
-                                    numeroDePessoasString,
-                                  );
-
+                                  if(nomeClienteDoPedido == 0 ){
+                                    await inserirConta(
+                                      numeroTradepointSelecionada,
+                                      numeroUsuario, // numero do nome selecionado
+                                      comandaDoPedidoParaInsert,
+                                      mesaDoPedidoParaInsert,
+                                      numeroDePessoasString,
+                                    );
+                                  }
+                                  else {
+                                    await inserirConta(
+                                      numeroTradepointSelecionada,
+                                      numeroUsuario, // numero do nome selecionado
+                                      comandaDoPedidoParaInsert,
+                                      mesaDoPedidoParaInsert,
+                                      numeroDePessoasString,
+                                    );
+                                    await updateContaBalcao(numeropedido);
+                                  }
                                   Get.put(CarrinhoController()).limparCarrinho();
 
                                   await zerarAtendimento();
 
-                                  Get.toNamed('/garcom');
-
+                                  if(rotaAnteriorPage == "garcom"){
+                                    Get.toNamed('/garcom');
+                                  }else if(rotaAnteriorPage == "mapa"){
+                                    Get.toNamed('/mapa');
+                                  } 
                                   // GarcomPageState().zerarAtendimento(); // zera o atendimento da pagina de garcom
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(

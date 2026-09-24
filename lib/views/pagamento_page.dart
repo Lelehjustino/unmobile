@@ -1410,10 +1410,11 @@ class PagamentoPageState extends State<PagamentoPage>
             lastsync = '0000-00-00 00:00:00'
           WHERE numeropedido_FK = '$numeroPedido';
       """);
-      
-      // Logica por Mesa
-      if(garcomController.vendaMesa.value == true){
-        queries.add("""
+
+      (comandaDoPedido == "0" && mesaDoPedido != "0")
+        ? 
+          // mesa 
+          queries.add("""
           UPDATE mesas 
             SET 
               atendimento = '0',
@@ -1426,11 +1427,103 @@ class PagamentoPageState extends State<PagamentoPage>
               lastsync = '0000-00-00 00:00:00'
             WHERE numero = '$mesaDoPedidoParaInsert'
             LIMIT 1;
-        """);
-      }
-      
-      // Logica por Comanda
-      if(garcomController.vendaComanda == true && garcomController.vendaComandaNaMesa == false){
+        """)
+        : (mesaDoPedido == "0" && comandaDoPedido != "0")
+        ? 
+          // comanda
+          queries.add("""
+            UPDATE cartoes 
+            SET 
+              atendimento = '0',
+              statuspedido = '0',
+              numeropedido_FK = '0',
+              pessoas = '0',
+              valorliquidopedido = '0.00',
+              nomecliente = '',
+              numeromesa = '0',
+              lastsync = '0000-00-00 00:00:00'
+            WHERE numero = '$comandaDoPedidoParaInsert'
+            LIMIT 1;
+          """)
+        : (comandaDoPedido != "0" && mesaDoPedido != "0")
+        ? {
+            // comanda na mesa
+            queries.add("""
+              UPDATE cartoes 
+              SET 
+                atendimento = '0',
+                statuspedido = '0',
+                numeropedido_FK = '0',
+                pessoas = '0',
+                valorliquidopedido = '0.00',
+                nomecliente = '',
+                numeromesa = '0',
+                lastsync = '0000-00-00 00:00:00'
+              WHERE numero = '$comandaDoPedidoParaInsert'
+              LIMIT 1;
+            """),
+
+            queries.add("""
+              UPDATE mesas 
+              SET 
+                comandavinculada = '0',
+                lastsync = '0000-00-00 00:00:00'
+              WHERE numero = '$mesaDoPedidoParaInsert'
+              LIMIT 1;
+            """)
+          }
+        : (comandaDoPedido != "0")
+        ? 
+          // comanda
+          queries.add("""
+            UPDATE cartoes 
+            SET 
+              atendimento = '0',
+              statuspedido = '0',
+              numeropedido_FK = '0',
+              pessoas = '0',
+              valorliquidopedido = '0.00',
+              nomecliente = '',
+              numeromesa = '0',
+              lastsync = '0000-00-00 00:00:00'
+            WHERE numero = '$comandaDoPedidoParaInsert'
+            LIMIT 1;
+          """)
+        : (mesaDoPedido != "0")
+        ? 
+          // mesa 
+          queries.add("""
+          UPDATE mesas 
+            SET 
+              atendimento = '0',
+              statuspedido = '0',
+              numeropedido_FK = '0',
+              comandavinculada = '0',
+              pessoas = '0',
+              valorliquidopedido = '0.00',
+              nomecliente = '',
+              lastsync = '0000-00-00 00:00:00'
+            WHERE numero = '$mesaDoPedidoParaInsert'
+            LIMIT 1;
+        """)
+        : (nomeClienteDoPedido != "0")
+        ? 
+          // balcao 
+          queries.add("""
+            UPDATE delivery 
+              SET 
+                atendimento = '0',
+                statuspedido = '3',
+                numeropedido_FK = '0',
+                valorliquidopedido = '0.00',
+                nomecliente = '',
+                lastsync = '0000-00-00 00:00:00'
+              WHERE numeropedido_FK = '$numeroPedido'
+              LIMIT 1;
+          """)
+
+        // caso nada funcione
+        : 
         queries.add("""
           UPDATE cartoes 
           SET 
@@ -1445,9 +1538,70 @@ class PagamentoPageState extends State<PagamentoPage>
           WHERE numero = '$comandaDoPedidoParaInsert'
           LIMIT 1;
         """);
-      }
 
-      if(garcomController.vendaComanda == true && garcomController.vendaComandaNaMesa == true){
+        queries.add("""
+          UPDATE mesas 
+          SET 
+            comandavinculada = '0',
+            lastsync = '0000-00-00 00:00:00'
+          WHERE numero = '$mesaDoPedidoParaInsert'
+          LIMIT 1;
+        """);
+
+      /* // Logica Balcao 
+      if(funcoesController.vendaBalcao.value && nomeClienteDoPedido != ""){
+        queries.add("""
+          UPDATE delivery 
+            SET 
+              atendimento = '0',
+              statuspedido = '0',
+              numeropedido_FK = '0',
+              valorliquidopedido = '0.00',
+              nomecliente = '',
+              lastsync = '0000-00-00 00:00:00'
+            WHERE numeropedido_FK = '$numeroPedido'
+            LIMIT 1;
+        """);
+      } */
+      
+      
+     /*  // Logica por Mesa
+      if(garcomController.vendaMesa.value){
+        queries.add("""
+          UPDATE mesas 
+            SET 
+              atendimento = '0',
+              statuspedido = '0',
+              numeropedido_FK = '0',
+              comandavinculada = '0',
+              pessoas = '0',
+              valorliquidopedido = '0.00',
+              nomecliente = '',
+              lastsync = '0000-00-00 00:00:00'
+            WHERE numero = '$mesaDoPedidoParaInsert'
+            LIMIT 1;
+        """);
+      } */
+      
+     /*  // Logica por Comanda
+      if(garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value){
+        queries.add("""
+          UPDATE cartoes 
+          SET 
+            atendimento = '0',
+            statuspedido = '0',
+            numeropedido_FK = '0',
+            pessoas = '0',
+            valorliquidopedido = '0.00',
+            nomecliente = '',
+            numeromesa = '0',
+            lastsync = '0000-00-00 00:00:00'
+          WHERE numero = '$comandaDoPedidoParaInsert'
+          LIMIT 1;
+        """);
+      } */
+
+      /* if(garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value){
         // Comandas
         queries.add("""
           UPDATE cartoes 
@@ -1472,7 +1626,7 @@ class PagamentoPageState extends State<PagamentoPage>
           WHERE numero = '$mesaDoPedidoParaInsert'
           LIMIT 1;
         """);
-      }
+      } */
 
       String res = await Connection().safeQuery(queries);
       
@@ -2009,10 +2163,10 @@ class PagamentoPageState extends State<PagamentoPage>
 
           final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
 
-          await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
-          await pagarPedido();
+          /* await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
+          await pagarPedido(); */
 
-          /* if (maquininhaDisponivel) {
+          if (maquininhaDisponivel) {
             // SmartPOS disponível: executa pagamento PagBank primeiro
             final bool pagBankAprovado = await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
             if (pagBankAprovado) {
@@ -2023,7 +2177,7 @@ class PagamentoPageState extends State<PagamentoPage>
           } else {
             // Sem SmartPOS: finaliza o pedido diretamente
             await pagarPedido();
-          } */
+          }
 
           dialogoConfirmacaoAberto = false;
         },
@@ -3005,7 +3159,7 @@ class PagamentoPageState extends State<PagamentoPage>
                                   : (mesaDoPedido != "0")
                                   ? 'MESA: $mesaDoPedido'
                                   : (nomeClienteDoPedido != "0")
-                                  ? 'NOME: $nomeClienteDoPedido'
+                                  ? '$nomeClienteDoPedido'
                                   : '',
                                 style: const TextStyle(
                                   color: Colors.white,

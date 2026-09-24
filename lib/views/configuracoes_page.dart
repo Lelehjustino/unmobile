@@ -242,10 +242,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadFocarCadastroClienteSalvo();
     _loadModoCarrinhoComandasSalvo();
     _loadRetirarBalcao();
-    // _loadVendas();
-    _loadVendas().then((_) {
+     _loadVendas();
+   /*  _loadVendas().then((_) {
       arrumarListaVendas();
-    });
+    }); */
   }
 
   @override
@@ -2606,7 +2606,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                        if(funcoesController.vendaBalcao.value)
+                        // if(funcoesController.vendaBalcao.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(

@@ -1148,11 +1148,11 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
   }
 
   void iniciarComandaMesa() {
-    if ((garcomController.vendaMesa.value)) {
+    if ((_usarVendaMesa)) {
       mesaController.addListener(_onMesaChanged);
-    } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
+    } else if ((_usarVendaComanda && !_usarVendaComandaNaMesa)) {
       comandaController.addListener(_onComandaChanged);
-    } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+    } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
       comandaController.addListener(_onComandaChanged);
     }
   }
@@ -1192,8 +1192,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   // Verificar se tem conta quando reconstroi a tela
   verificarSeTemConta(String numero) async {
-    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-        (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+    if ((_usarVendaComanda && !_usarVendaComandaNaMesa) ||
+        (_usarVendaComanda && _usarVendaComandaNaMesa)) {
       String dadosJson = await Connection().select(
         "SELECT valorliquidopedido FROM cartoes WHERE numero='$numero';",
       );
@@ -1238,255 +1238,351 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     }
   }
 
-  // Função para iniciar com carrinho
+  // INICIA CARRINHO
   void iniciaComCarrinho() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (Get.arguments != null) {
-
-      String comandaDoPedido = Get.arguments['comanda'] ?? '';
-      String mesaDoPedido = Get.arguments['mesa'] ?? '';
-      String numeropedido = Get.arguments['numeropedido'] ?? '0';
-
-      String clienteId = Get.arguments['clienteId'] ?? '';
-      String clienteNome = Get.arguments['clienteNome'] ?? '';
-      String clienteCpf = Get.arguments['clienteDocumento'] ?? '';
-      String clienteTelefone = Get.arguments['clienteTelefone'] ?? '';
-      String clienteDataNascimento = Get.arguments['clienteDataNascimento'] ?? '';
-
-      String nomeCliente = Get.arguments['nomeCliente'] ?? '';
-
-      if (mesaDoPedido == "0" || mesaDoPedido == '0') {
-        mesaDoPedido = "";
-      }
-
-      if(mesaDoPedido == ""){
-        mesaDoPedido = carrinhoController.numeroMesa.value;
-      }
-
-      if (comandaDoPedido == "0" || comandaDoPedido == '0') {
-        comandaDoPedido = "";
-      }
-
-      if(comandaDoPedido == ""){
-        comandaDoPedido = carrinhoController.numeroComanda.value;
-      }
-
-      if(clienteId == ""){
-        clienteId = carrinhoController.clienteId.value;
-      }
-
-      if(clienteNome == ""){
-        clienteNome = carrinhoController.clienteNome.value;
-      }
-
-      if(clienteCpf == ""){
-        clienteCpf = carrinhoController.clienteCpf.value;
-      }
-
-      if(clienteTelefone == ""){
-        clienteTelefone = carrinhoController.clienteTelefone.value;
-      }
-
-      if(clienteDataNascimento == ""){
-        clienteDataNascimento = carrinhoController.clienteDataNascimento.value;
-      }
-
-      if(nomeCliente == ""){
-        nomeCliente = carrinhoController.clienteNome.value;
-      }
-
-      carrinhoController.clienteId.value = clienteId;
-      carrinhoController.clienteNome.value = clienteNome;
-      carrinhoController.clienteCpf.value = clienteCpf;
-      carrinhoController.clienteTelefone.value = clienteTelefone;
-      carrinhoController.clienteDataNascimento.value = clienteDataNascimento;
-
-      nomeClienteDialogoController.text = clienteNome;
-      telefoneClienteDialogoController.text = clienteTelefone;
-      cpfClienteDialogoController.text = clienteCpf;
-      dataNascimentoClienteDialogoController.text = clienteDataNascimento;
-
-      nomeClienteController.text = nomeCliente;
-
-      // await buscarTipoPedido();
-
-      if (numeropedido == "0") {
-        if (((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) && !garcomController.retirarBalcaoRota.value) {
-          validarComanda(comandaDoPedido);
-        } else if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value) {
-          validarMesa(mesaDoPedido);
-        } else if (garcomController.retirarBalcaoRota.value){
-          _fluxoRetirarBalcao();
-        }
+        await _iniciarComCarrinhoComArgumentos();
       } else {
-        if (((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) && !garcomController.retirarBalcaoRota.value) {
-          verificarSeTemConta(comandaDoPedido);
-        } else if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value){
-          verificarSeTemConta(mesaDoPedido);
-        } else if (garcomController.retirarBalcaoRota.value){
-          _fluxoRetirarBalcao();
-        }
-
-        if (((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) && !garcomController.retirarBalcaoRota.value) {
-          buscarNumeroPedido(comandaDoPedido);
-        } else if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value) {
-          buscarNumeroPedido(mesaDoPedido);
-        } else if (garcomController.retirarBalcaoRota.value){
-          _fluxoRetirarBalcao();
-        }
-      }
-
-      informacoesCliente();
-
-      setState(() {
-        volteiPizza = true;
-        aparecerCarrinho = true;
-        aparecerCardapio = true;
-        showKeyboardAlfa = false;
-
-        showKeyboardQuantidade = false;
-        aparecerLista = false;
-        aparecerConfiguracaoProduto = false;
-        aparecerBotoes = false;
-        comandaController.text = comandaDoPedido;
-        mesaController.text = mesaDoPedido;
-        aparecerFazerPedido = true;
-
-        numeroComandaEmUso = comandaDoPedido;
-        numeroMesaEmUso = mesaDoPedido;
-
-        _campoAtivo = 'cardapioController';
-
-        Future.delayed(Duration(milliseconds: 300), () {
-          if (cardapioFocus.canRequestFocus) {
-            cardapioFocus.requestFocus();
-          }
-        });
-      });
-
-      sairModoTouch();
-      } else {
-        String comandaDoPedido = carrinhoController.numeroComanda.value;
-        String mesaDoPedido = carrinhoController.numeroMesa.value;
-        String numeropedido = "";
-        String nomeCliente = carrinhoController.nomeClienteBalcao.value;
-
-        String clienteId = carrinhoController.clienteId.value;
-        String clienteNome = carrinhoController.clienteNome.value;
-        String clienteCpf = carrinhoController.clienteCpf.value;
-        String clienteTelefone = carrinhoController.clienteTelefone.value;
-        String clienteDataNascimento = carrinhoController.clienteDataNascimento.value;
-        
-        if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-            (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
-          await buscarNumeroPedido(comandaDoPedido);
-          numeropedido = carrinhoController.numeroPedido.value;
-        } else {
-          await buscarNumeroPedido(mesaDoPedido);
-          numeropedido = carrinhoController.numeroPedido.value;
-        }
-
-        if (mesaDoPedido == "0" || mesaDoPedido == '0') {
-          mesaDoPedido = "";
-        }
-
-        if(mesaDoPedido == ""){
-          mesaDoPedido = carrinhoController.numeroMesa.value;
-        }
-
-        if (comandaDoPedido == "0" || comandaDoPedido == '0') {
-          comandaDoPedido = "";
-        }
-
-        if(comandaDoPedido == ""){
-          comandaDoPedido = carrinhoController.numeroComanda.value;
-        }
-
-        carrinhoController.clienteId.value = clienteId;
-        carrinhoController.clienteNome.value = clienteNome;
-        carrinhoController.clienteCpf.value = clienteCpf;
-        carrinhoController.clienteTelefone.value = clienteTelefone;
-        carrinhoController.clienteDataNascimento.value = clienteDataNascimento;
-
-        nomeClienteDialogoController.text = clienteNome;
-        telefoneClienteDialogoController.text = clienteTelefone;
-        cpfClienteDialogoController.text = clienteCpf;
-        dataNascimentoClienteDialogoController.text = clienteDataNascimento;
-
-        nomeClienteController.text = carrinhoController.nomeClienteBalcao.value;
-
-        // await buscarTipoPedido();
-
-        if (numeropedido == "0") {
-          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
-            validarComanda(comandaDoPedido);
-          } else {
-            validarMesa(mesaDoPedido);
-          }
-        } else {
-          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
-            verificarSeTemConta(comandaDoPedido);
-          } else {
-            verificarSeTemConta(mesaDoPedido);
-          }
-
-          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
-            buscarNumeroPedido(comandaDoPedido);
-          } else {
-            buscarNumeroPedido(mesaDoPedido);
-          }
-        }
-
-        informacoesCliente();
-
-        setState(() {
-          volteiPizza = true;
-          aparecerCarrinho = true;
-          aparecerCardapio = true;
-          showKeyboardAlfa = false;
-
-          showKeyboardQuantidade = false;
-          aparecerLista = false;
-          aparecerConfiguracaoProduto = false;
-          aparecerBotoes = false;
-          comandaController.text = comandaDoPedido;
-          mesaController.text = mesaDoPedido;
-          aparecerFazerPedido = true;
-
-          numeroComandaEmUso = comandaDoPedido;
-          numeroMesaEmUso = mesaDoPedido;
-
-          _campoAtivo = 'cardapioController';
-
-          Future.delayed(Duration(milliseconds: 300), () {
-            if (cardapioFocus.canRequestFocus) {
-              cardapioFocus.requestFocus();
-            }
-          });
-        });
-
-        sairModoTouch();
+        await _iniciarComCarrinhoAtual();
       }
     });
   }
 
-  // ─── Bloqueio global de foco ────────────────────────────────────────────────
 
-  /// Ativa o modo de bloqueio de foco: o [_focoBloqueio] sequestra o
-  /// primaryFocus do [FocusManager], impedindo que qualquer outro FocusNode
-  /// da árvore receba foco enquanto o bloqueio estiver ativo.
-  ///
-  /// Como funciona:
-  ///   1. Desabilitamos [FocusManager.instance.highlightStrategy] para suprimir
-  ///      qualquer sinal de highlight durante o período.
-  ///   2. Chamamos [_focoBloqueio.requestFocus()] via [FocusManager.instance]
-  ///      para que ele assuma o primaryFocus imediatamente.
-  ///   3. Qualquer chamada subsequente a [requestFocus()] em outros nós será
-  ///      ignorada pelo Flutter pois [_focoBloqueio] retém o primaryFocus e
-  ///      não está dentro da rota de baixo.
+  // CARRINHO COM ARGUMENTOS DA ROTA
+
+  Future<void> _iniciarComCarrinhoComArgumentos() async {
+    final argumentos = Get.arguments;
+
+    String comanda = argumentos['comanda'] ?? '';
+    String mesa = argumentos['mesa'] ?? '';
+    String numeroPedido = argumentos['numeropedido'] ?? '0';
+
+    String clienteId = argumentos['clienteId'] ?? '';
+    String clienteNome = argumentos['clienteNome'] ?? '';
+    String clienteCpf = argumentos['clienteDocumento'] ?? '';
+    String clienteTelefone = argumentos['clienteTelefone'] ?? '';
+    String clienteDataNascimento = argumentos['clienteDataNascimento'] ?? '';
+
+    String nomeCliente = argumentos['nomeCliente'] ?? '';
+    String rota = argumentos['rota'] ?? '';
+
+    // Corrige mesa e comanda
+    mesa = _obterMesa(mesa);
+    comanda = _obterComanda(comanda);
+
+    // Preenche os dados do cliente usando o carrinho como fallback
+
+    clienteId = _usarValorOuCarrinho(
+      clienteId,
+      carrinhoController.clienteId.value,
+    );
+
+    clienteNome = _usarValorOuCarrinho(
+      clienteNome,
+      carrinhoController.clienteNome.value,
+    );
+
+    clienteCpf = _usarValorOuCarrinho(
+      clienteCpf,
+      carrinhoController.clienteCpf.value,
+    );
+
+    clienteTelefone = _usarValorOuCarrinho(
+      clienteTelefone,
+      carrinhoController.clienteTelefone.value,
+    );
+
+    clienteDataNascimento = _usarValorOuCarrinho(
+      clienteDataNascimento,
+      carrinhoController.clienteDataNascimento.value,
+    );
+
+    nomeCliente = _usarValorOuCarrinho(
+      nomeCliente,
+      carrinhoController.clienteNome.value,
+    );
+
+    // Salva os dados do cliente
+    _salvarDadosCliente(
+      clienteId: clienteId,
+      clienteNome: clienteNome,
+      clienteCpf: clienteCpf,
+      clienteTelefone: clienteTelefone,
+      clienteDataNascimento: clienteDataNascimento,
+    );
+
+    // Atualiza os campos da tela
+    _preencherCamposCliente(
+      clienteNome: clienteNome,
+      clienteCpf: clienteCpf,
+      clienteTelefone: clienteTelefone,
+      clienteDataNascimento: clienteDataNascimento,
+      nomeCliente: nomeCliente,
+    );
+
+    // Processa o pedido
+    await _processarPedido(
+      numeroPedido: numeroPedido,
+      comanda: comanda,
+      mesa: mesa,
+      rota: rota 
+    );
+
+    // Finaliza configuração da tela
+    _finalizarTelaCarrinho(
+      comanda: comanda,
+      mesa: mesa,
+    );
+
+    sairModoTouch();
+  }
+
+
+  // CARRINHO JÁ EXISTENTE
+
+  Future<void> _iniciarComCarrinhoAtual() async {
+    String comanda = carrinhoController.numeroComanda.value;
+    String mesa = carrinhoController.numeroMesa.value;
+
+    String numeroPedido = '';
+
+    final nomeCliente = carrinhoController.nomeClienteBalcao.value;
+
+    final clienteId = carrinhoController.clienteId.value;
+
+    final clienteNome = carrinhoController.clienteNome.value;
+
+    final clienteCpf = carrinhoController.clienteCpf.value;
+
+    final clienteTelefone = carrinhoController.clienteTelefone.value;
+
+    final clienteDataNascimento = carrinhoController.clienteDataNascimento.value;
+
+    // Busca o número do pedido atual
+    final identificadorPedido = _usarComanda
+        ? comanda
+        : mesa;
+
+    await buscarNumeroPedido(identificadorPedido);
+
+    numeroPedido = carrinhoController.numeroPedido.value;
+
+    // Corrige mesa e comanda
+    mesa = _obterMesa(mesa);
+    comanda = _obterComanda(comanda);
+
+    // Salva os dados do cliente
+    _salvarDadosCliente(
+      clienteId: clienteId,
+      clienteNome: clienteNome,
+      clienteCpf: clienteCpf,
+      clienteTelefone: clienteTelefone,
+      clienteDataNascimento: clienteDataNascimento,
+    );
+
+    // Atualiza os campos da tela
+    _preencherCamposCliente(
+      clienteNome: clienteNome,
+      clienteCpf: clienteCpf,
+      clienteTelefone: clienteTelefone,
+      clienteDataNascimento: clienteDataNascimento,
+      nomeCliente: nomeCliente,
+    );
+
+    // Processa o pedido
+    await _processarPedido(
+      numeroPedido: numeroPedido,
+      comanda: comanda,
+      mesa: mesa,
+      rota: ""
+    );
+
+    // Finaliza configuração da tela
+    _finalizarTelaCarrinho(
+      comanda: comanda,
+      mesa: mesa,
+    );
+
+    sairModoTouch();
+  }
+
+
+  // REGRAS DE COMANDA / MESA
+  bool get _usarVendaComanda {
+    var args = Get.arguments;
+    if (args != null && args is Map && args['rota'] == 'mesa') return false;
+    return garcomController.vendaComanda.value;
+  }
+  
+  bool get _usarVendaMesa {
+    var args = Get.arguments;
+    if (args != null && args is Map && args['rota'] == 'mesa') return true;
+    return garcomController.vendaMesa.value;
+  }
+
+  bool get _usarVendaComandaNaMesa {
+    var args = Get.arguments;
+    if (args != null && args is Map && args['rota'] == 'mesa') return false;
+    return garcomController.vendaComandaNaMesa.value;
+  }
+
+  bool get _usarComanda {
+    return _usarVendaComanda;
+  }
+
+  bool get _retirarBalcao {
+    return garcomController.retirarBalcaoRota.value;
+  }
+
+
+  // OBTÉM MESA
+  String _obterMesa(String mesa) {
+    if (mesa == '0' || mesa.isEmpty) {
+      return carrinhoController.numeroMesa.value;
+    }
+
+    return mesa;
+  }
+
+
+  // OBTÉM COMANDA
+  String _obterComanda(String comanda) {
+    if (comanda == '0' || comanda.isEmpty) {
+      return carrinhoController.numeroComanda.value;
+    }
+
+    return comanda;
+  }
+
+
+  // USA VALOR INFORMADO OU VALOR DO CARRINHO
+  String _usarValorOuCarrinho(
+    String valor,
+    String valorCarrinho,
+  ) {
+    if (valor.isEmpty) {
+      return valorCarrinho;
+    }
+
+    return valor;
+  }
+
+
+  // SALVA DADOS DO CLIENTE NO CARRINHO
+
+  void _salvarDadosCliente({
+    required String clienteId,
+    required String clienteNome,
+    required String clienteCpf,
+    required String clienteTelefone,
+    required String clienteDataNascimento,
+  }) {
+    carrinhoController.clienteId.value = clienteId;
+    carrinhoController.clienteNome.value = clienteNome;
+    carrinhoController.clienteCpf.value = clienteCpf;
+    carrinhoController.clienteTelefone.value = clienteTelefone;
+    carrinhoController.clienteDataNascimento.value = clienteDataNascimento;
+  }
+
+
+  // PREENCHE CAMPOS DO CLIENTE
+
+  void _preencherCamposCliente({
+    required String clienteNome,
+    required String clienteCpf,
+    required String clienteTelefone,
+    required String clienteDataNascimento,
+    required String nomeCliente,
+  }) {
+    nomeClienteDialogoController.text = clienteNome;
+    telefoneClienteDialogoController.text = clienteTelefone;
+    cpfClienteDialogoController.text = clienteCpf;
+    dataNascimentoClienteDialogoController.text = clienteDataNascimento;
+
+    nomeClienteController.text = nomeCliente;
+  }
+
+
+  // PROCESSA O PEDIDO
+  Future<void> _processarPedido({
+    required String numeroPedido,
+    required String comanda,
+    required String mesa,
+    required String rota,
+  }) async {
+    // Retirada no balcão
+
+    if (_retirarBalcao) {
+      _fluxoRetirarBalcao();
+      return;
+    }
+
+    // Define se deve usar comanda ou mesa
+    final identificador = _usarComanda ? comanda : mesa;
+
+    // Pedido novo
+    if (numeroPedido == '0' || numeroPedido.isEmpty) {
+      if (_usarComanda && ((rota == 'comanda') || rota ==  "")) {
+        validarComanda(comanda);
+      } else {
+        validarMesa(mesa);
+      }
+
+      return;
+    }
+
+    // Pedido já existente
+    await verificarSeTemConta(identificador);
+
+    await buscarNumeroPedido(identificador);
+  }
+
+
+  // FINALIZA CONFIGURAÇÃO DA TELA
+  void _finalizarTelaCarrinho({
+    required String comanda,
+    required String mesa,
+  }) {
+    informacoesCliente();
+
+    setState(() {
+      volteiPizza = true;
+
+      aparecerCarrinho = true;
+      aparecerCardapio = true;
+      aparecerFazerPedido = true;
+
+      aparecerLista = false;
+      aparecerConfiguracaoProduto = false;
+      aparecerBotoes = false;
+
+      showKeyboardAlfa = false;
+      showKeyboardQuantidade = false;
+
+      comandaController.text = comanda;
+      mesaController.text = mesa;
+
+      numeroComandaEmUso = comanda;
+      numeroMesaEmUso = mesa;
+
+      _campoAtivo = 'cardapioController';
+    });
+
+    // Dá tempo para o widget entrar na árvore antes
+    // de solicitar o foco.
+    Future.delayed(
+      const Duration(milliseconds: 300),
+      () {
+        if (cardapioFocus.canRequestFocus) {
+          cardapioFocus.requestFocus();
+        }
+      },
+    );
+  }
+
+  // ─── Bloqueio global de foco ────────────────────────────────────────────────
   void _bloquearFocoGlobal() {
     if (_bloqueandoFoco) return;
     _bloqueandoFoco = true;
@@ -2620,7 +2716,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           nomeClienteFocus.requestFocus();
         }
       });
-    } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) || (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+    } else if ((_usarVendaComanda && !_usarVendaComandaNaMesa) || (_usarVendaComanda && _usarVendaComandaNaMesa)) {
       setState(() {
         showKeyboardNumero = true;
         empurrarBotoes = false;
@@ -2631,7 +2727,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           comandaFocus.requestFocus();
         }
       });
-    } else if ((garcomController.vendaMesa.value)) {
+    } else if ((_usarVendaMesa)) {
       setState(() {
         showKeyboardNumero = true;
         empurrarBotoes = false;
@@ -2666,8 +2762,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           nomeClienteFocus.requestFocus();
         }
       });
-    } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-        (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+    } else if ((_usarVendaComanda && !_usarVendaComandaNaMesa) ||
+        (_usarVendaComanda && _usarVendaComandaNaMesa)) {
       setState(() {
         showKeyboardNumero = true;
         empurrarBotoes = false;
@@ -2678,7 +2774,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           comandaFocus.requestFocus();
         }
       });
-    } else if ((garcomController.vendaMesa.value)) {
+    } else if ((_usarVendaMesa)) {
       setState(() {
         showKeyboardNumero = true;
         _campoAtivo = 'mesaController';
@@ -2838,12 +2934,12 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
             _campoAtivo = 'clienteController';
-          } else if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-              (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+          } else if ((_usarVendaComanda && !_usarVendaComandaNaMesa) ||
+              (_usarVendaComanda && _usarVendaComandaNaMesa)) {
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
             _campoAtivo = 'comandaController';
-          } else if ((garcomController.vendaMesa.value)) {
+          } else if ((_usarVendaMesa)) {
             showKeyboardAlfa = false;
             showKeyboardNumero = true;
             _campoAtivo = 'mesaController';
@@ -2854,7 +2950,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 FocusNode node;
                 if (garcomController.retirarBalcaoRota.value) {
                   node = nomeClienteFocus;
-                } else if (garcomController.vendaMesa.value) {
+                } else if (_usarVendaMesa) {
                   node = mesaFocus;
                 } else {
                   node = comandaFocus;
@@ -2942,8 +3038,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   // Buscar numero pedido
   Future<void> buscarNumeroPedido(String numero) async {
-    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-        (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+    if ((_usarVendaComanda && !_usarVendaComandaNaMesa) ||
+        (_usarVendaComanda && _usarVendaComandaNaMesa)) {
       try {
         String dadosJson = await Connection().select(
           "SELECT numeropedido_FK FROM cartoes WHERE numero='$numero';",
@@ -2972,7 +3068,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           numeropedido_FK = "";
         });
       }
-    } else if ((garcomController.vendaMesa.value)) {
+    } else if ((_usarVendaMesa)) {
       try {
         String dadosJson = await Connection().select(
           "SELECT numeropedido_FK FROM mesas WHERE numero='$numero';",
@@ -3126,7 +3222,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
             double valorLiquido = double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
-            if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
+            if ((_usarVendaComanda && !_usarVendaComandaNaMesa)) {
               setState(() {
                 numeroComandaEmUso = numeroComanda;
                 comandaValida = true;
@@ -3134,7 +3230,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 mostrarDentroComandaMesa = valorLiquido != 0.0;
               });
               _irParaCardapio();
-            } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+            } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
               setState(() {
                 numeroComandaEmUso = numeroComanda;
                 numeroMesaEmUso = comanda['numeromesa'];
@@ -3165,7 +3261,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
         double valorLiquido = double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
-        if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
+        if ((_usarVendaComanda && !_usarVendaComandaNaMesa)) {
           setState(() {
             numeroComandaEmUso = numeroComanda;
             comandaValida = true;
@@ -3173,7 +3269,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             mostrarDentroComandaMesa = valorLiquido != 0.0;
             _irParaCardapio();
           });
-        } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+        } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
           setState(() {
             numeroComandaEmUso = numeroComanda;
             numeroMesaEmUso = comanda['numeromesa'];
@@ -3322,7 +3418,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           },
         );
         // Se a mesa estiver aberta e a logica for por comanda na mesa
-      } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value) &&
+      } else if ((_usarVendaComanda && _usarVendaComandaNaMesa) &&
           mesa['numeropedido_FK'] != '0') {
         setState(() {
           validaMesa = [];
@@ -3333,7 +3429,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         });
       }
       // Nao pode abrir mesa com pedido
-      else if (mesa['comandavinculada'] != '0' && (garcomController.vendaMesa.value)) {
+      else if (mesa['comandavinculada'] != '0' && (_usarVendaMesa)) {
         setState(() {
           validaMesa = [];
           mensagemNaMesa = "Mesa $numeroMesa já esta vinculada a uma comanda!";
@@ -3384,7 +3480,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
             double valorLiquido = double.tryParse(mesa['valorliquidopedido'].toString()) ?? 0.0;
 
-            if ((garcomController.vendaMesa.value)) {
+            if ((_usarVendaMesa)) {
               carrinhoController.numeroMesa.value = numeroMesa;
               setState(() {
                 numeroMesaEmUso = numeroMesa;
@@ -3401,7 +3497,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                   }
                 });
               });
-            } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+            } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
               carrinhoController.numeroMesa.value = numeroMesa;
               // Atualização da tela
               setState(() {
@@ -3441,7 +3537,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           mesaComandaNaoTemConta = true;
         });
 
-        if((garcomController.vendaMesa.value)){
+        if((_usarVendaMesa)){
           setState(() {
             mostrarDentroComandaMesa = valorLiquido != 0.0;
           });
@@ -6168,7 +6264,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       if (mesaValida) {
         aparecerFazerPedido = true;
       } else {
-        if (!(garcomController.vendaMesa.value)) {
+        if (!(_usarVendaMesa)) {
           if (mesaComandaNaoTemConta) {
             showErrorDialog(
               context: context,
@@ -6179,13 +6275,13 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               icon: Icons.error, // você pode trocar para outro ícone
               onConfirm: () async {
                 _dialogVincularMesa(false);
-                if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+                if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
                   comandaController.text = numeroComanda;
                   numeroComandaEmUso = numeroComanda;
                 }
               },
             );
-            if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+            if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
               comandaController.text = numeroComanda;
               numeroComandaEmUso = numeroComanda;
             }
@@ -6236,17 +6332,17 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       }
 
       // Se está na tela de escolha de mesa
-      if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+      if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
         await _fluxoComandaNaMesa();
         return;
       }
 
-      if ((garcomController.vendaMesa.value)) {
+      if ((_usarVendaMesa)) {
         await _fluxoMesa();
         return;
       }
 
-      if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
+      if ((_usarVendaComanda && !_usarVendaComandaNaMesa)) {
         await _fluxoComanda();
         aparecerPopUpCliente();
         return;
@@ -6432,7 +6528,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         }
       });
     });
-    if (!(garcomController.vendaMesa.value)) {
+    if (!(_usarVendaMesa)) {
       shownDialogTwoBottomKeyboard(
         context: context, 
         title: "Deseja vincular a uma mesa?",
@@ -6512,7 +6608,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         message: "",
         icon: Icons.error, // você pode trocar para outro ícone
         onConfirm: () async {
-          if((garcomController.vendaMesa.value)){
+          if((_usarVendaMesa)){
             // Navigator.pushNamed(context, '/garcom');
             Navigator.of(context).push(
               PageRouteBuilder(
@@ -6526,7 +6622,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           }
         },
       );
-      if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+      if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
         comandaController.text = numeroComandaEmUso;
       }
     }
@@ -8489,7 +8585,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                       child: GestureDetector(
                                         // quando clicar em fazer pedido
                                         onTap: () async {
-                                          if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value)) {
+                                          if ((_usarVendaComanda && !_usarVendaComandaNaMesa)) {
                                             Get.to(
                                               () => ContaPage(),
                                               arguments: {
@@ -8500,7 +8596,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
                                               },
                                             );
-                                          } else if ((garcomController.vendaMesa.value)) {
+                                          } else if ((_usarVendaMesa)) {
                                             Get.to(
                                               () => ContaPage(),
                                               arguments: {
@@ -8511,7 +8607,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
                                               },
                                             );
-                                          } else if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+                                          } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
                                             Get.to(
                                               () => ContaPage(),
                                               arguments: {
@@ -8650,8 +8746,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                               aparecerLista = false;
                                             });
 
-                                            if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) ||
-                                                (garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value)) {
+                                            if ((_usarVendaComanda && !_usarVendaComandaNaMesa) ||
+                                                (_usarVendaComanda && _usarVendaComandaNaMesa)) {
                                               setState(() {
                                                 showKeyboardNumero = true;
                                                 showKeyboardAlfa = false;
@@ -8659,7 +8755,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 FocusScope.of(context).requestFocus(comandaFocus);
                                               });
                                               conectarBanco();
-                                            } else if ((garcomController.vendaMesa.value)) {
+                                            } else if ((_usarVendaMesa)) {
                                               setState(() {
                                                 showKeyboardNumero = true;
                                                 showKeyboardAlfa = false;
@@ -8844,7 +8940,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                       ),
                     ),
                     // LÓGICA DA COMANDA
-                    if ((garcomController.vendaComanda.value && !garcomController.vendaComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value)
+                    if ((_usarVendaComanda && !_usarVendaComandaNaMesa) && !garcomController.retirarBalcaoRota.value)
                       Padding(
                         padding: EdgeInsets.all(0.0),
                         child: Container(
@@ -9207,7 +9303,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                       ),
 
                     // LÓGICA DA MESA
-                    if ((garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value)
+                    if ((_usarVendaMesa) && !garcomController.retirarBalcaoRota.value)
                       Padding(
                         padding: EdgeInsets.all(0.0),
                         child: Container(
@@ -9443,7 +9539,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                       ),
 
                     // LÓGICA DA COMANDA NA MESA
-                    if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value)
+                    if ((_usarVendaComanda && _usarVendaComandaNaMesa) && !garcomController.retirarBalcaoRota.value)
                       Padding(
                         padding: EdgeInsets.all(0.0),
                         child: Container(
@@ -10235,7 +10331,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                               ),
 
                               // Ícone da mesa
-                              if ((garcomController.vendaComanda.value && garcomController.vendaComandaNaMesa.value) && !garcomController.retirarBalcaoRota.value)
+                              if ((_usarVendaComanda && _usarVendaComandaNaMesa) && !garcomController.retirarBalcaoRota.value)
                                 Padding(
                                   padding: EdgeInsets.only(left: 8, right: 0, top: 16, bottom: 8,),
                                   child: GestureDetector(
@@ -10360,7 +10456,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                   ),
                                 ),
                                 
-                                if(garcomController.cadastroCliente.value && !(garcomController.vendaMesa.value) && !garcomController.retirarBalcaoRota.value)
+                                if(garcomController.cadastroCliente.value && !(_usarVendaMesa) && !garcomController.retirarBalcaoRota.value)
                                 Padding(
                                   padding: EdgeInsets.only(left: 8, right: 8, top: 16, bottom: 8,),
                                   child: Column(
