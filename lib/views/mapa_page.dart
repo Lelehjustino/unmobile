@@ -1452,6 +1452,7 @@ class MapaPageState extends State<MapaPage> {
                       'comanda': "0",
                       'mesa': item['numero'].toString(),
                       'page': "mapa",
+                      'nome': "",
                     },
                   );
                 } else if (aberto) {
@@ -1815,6 +1816,7 @@ class MapaPageState extends State<MapaPage> {
                     'comanda': numeroComanda,
                     'mesa': comanda['numeromesa'].toString(),
                     'page': "mapa",
+                    'nome': "",
                   },
                 );
               });
@@ -1871,6 +1873,7 @@ class MapaPageState extends State<MapaPage> {
               'comanda': numeroComanda,
               'mesa': comanda['numeromesa'].toString(),
               'page': "mapa",
+              'nome': "",
             },
           );
         });

@@ -698,6 +698,54 @@ class ContaPageState extends State<ContaPage>
     }
   }
 
+  // Função para fazer fechar pedido
+  Future<void> updateMesa (String numeroMesa) async {
+    String sql =
+    """
+      UPDATE mesas 
+        SET 
+          atendimento = '0',
+          statuspedido = '2'
+        WHERE numero = '$numeroMesa'
+        LIMIT 1;
+    """;
+    try {
+      String resultado = await Connection().ipd(sql);
+
+      if (resultado == 'sucesso') {
+        print("Sucesso");
+      } else {
+        print("Erro: $resultado");
+      }
+    } catch (e) {
+      print("Erro: $e");
+    }
+  }
+
+  // Função para fazer fechar pedido
+  Future<void> updateComanda (String numeroCmanda) async {
+    String sql =
+    """
+      UPDATE cartoes 
+        SET 
+          atendimento = '0',
+          statuspedido = '2'
+        WHERE numero = '$comandaDoPedidoParaInsert'
+        LIMIT 1;
+    """;
+    try {
+      String resultado = await Connection().ipd(sql);
+
+      if (resultado == 'sucesso') {
+        print("Sucesso");
+      } else {
+        print("Erro: $resultado");
+      }
+    } catch (e) {
+      print("Erro: $e");
+    }
+  }
+
   // Função para inserir venda
   Future<void> inserirConta(
     // conta
@@ -2442,7 +2490,7 @@ class ContaPageState extends State<ContaPage>
                               confirmText: 'Sim',
                               onConfirm: () async {
                                 try {
-                                  if(nomeClienteDoPedido == 0 ){
+                                  if(nomeClienteDoPedido == "0"){
                                     await inserirConta(
                                       numeroTradepointSelecionada,
                                       numeroUsuario, // numero do nome selecionado
@@ -2450,6 +2498,11 @@ class ContaPageState extends State<ContaPage>
                                       mesaDoPedidoParaInsert,
                                       numeroDePessoasString,
                                     );
+                                    if(comandaDoPedidoParaInsert != '0'){
+                                      await updateComanda(comandaDoPedidoParaInsert);
+                                    } else {
+                                      await updateMesa(mesaDoPedidoParaInsert);
+                                    }
                                   }
                                   else {
                                     await inserirConta(
