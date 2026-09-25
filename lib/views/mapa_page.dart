@@ -122,10 +122,10 @@ class MapaPageState extends State<MapaPage> {
     _loadNomeEmpresa();
     _loadNumeroLicenca();
     carregar();
-    _timerAtualizacao = Timer.periodic(
+    /* _timerAtualizacao = Timer.periodic(
       Duration(seconds: 15),
       (_) => GarcomController().carregarTudo(),
-    );
+    ); */
   }
 
   void carregar() async {
@@ -1195,14 +1195,14 @@ class MapaPageState extends State<MapaPage> {
           final temConta = item['numeropedido_FK'].toString() != '0' && statusPedido == 2;
 
           // Cor base
-          Color corDelivery = Theme.of(context).colorScheme.tertiary;
+          Color corDelivery = Theme.of(context).colorScheme.tertiaryContainer;
           Color corTexto = Theme.of(context).colorScheme.onPrimary;
 
           corDelivery = integrador.contains("PEDEAQUI") 
               ? const Color.fromARGB(255, 177, 167, 179)
               : integrador.contains("IFOOD")
               ? const Color.fromARGB(255, 240, 147, 140)
-              : Theme.of(context).colorScheme.tertiary;
+              : Theme.of(context).colorScheme.tertiaryContainer;
 
           corDelivery = integrador.contains("PEDEAQUI")
               ? const Color.fromARGB(255, 73, 21, 82)
@@ -1214,7 +1214,7 @@ class MapaPageState extends State<MapaPage> {
               ? const Color.fromARGB(255, 236, 162, 2)
               : integrador.contains("ANOTA AI")
               ? const Color.fromARGB(255, 27, 88, 220)
-              : Theme.of(context).colorScheme.tertiary;
+              : Theme.of(context).colorScheme.tertiaryContainer;
           
           // se tiver vazio n escreve gourmet 
           String nomeIntegrador = integrador.contains("PEDEAQUI")
@@ -2530,9 +2530,9 @@ class MapaPageState extends State<MapaPage> {
                   padding: EdgeInsets.symmetric(horizontal: 8.0),
                   child: Row(
                     children: [
-                      // f(vendaComandaClicado || vendaMesaClicado)
+                      // if(vendaComandaClicado || vendaMesaClicado)
                       Expanded(
-                        flex: orientation == Orientation.landscape ? 5 : 1,
+                        // flex: orientation == Orientation.landscape ? 4 : 1,
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height * 0.06,
                           child: KeyboardActions(
@@ -2622,7 +2622,7 @@ class MapaPageState extends State<MapaPage> {
                     // botões cloudy
                     // refresh
                     Expanded(
-                      flex: orientation == Orientation.landscape ? 2 : 3,
+                      // flex: orientation == Orientation.landscape ? 2 : 3,
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -2894,7 +2894,7 @@ class MapaPageState extends State<MapaPage> {
                                   shape: CircleBorder(),
                                   padding: EdgeInsets.all(18),
                                   iconColor: colorScheme.secondary,
-                                  backgroundColor: !vendaBalcaoClicado ? colorScheme.surfaceDim : colorScheme.tertiary,
+                                  backgroundColor: !vendaBalcaoClicado ? colorScheme.surfaceDim : colorScheme.tertiaryContainer,
                                   elevation:8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
                                   shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
                                 ),
@@ -2914,7 +2914,7 @@ class MapaPageState extends State<MapaPage> {
                                 'Balcão',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: !vendaBalcaoClicado ? colorScheme.surfaceDim : colorScheme.tertiary,
+                                    color: !vendaBalcaoClicado ? colorScheme.surfaceDim : colorScheme.tertiaryContainer,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 )

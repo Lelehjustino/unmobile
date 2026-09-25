@@ -242,10 +242,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadFocarCadastroClienteSalvo();
     _loadModoCarrinhoComandasSalvo();
     _loadRetirarBalcao();
-     _loadVendas();
-   /*  _loadVendas().then((_) {
+    _loadVendas();
+    _loadVendas().then((_) {
       arrumarListaVendas();
-    }); */
+    });
   }
 
   @override
@@ -267,21 +267,26 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     if(!funcoesController.vendaBalcao.value){
       // venda balcao 
       vendas.remove('Venda Balcão');
+      footerButtonsController.retirarBalcao.value = false;
+      retirarBalcaoSelecionados.clear();
       if (vendasSelecionados.remove('0')) changed = true;
     }
     if (!funcoesController.vendaComanda.value){
       // venda comanda
       vendas.remove('Venda Comanda');
+      footerButtonsController.vendaComanda.value = false;
       if (vendasSelecionados.remove('1')) changed = true;
     }
     if (!garcomController.vendaComandaNaMesa.value){
       // venda comanda na mesa 
       vendas.remove('Venda Comanda Na Mesa');
+      footerButtonsController.vendaComanda.value = false;
       if (vendasSelecionados.remove('2')) changed = true;
     }
     if (!funcoesController.vendaMesa.value){
       // venda mesa 
       vendas.remove('Venda Mesa');
+      footerButtonsController.vendaMesa.value = false;
       if (vendasSelecionados.remove('3')) changed = true;
     } 
     // Só salva novamente as configurações se alguma coisa realmente foi removida.
@@ -298,7 +303,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     } else {
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
-      } else if (footerButtonsController.aparecerGarcom.value) {
+      // } else if (footerButtonsController.aparecerGarcom.value) {
+      } else if (vendaComandaSelecionados.isNotEmpty || vendaMesaSelecionados.isNotEmpty || retirarBalcaoSelecionados.isNotEmpty) {
         // venda comanda marcada 
         if(footerButtonsController.vendaComanda.value){
           garcomController.retirarBalcaoRota.value = false;
@@ -313,8 +319,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         } 
         // venda balcao marcada 
         else if (footerButtonsController.retirarBalcao.value) {
-          garcomController.retirarBalcaoRota.value = false;
-          garcomController.vendaComanda.value = true;
+          garcomController.retirarBalcaoRota.value = true;
+          garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = false;
         }
         else {
@@ -2606,7 +2612,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ),
-                        // if(funcoesController.vendaBalcao.value)
+                        if(funcoesController.vendaBalcao.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(

@@ -132,6 +132,7 @@ class _AppState extends State<App> {
               onSecondary: Colors.black,
               tertiary: const Color.fromRGBO(255, 216, 99, 1),
               onTertiary: const Color.fromRGBO(249, 248, 245, 1),
+              tertiaryContainer: const Color.fromARGB(255, 238, 201, 91),
               surface: Colors.white,
               onSurface: Colors.black,
               error: Colors.red,

@@ -733,7 +733,7 @@ class SideNavState extends State<SideNav> {
                   if (footerButtonsController.vendaMesa.value && footerButtonsController.rotaHome.value && funcoesController.vendaMesa.value)
                   vendasMesaPage(currentRoute, colorScheme),
 
-                  // if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value && funcoesController.vendaBalcao.value)
+                  if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value && funcoesController.vendaBalcao.value)
                   retirarBalcao(currentRoute, colorScheme),
             
                   if (footerButtonsController.aparecerCheckIn.value && footerButtonsController.rotaHome.value)

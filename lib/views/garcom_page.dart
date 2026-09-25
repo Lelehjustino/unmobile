@@ -8711,8 +8711,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                       ),
                                     ), */
                                   // Fazer pedido
-                                  // Fazer pedido
-                                  if (aparecerFazerPedido && carrinhoController.carrinho.isNotEmpty && comandaCarrinhoController.isEmpty)
+                                  if (
+                                   //  aparecerFazerPedido && 
+                                    carrinhoController.carrinho.isNotEmpty && comandaCarrinhoController.isEmpty)
                                   Expanded(
                                     child: GestureDetector(
                                       // quando clicar em fazer pedido

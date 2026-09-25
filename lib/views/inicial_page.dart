@@ -163,7 +163,7 @@ class InicialPageState extends State<InicialPage> {
     } else {
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
-      } else if (footerButtonsController.aparecerGarcom.value) {
+      } else if ((footerButtonsController.vendaComanda.value && garcomController.vendaComanda.value) || (footerButtonsController.vendaMesa.value && garcomController.vendaMesa.value) || (footerButtonsController.retirarBalcao.value && funcoesController.vendaBalcao.value)) {
         // venda comanda marcada 
         if(footerButtonsController.vendaComanda.value && garcomController.vendaComanda.value){
           garcomController.retirarBalcaoRota.value = false;
@@ -178,8 +178,8 @@ class InicialPageState extends State<InicialPage> {
         } 
         // venda balcao marcada 
         else if (footerButtonsController.retirarBalcao.value && funcoesController.vendaBalcao.value) {
-          garcomController.retirarBalcaoRota.value = false;
-          garcomController.vendaComanda.value = true;
+          garcomController.retirarBalcaoRota.value = true;
+          garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = false;
         } 
         else {
@@ -215,6 +215,20 @@ class InicialPageState extends State<InicialPage> {
       }
       else {
         Get.toNamed('/garcom');
+        // venda comanda 
+        if(garcomController.vendaComanda.value){
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = true;
+          garcomController.vendaMesa.value = false;
+        } else if (garcomController.vendaMesa.value){
+          garcomController.retirarBalcaoRota.value = false;
+          garcomController.vendaComanda.value = false;
+          garcomController.vendaMesa.value = true;
+        } else if (funcoesController.vendaBalcao.value){
+          garcomController.retirarBalcaoRota.value = true;
+          garcomController.vendaComanda.value = false;
+          garcomController.vendaMesa.value = false;
+        }
       }
     }
   }
@@ -772,8 +786,7 @@ class InicialPageState extends State<InicialPage> {
   // Função para verificar se o id do aparelho já esta com licença.
   // Valida se a licença salva no SharedPreferences pertence ao Mobile ID atual.
   Future<void> vefificacaoLicencaComId() async {
-    if ((servidorController.text == "192.192.192.192") ||
-        (servidorController.text == "192192192192")) {
+    if ((servidorController.text == "192.192.192.192") || (servidorController.text == "192192192192")) {
       await forcarMobileId();
       if (mounted) {
         setState(() {
