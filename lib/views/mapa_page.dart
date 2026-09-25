@@ -2532,7 +2532,7 @@ class MapaPageState extends State<MapaPage> {
                     children: [
                       // if(vendaComandaClicado || vendaMesaClicado)
                       Expanded(
-                        // flex: orientation == Orientation.landscape ? 4 : 1,
+                        flex: orientation == Orientation.landscape ? 3 : 3,
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height * 0.06,
                           child: KeyboardActions(
@@ -2622,7 +2622,7 @@ class MapaPageState extends State<MapaPage> {
                     // botões cloudy
                     // refresh
                     Expanded(
-                      // flex: orientation == Orientation.landscape ? 2 : 3,
+                      flex: orientation == Orientation.landscape ? 1 : 3,
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -2680,8 +2680,8 @@ class MapaPageState extends State<MapaPage> {
                             )
                           ],
                         ),
-                        if(!modoCarrossel)
-                        SizedBox(width: 3),
+                        /* if(!modoCarrossel)
+                        // SizedBox(width: 3), */
                         // Botao tres funções - abertas - fechadas - todas
                         if(vendaComandaClicado || vendaMesaClicado)
                         Column(
@@ -2734,7 +2734,7 @@ class MapaPageState extends State<MapaPage> {
                             )
                           ],
                         ),
-                        /* SizedBox(width: 3),
+                        /* // SizedBox(width: 3),
                         if(mapaController.vendaComandaNaMesa.value)
                         Column(
                           children: [
@@ -2774,7 +2774,7 @@ class MapaPageState extends State<MapaPage> {
                             )
                           ],
                         ), */
-                        SizedBox(width: 3),
+                        // // SizedBox(width: 3),
                         if(mapaController.vendaComandaNaMesa.value && garcomController.vendaComandaNaMesa.value)
                         Column(
                           children: [
@@ -2806,7 +2806,7 @@ class MapaPageState extends State<MapaPage> {
                             )
                           ],
                         ),
-                        SizedBox(width: 3),
+                        // SizedBox(width: 3),
                         // botão mesa
                         if (mapaController.vendaMesa.value && garcomController.vendaComandaNaMesa.value)
                           Column(
@@ -2847,7 +2847,7 @@ class MapaPageState extends State<MapaPage> {
                             ],
                           ),
 
-                        SizedBox(width: 3),
+                        // SizedBox(width: 3),
                         // botão comanda
                         if (mapaController.vendaComanda.value && funcoesController.vendaComanda.value)
                           Column(
@@ -2881,7 +2881,7 @@ class MapaPageState extends State<MapaPage> {
                                 )
                               ],
                           ),
-                          SizedBox(width: 3),
+                          // SizedBox(width: 3),
                         // botão balcao
                         if (mapaController.vendaBalcao.value)
                           Column(
