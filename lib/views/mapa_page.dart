@@ -2532,7 +2532,7 @@ class MapaPageState extends State<MapaPage> {
                     children: [
                       // f(vendaComandaClicado || vendaMesaClicado)
                       Expanded(
-                        flex: 1,
+                        flex: orientation == Orientation.landscape ? 5 : 1,
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height * 0.06,
                           child: KeyboardActions(
@@ -2622,13 +2622,13 @@ class MapaPageState extends State<MapaPage> {
                     // botões cloudy
                     // refresh
                     Expanded(
-                      flex: 3,
+                      flex: orientation == Orientation.landscape ? 2 : 3,
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            /* Column(
+                            Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -2679,7 +2679,7 @@ class MapaPageState extends State<MapaPage> {
                               ),
                             )
                           ],
-                        ), */
+                        ),
                         if(!modoCarrossel)
                         SizedBox(width: 3),
                         // Botao tres funções - abertas - fechadas - todas
