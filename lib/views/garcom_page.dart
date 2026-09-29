@@ -463,6 +463,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       // NÃO chamar carregarUltimaConfiguracao() aqui, pois ela leria "Touch" do
       // SharedPreferences e reativaria o modo touch logo após sairModoTouch().
       iniciaComCarrinho();
+      setState(() {
+        mesaController.text = carrinhoController.numeroMesa.value;
+      });
     } else {
       chamarFocoInicial();
       carrinhoController.carrinho.clear();
@@ -1243,8 +1246,14 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (Get.arguments != null) {
         await _iniciarComCarrinhoComArgumentos();
+        setState(() {
+          mesaController.text = carrinhoController.numeroMesa.value;
+        });
       } else {
         await _iniciarComCarrinhoAtual();
+        setState(() {
+          mesaController.text = carrinhoController.numeroMesa.value;
+        });
       }
     });
   }
@@ -1406,6 +1415,10 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     );
 
     sairModoTouch();
+
+    setState(() {
+      mesaController.text = carrinhoController.numeroMesa.value;
+    });
   }
 
 
@@ -1513,7 +1526,6 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     required String rota,
   }) async {
     // Retirada no balcão
-
     if (_retirarBalcao) {
       _fluxoRetirarBalcao();
       return;
@@ -1524,10 +1536,48 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     // Pedido novo
     if (numeroPedido == '0' || numeroPedido.isEmpty) {
-      if (_usarComanda && ((rota == 'comanda') || rota ==  "")) {
-        validarComanda(comanda);
+      // GUARD: Se o carrinho já tem itens (ex: retorno da pizza), a mesa/comanda
+      // já está validada. Chamar validarMesa/validarComanda aqui dispara operações
+      // assíncronas que sobrescrevem mesaController.text ou chamam zerarAtendimento()
+      // DEPOIS que _finalizarTelaCarrinho já setou a mesa corretamente.
+      //
+      // Em modo "comanda na mesa": validarComanda seta mesaController.text com
+      // o valor do banco (que pode ser '0') na linha 3285, apagando a mesa correta.
+      // Em modo "mesa": validarMesa pode chamar zerarAtendimento() se a mesa
+      // já tiver atendimento/comanda vinculada.
+      if (carrinhoController.carrinho.isNotEmpty) {
+        debugPrint('[MESA-DEBUG] _processarPedido: carrinho não vazio → pulando validação ao voltar da pizza. mesa=$mesa comanda=$comanda');
+
+        // Modo comanda (inclui comanda-na-mesa)
+        if (_usarComanda && comanda.isNotEmpty && comanda != '0') {
+          carrinhoController.numeroComanda.value = comanda;
+          setState(() {
+            numeroComandaEmUso = comanda;
+            comandaValida = true;
+            aparecerFazerPedido = true;
+          });
+        }
+        // Mesa: restaura em modo puro-mesa OU em modo comanda-na-mesa
+        if (mesa.isNotEmpty && mesa != '0') {
+          carrinhoController.numeroMesa.value = mesa;
+          setState(() {
+            numeroMesaEmUso = mesa;
+            mesaValida = true;
+            mesaVinculada = true;
+            aparecerFazerPedido = true;
+          });
+        }
+
+        await verificarSeTemConta(identificador);
+        await buscarNumeroPedido(identificador);
+        return;
+      }
+
+      // Carrinho vazio: fluxo normal de primeiro acesso
+      if (_usarComanda && ((rota == 'comanda') || rota == "")) {
+        await validarComanda(comanda);
       } else {
-        validarMesa(mesa);
+        await validarMesa(mesa);
       }
 
       return;
@@ -1535,7 +1585,6 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     // Pedido já existente
     await verificarSeTemConta(identificador);
-
     await buscarNumeroPedido(identificador);
   }
 
@@ -1546,6 +1595,17 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     required String mesa,
   }) {
     informacoesCliente();
+
+    // Remove os listeners antes de alterar os controllers para não disparar
+    // _onMesaChanged / _onComandaChanged enquanto numeroMesaEmUso ainda tem
+    // o valor antigo — o que causaria zerarAtendimento() ao voltar da pizza.
+    comandaController.removeListener(_onComandaChanged);
+    mesaController.removeListener(_onMesaChanged);
+
+    // Persiste os valores no carrinhoController ANTES de readicionar listeners,
+    // garantindo que o estado esteja correto mesmo que algo leia esses valores.
+    carrinhoController.numeroComanda.value = comanda;
+    carrinhoController.numeroMesa.value = mesa;
 
     setState(() {
       volteiPizza = true;
@@ -1565,21 +1625,23 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       mesaController.text = mesa;
 
       numeroComandaEmUso = comanda;
+      carrinhoController.numeroComanda.value = comanda;
       numeroMesaEmUso = mesa;
+      carrinhoController.numeroMesa.value = mesa;
+
+      mesaValida = mesa.isNotEmpty && mesa != '0';
+      aparecerFazerPedido = true;
 
       _campoAtivo = 'cardapioController';
     });
 
-    // Dá tempo para o widget entrar na árvore antes
-    // de solicitar o foco.
-    Future.delayed(
-      const Duration(milliseconds: 300),
-      () {
-        if (cardapioFocus.canRequestFocus) {
-          cardapioFocus.requestFocus();
-        }
-      },
-    );
+    // Readiciona os listeners APÓS o setState concluir
+    comandaController.addListener(_onComandaChanged);
+    mesaController.addListener(_onMesaChanged);
+
+    setState(() {
+      mesaController.text = carrinhoController.numeroMesa.value;
+    });
   }
 
   // ─── Bloqueio global de foco ────────────────────────────────────────────────
@@ -2679,8 +2741,10 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
   }
 
   // Função que executa ação se mudar TextField da comanda
-  // Função que executa ação se mudar TextField da comanda
   void _onComandaChanged() {
+    // Protege o estado ao voltar da pizza: nunca zerar enquanto volteiPizza = true
+    if (volteiPizza) return;
+
     final value = comandaController.text;
     if (value.isEmpty || value == numeroComandaEmUso) return;
 
@@ -2695,6 +2759,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   // Função que executa ação se mudar TextField da mesa
   void _onMesaChanged() {
+    // Protege o estado ao voltar da pizza: nunca zerar enquanto volteiPizza = true
+    if (volteiPizza) return;
+
     final value = mesaController.text;
     if (value.isEmpty || value == numeroMesaEmUso) return;
 
@@ -3231,12 +3298,14 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               });
               _irParaCardapio();
             } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
+              final mesaDoDb = comanda['numeromesa']?.toString() ?? '0';
+            
               setState(() {
                 numeroComandaEmUso = numeroComanda;
-                numeroMesaEmUso = comanda['numeromesa'];
-                mesaController.text = numeroMesaEmUso;
+                numeroMesaEmUso = mesaDoDb;
+                mesaController.text = mesaDoDb;
                 comandaValida = true;
-                mesaVinculada = comanda['numeromesa'] != '0';
+                mesaVinculada = mesaDoDb != '0';
                 mesaComandaNaoTemConta = true;
                 mostrarDentroComandaMesa = valorLiquido != 0.0;
                 aparecerFazerPedido = true;
@@ -3270,10 +3339,12 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             _irParaCardapio();
           });
         } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
+          final mesaDoDb = comanda['numeromesa']?.toString() ?? '0';
+          debugPrint('[MESA-DEBUG] validarComanda (mesa vinculada, comanda-na-mesa) sobrescrevendo mesaController com: $mesaDoDb');
           setState(() {
             numeroComandaEmUso = numeroComanda;
-            numeroMesaEmUso = comanda['numeromesa'];
-            mesaController.text = numeroMesaEmUso;
+            numeroMesaEmUso = mesaDoDb;
+            mesaController.text = mesaDoDb;
             comandaValida = true;
             mesaVinculada = true;
             mesaComandaNaoTemConta = true;
