@@ -160,7 +160,10 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
     required String numeroUsuario, // numero do motoboy 
     required String numeroTradepoint,
     required String nomeMotoboy,
+    required bool despacharintegracaobool
   }) async {
+
+    String despacharintegracaostring = despacharintegracaobool ? "1" : "0";
 
     String sql = """
       INSERT INTO pedidoslog (
@@ -169,7 +172,8 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
         numerotradepoint_FK,
         numerocaixa_FK,
         datahora,
-        log
+        log,
+        despacharintegracao
       )
       VALUES (
         '$numeroPedido',
@@ -177,7 +181,8 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
         '$numeroTradepoint',
         '0',
         CURRENT_TIMESTAMP,
-        'Confirmado a entrega do pedido para o motoboy: $nomeMotoboy'
+        'Confirmado a entrega do pedido para o motoboy: $nomeMotoboy',
+        '$despacharintegracaostring'
       );
     """;
 
@@ -919,6 +924,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                           'enderecoClienteSelecionado': enderecoClienteSelecionado,
                           'numeroEnderecoClienteSelecionado': numeroEnderecoClienteSelecionado,
                           'bairroClienteSelecionado': bairroClienteSelecionado,
+                          'integrador': pedido['integrador']?.toString() ?? "",
                         };
 
                         try {
@@ -1156,7 +1162,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
           // FINAL PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS 
           SizedBox(width: spacingPadrao),
           // build de expedicao 
-          Expanded(
+          /* Expanded(
             flex: 1,
             child: Container(
               color: colorScheme.secondary.withOpacity(0.1),
@@ -1455,6 +1461,14 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                                       if(conectado){
                                         // update
                                         for(var pedido in listaPedidosSelecionados){
+                                          String intStr = pedido['integrador']?.toString() ?? "";
+                                          bool integradorBool = intStr.contains("PEDEAQUI") ||
+                                                                intStr.contains("IFOOD") ||
+                                                                intStr.contains("P10") || intStr.contains("P 10") ||
+                                                                intStr.contains("NEEMO") ||
+                                                                intStr.contains("99FOOD") ||
+                                                                intStr.contains("ANOTA AI");
+
                                           await atualizarStatusEntrega(
                                             numeroDelivery: pedido['numerodelivery'].toString(),
                                             numeroMotoboy: painelController.numeroMotoboySelecionado.value,
@@ -1465,6 +1479,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                                             numeroUsuario: painelController.numeroMotoboySelecionado.value,
                                             numeroTradepoint: numeroTradepointSelecionada,
                                             nomeMotoboy: painelController.nomeMotoboySelecionado.value,
+                                            despacharintegracaobool: integradorBool
                                           );
                                         }
                                         await buscarPedidos();
@@ -1529,7 +1544,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                 }
               ),
             ),
-          ),
+          ), */
         ],
       ),
     );
@@ -1614,6 +1629,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                           'enderecoClienteSelecionado': enderecoClienteSelecionado,
                           'numeroEnderecoClienteSelecionado': numeroEnderecoClienteSelecionado,
                           'bairroClienteSelecionado': bairroClienteSelecionado,
+                          'integrador': pedido['integrador']?.toString() ?? "",
                         };
 
                         try {
@@ -1851,7 +1867,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
           // FINAL PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS 
           SizedBox(width: spacingPadrao),
           // build de expedicao 
-          Expanded(
+          /* Expanded(
             flex: 1,
             child: Container(
               color: colorScheme.secondary.withOpacity(0.1),
@@ -2156,6 +2172,14 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                                       if(conectado){
                                         // update
                                         for(var pedido in listaPedidosSelecionados){
+                                          String intStr = pedido['integrador']?.toString() ?? "";
+                                          bool integradorBool = intStr.contains("PEDEAQUI") ||
+                                                                intStr.contains("IFOOD") ||
+                                                                intStr.contains("P10") || intStr.contains("P 10") ||
+                                                                intStr.contains("NEEMO") ||
+                                                                intStr.contains("99FOOD") ||
+                                                                intStr.contains("ANOTA AI");
+
                                           await atualizarStatusEntrega(
                                             numeroDelivery: pedido['numerodelivery'].toString(),
                                             numeroMotoboy: painelController.numeroMotoboySelecionado.value,
@@ -2166,6 +2190,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                                             numeroUsuario: painelController.numeroMotoboySelecionado.value,
                                             numeroTradepoint: numeroTradepointSelecionada,
                                             nomeMotoboy: painelController.nomeMotoboySelecionado.value,
+                                            despacharintegracaobool: integradorBool
                                           );
                                         }
                                         await buscarPedidos();
@@ -2230,7 +2255,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                 }
               ),
             ),
-          ),
+          ), */
         ],
       ),
     );
@@ -2298,6 +2323,19 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
             final statusentrega = pedido['statusentrega'].toString();
             final atendimento = pedido['atendimento'].toString();
             final integrador = pedido['integrador'].toString();
+            bool integradorBool = integrador.contains("PEDEAQUI")
+                ? true
+                : integrador.contains("IFOOD")
+                ? true
+                : integrador.contains("P10") || integrador.contains("P 10")
+                ? true
+                : integrador.contains("NEEMO")
+                ? true
+                : integrador.contains("99FOOD")
+                ? true
+                : integrador.contains("ANOTA AI")
+                ? true
+                : false;
 
             final corGrid = integrador.contains("PEDEAQUI") 
                 ? const Color.fromARGB(255, 177, 167, 179)
@@ -2359,6 +2397,20 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                   'bairroClienteSelecionado': bairroClienteSelecionado,
                   'integrador': integrador,
                 };
+
+                bool integradorBool = integrador.contains("PEDEAQUI")
+                  ? true
+                  : integrador.contains("IFOOD")
+                  ? true
+                  : integrador.contains("P10") || integrador.contains("P 10")
+                  ? true
+                  : integrador.contains("NEEMO")
+                  ? true
+                  : integrador.contains("99FOOD")
+                  ? true
+                  : integrador.contains("ANOTA AI")
+                  ? true
+                  : false;
 
                 listaPedidosSelecionados.add(novoPedido);
                 listaIndexPedidosSelecionados.add(index);
@@ -3072,6 +3124,13 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                                         bool conectado = await Connection.conectarBanconoSalvar();
                                         await _loadNumeroLicenca();
                                         if (conectado) {
+                                          bool integradorBool = integrador.contains("PEDEAQUI") ||
+                                                                integrador.contains("IFOOD") ||
+                                                                integrador.contains("P10") || integrador.contains("P 10") ||
+                                                                integrador.contains("NEEMO") ||
+                                                                integrador.contains("99FOOD") ||
+                                                                integrador.contains("ANOTA AI");
+
                                           for (var pedido in listaPedidosSelecionadosFuncao) {
                                             await atualizarStatusEntrega(
                                               numeroDelivery: pedido['numerodelivery'].toString(),
@@ -3082,6 +3141,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                                               numeroUsuario: motoboyNumeroLocal,
                                               numeroTradepoint: numeroTradepointSelecionada,
                                               nomeMotoboy: motoboyNomeLocal,
+                                              despacharintegracaobool: integradorBool
                                             );
                                           }
                                           if (mounted) {

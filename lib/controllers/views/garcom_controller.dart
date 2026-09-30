@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:cpf_cnpj_validator/cpf_validator.dart';
 import 'package:get/get_rx/src/rx_types/rx_types.dart';
@@ -41,6 +42,14 @@ class GarcomController extends GetxController {
     await carregarCadastroCliente();
     await carregarTipoCadastroCliente();
     await carregarForcarCadastroCliente();
+  }
+
+  Future<String> numeroAleatorio() async {
+    final random = Random();
+
+    final numeroGerado = random.nextInt(1000);
+
+    return numeroGerado.toString().padLeft(4, '0');
   }
 
   Future<void> carregarRetiradaBalcao() async {

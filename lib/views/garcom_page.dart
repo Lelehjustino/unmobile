@@ -299,7 +299,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   String numeropedido_FK = "";
 
-  bool mostrarDentroComandaMesa = false;
+  bool mostrarDentroComandaMesaBalcao = false;
   bool produtoKilo = false;
   int contadorPonto = 0;
 
@@ -387,6 +387,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
   bool volteiPizza = false;
 
   bool clienteCadastradoVisual = false;
+
+  String numeroPedidoBalcao = '';
 
   // A máscara permite 10 ou 11 dígitos para o número (com DDD)
   final _maskFormatter = MaskTextInputFormatter(
@@ -481,6 +483,46 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     garcomController.configuracoesCadastroCliente();
     garcomController.carregarModoCarrinhoComandas();
     garcomController.carregarRetiradaBalcao();
+  }
+
+  // Icone de carrinho com quantidade de itens
+  Widget iconeCarrinhoComQuantidade(int quantidade) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        Icon(
+          Icons.shopping_cart,
+          // size: 35,
+          color: Theme.of(context).colorScheme.onTertiary,
+        ),
+        Positioned(
+          top: -5,
+          right: -7,
+          child: Container(
+            width: 19,
+            height: 19,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.scrim,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              '$quantidade',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.scrim,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> atualizarValores(
@@ -962,7 +1004,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           'clienteCpf': cpfClienteDialogoController.text,
           'clienteTelefone': telefoneClienteDialogoController.text,
           'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
-          'nomeCliente': nomeClienteController.text
+          'nomeCliente': nomeClienteController.text,
+          'numeroPedidoBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : '0',
         },
       )?.then((_) {
         if (mounted) {
@@ -1205,16 +1248,38 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         double valorLiquido = double.tryParse(lista[0]['valorliquidopedido'].toString()) ?? 0.0;
         if (valorLiquido != 0.0) {
           setState(() {
-            mostrarDentroComandaMesa = true;
+            mostrarDentroComandaMesaBalcao = true;
           });
         } else {
           setState(() {
-            mostrarDentroComandaMesa = false;
+            mostrarDentroComandaMesaBalcao = false;
           });
         }
       } else {
         setState(() {
-          mostrarDentroComandaMesa = false;
+          mostrarDentroComandaMesaBalcao = false;
+        });
+      }
+    } else if (garcomController.retirarBalcaoRota.value) {
+      // valorliquidopedido FROM
+      String dadosJson = await Connection().select(
+        "SELECT valorliquidopedido FROM delivery WHERE numerodelivery='$numero';",
+      );
+      List<dynamic> lista = jsonDecode(dadosJson);
+      if (lista.isNotEmpty) {
+        double valorLiquido =  double.tryParse(lista[0]['valorliquidopedido'].toString()) ?? 0.0;
+        if (valorLiquido != 0.0) {
+          setState(() {
+            mostrarDentroComandaMesaBalcao = true;
+          });
+        } else {
+          setState(() {
+            mostrarDentroComandaMesaBalcao = false;
+          });
+        }
+      } else {
+        setState(() {
+          mostrarDentroComandaMesaBalcao = false;
         });
       }
     } else {
@@ -1226,16 +1291,16 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         double valorLiquido =  double.tryParse(lista[0]['valorliquidopedido'].toString()) ?? 0.0;
         if (valorLiquido != 0.0) {
           setState(() {
-            mostrarDentroComandaMesa = true;
+            mostrarDentroComandaMesaBalcao = true;
           });
         } else {
           setState(() {
-            mostrarDentroComandaMesa = false;
+            mostrarDentroComandaMesaBalcao = false;
           });
         }
       } else {
         setState(() {
-          mostrarDentroComandaMesa = false;
+          mostrarDentroComandaMesaBalcao = false;
         });
       }
     }
@@ -1258,7 +1323,6 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     });
   }
 
-
   // CARRINHO COM ARGUMENTOS DA ROTA
 
   Future<void> _iniciarComCarrinhoComArgumentos() async {
@@ -1267,6 +1331,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String comanda = argumentos['comanda'] ?? '';
     String mesa = argumentos['mesa'] ?? '';
     String numeroPedido = argumentos['numeropedido'] ?? '0';
+    numeroDoPedido = numeroPedido;
 
     String clienteId = argumentos['clienteId'] ?? '';
     String clienteNome = argumentos['clienteNome'] ?? '';
@@ -1277,11 +1342,20 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String nomeCliente = argumentos['nomeCliente'] ?? '';
     String rota = argumentos['rota'] ?? '';
 
+    String nomeClienteBalcao = argumentos['nomeClienteBalcao'] ?? '';
+    String numeroClienteBalcao = argumentos['numeroClienteBalcao' ] ?? '0';
+    numeroPedidoBalcao = numeroClienteBalcao;
+
     // Corrige mesa e comanda
     mesa = _obterMesa(mesa);
     comanda = _obterComanda(comanda);
 
     // Preenche os dados do cliente usando o carrinho como fallback
+
+    numeroPedido = _usarValorOuCarrinho(
+      numeroPedido,
+      carrinhoController.numeroPedido.value,
+    );
 
     clienteId = _usarValorOuCarrinho(
       clienteId,
@@ -1313,6 +1387,16 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       carrinhoController.clienteNome.value,
     );
 
+    nomeClienteBalcao = _usarValorOuCarrinho(
+      nomeClienteBalcao,
+      carrinhoController.nomeClienteBalcao.value,
+    );
+
+    numeroClienteBalcao = _usarValorOuCarrinho(
+      numeroClienteBalcao, 
+      carrinhoController.numeroClienteBalcao.value
+    );
+    
     // Salva os dados do cliente
     _salvarDadosCliente(
       clienteId: clienteId,
@@ -1336,13 +1420,15 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       numeroPedido: numeroPedido,
       comanda: comanda,
       mesa: mesa,
-      rota: rota 
+      rota: rota,
+      numeroClienteBalcao: numeroClienteBalcao,
     );
 
     // Finaliza configuração da tela
     _finalizarTelaCarrinho(
       comanda: comanda,
       mesa: mesa,
+      nomeClienteBalcao: nomeClienteBalcao
     );
 
     sairModoTouch();
@@ -1354,8 +1440,6 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
   Future<void> _iniciarComCarrinhoAtual() async {
     String comanda = carrinhoController.numeroComanda.value;
     String mesa = carrinhoController.numeroMesa.value;
-
-    String numeroPedido = '';
 
     final nomeCliente = carrinhoController.nomeClienteBalcao.value;
 
@@ -1369,6 +1453,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     final clienteDataNascimento = carrinhoController.clienteDataNascimento.value;
 
+    final numeroClienteBalcao = carrinhoController.numeroClienteBalcao.value; 
+
     // Busca o número do pedido atual
     final identificadorPedido = _usarComanda
         ? comanda
@@ -1376,7 +1462,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     await buscarNumeroPedido(identificadorPedido);
 
-    numeroPedido = carrinhoController.numeroPedido.value;
+    String numeroPedido = carrinhoController.numeroPedido.value;
 
     // Corrige mesa e comanda
     mesa = _obterMesa(mesa);
@@ -1405,19 +1491,22 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       numeroPedido: numeroPedido,
       comanda: comanda,
       mesa: mesa,
-      rota: ""
+      rota: "",
+      numeroClienteBalcao: numeroClienteBalcao,
     );
 
     // Finaliza configuração da tela
     _finalizarTelaCarrinho(
       comanda: comanda,
       mesa: mesa,
+      nomeClienteBalcao: nomeCliente
     );
 
     sairModoTouch();
 
     setState(() {
       mesaController.text = carrinhoController.numeroMesa.value;
+      nomeClienteController.text = carrinhoController.nomeClienteBalcao.value;
     });
   }
 
@@ -1524,10 +1613,21 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     required String comanda,
     required String mesa,
     required String rota,
+    required String numeroClienteBalcao,
   }) async {
     // Retirada no balcão
     if (_retirarBalcao) {
-      _fluxoRetirarBalcao();
+      if (numeroPedido != '0' && numeroPedido.isNotEmpty) {
+        await verificarSeTemConta(numeroClienteBalcao);
+        await validarBalcao(numeroClienteBalcao);
+        nomeClienteController.text = nomeClienteController.text;
+      } else {
+        if (carrinhoController.carrinho.isEmpty) {
+          _fluxoRetirarBalcao();
+          await verificarSeTemConta(numeroClienteBalcao);
+          await validarBalcao(numeroClienteBalcao);
+        }
+      }
       return;
     }
 
@@ -1536,17 +1636,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     // Pedido novo
     if (numeroPedido == '0' || numeroPedido.isEmpty) {
-      // GUARD: Se o carrinho já tem itens (ex: retorno da pizza), a mesa/comanda
-      // já está validada. Chamar validarMesa/validarComanda aqui dispara operações
-      // assíncronas que sobrescrevem mesaController.text ou chamam zerarAtendimento()
-      // DEPOIS que _finalizarTelaCarrinho já setou a mesa corretamente.
-      //
-      // Em modo "comanda na mesa": validarComanda seta mesaController.text com
-      // o valor do banco (que pode ser '0') na linha 3285, apagando a mesa correta.
-      // Em modo "mesa": validarMesa pode chamar zerarAtendimento() se a mesa
-      // já tiver atendimento/comanda vinculada.
       if (carrinhoController.carrinho.isNotEmpty) {
-        debugPrint('[MESA-DEBUG] _processarPedido: carrinho não vazio → pulando validação ao voltar da pizza. mesa=$mesa comanda=$comanda');
 
         // Modo comanda (inclui comanda-na-mesa)
         if (_usarComanda && comanda.isNotEmpty && comanda != '0') {
@@ -1593,6 +1683,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
   void _finalizarTelaCarrinho({
     required String comanda,
     required String mesa,
+    required String nomeClienteBalcao,
   }) {
     informacoesCliente();
 
@@ -1606,6 +1697,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     // garantindo que o estado esteja correto mesmo que algo leia esses valores.
     carrinhoController.numeroComanda.value = comanda;
     carrinhoController.numeroMesa.value = mesa;
+    carrinhoController.nomeClienteBalcao.value = nomeClienteBalcao; 
 
     setState(() {
       volteiPizza = true;
@@ -1623,6 +1715,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
       comandaController.text = comanda;
       mesaController.text = mesa;
+      nomeClienteController.text = nomeClienteBalcao;
 
       numeroComandaEmUso = comanda;
       carrinhoController.numeroComanda.value = comanda;
@@ -1641,6 +1734,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     setState(() {
       mesaController.text = carrinhoController.numeroMesa.value;
+      nomeClienteController.text = nomeClienteBalcao;
     });
   }
 
@@ -1922,6 +2016,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     bool todasSucesso = true;
 
+    String numeroAleatorio = await garcomController.numeroAleatorio();
+    String numeroPedidoBalcaoInterno = Get.arguments['numeroClienteBalcao' ] ?? '0';
+
     for (final produto in carrinhoSnapshot) {
       bool sucesso = false;
       if (produto.id == 'P' || produto.id == 'E') {
@@ -1938,9 +2035,13 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           '00000000',
           garcomController.retirarBalcaoRota.value ? '1' : '0',
           garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
+          garcomController.retirarBalcaoRota.value ? numeroAleatorio: '0',
+          garcomController.retirarBalcaoRota.value ? numeroPedidoBalcaoInterno: '0',
         );
       } else if (produto.id == 'PZ') {
         final partes = montarSaboresEBordas(produto.adicionais);
+
+        String numeroAleatorio = await garcomController.numeroAleatorio();
 
         if(produto.quantidade > 1){
           for(int i = 0; i < produto.quantidade; i++){
@@ -1993,6 +2094,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsBordas[7],
               garcomController.retirarBalcaoRota.value ? '1' : '0',
               garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
+              garcomController.retirarBalcaoRota.value ? numeroAleatorio: '0',
+              garcomController.retirarBalcaoRota.value ? numeroPedidoBalcaoInterno: '0',
             );
           }
         } else {
@@ -2045,6 +2148,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsBordas[7],
               garcomController.retirarBalcaoRota.value ? '1' : '0',
               garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
+              garcomController.retirarBalcaoRota.value ? numeroAleatorio: '0',
+              garcomController.retirarBalcaoRota.value ? numeroPedidoBalcaoInterno: '0',
             );
           }
         }
@@ -2078,6 +2183,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
     bool todasSucesso = true;
 
+    String numeroAleatorio = await garcomController.numeroAleatorio();
+    String numeroPedidoBalcaoInterno = Get.arguments['numeroClienteBalcao' ] ?? '0';
+
     for (final produto in carrinhoSnapshot) {
       bool sucesso = false;
       if (produto.id == 'P' || produto.id == 'E') {
@@ -2094,6 +2202,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           '00000000',
           garcomController.retirarBalcaoRota.value ? '1' : '0',
           garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
+          garcomController.retirarBalcaoRota.value ? numeroAleatorio: '0',
+          garcomController.retirarBalcaoRota.value ? numeroPedidoBalcaoInterno: '0',
         );
       } else if (produto.id == 'PZ') {
         final partes = montarSaboresEBordas(produto.adicionais);
@@ -2149,6 +2259,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               partes.obsBordas[7],
               garcomController.retirarBalcaoRota.value ? '1' : '0',
               garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
+              garcomController.retirarBalcaoRota.value ? numeroAleatorio: '0',
+              garcomController.retirarBalcaoRota.value ? numeroPedidoBalcaoInterno: '0',
             );
           }
         } else {
@@ -2204,6 +2316,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             partes.obsBordas[7],
             garcomController.retirarBalcaoRota.value ? '1' : '0',
             garcomController.retirarBalcaoRota.value ? nomeClienteController.text : '',
+            garcomController.retirarBalcaoRota.value ? numeroAleatorio: '0',
+            garcomController.retirarBalcaoRota.value ? numeroPedidoBalcaoInterno: '0',
           );
         }
       }
@@ -2444,6 +2558,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String obsborda8,
     String balcao, 
     String nomeCliente,
+    String numeroAleatorioBalcao,
+    String numeroPedidoBalcao,
   ) async {
     String divisaoDeSaboresParaInsert = completarComZeros(divisaoDeSabores);
     String numeroSerie = '1';
@@ -2503,6 +2619,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String balcaoInsert = balcao;
     String nomeClienteInsert = nomeCliente;
 
+    // Dados Balcao 
+    String numeroAleatorioBalcaoInsert = numeroAleatorioBalcao;
+    String numeroPedidoBalcaoInset = numeroPedidoBalcao;
     try {
       String sql =
           """
@@ -2553,7 +2672,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           obsborda8,
           numerocliente_FK,
           balcao,
-          nomeCliente
+          nomeCliente,
+          uid,
+          numerobalcao
         ) VALUES (
           '$numeroSerie',
           '$numeroTradepointParaInsert',
@@ -2601,7 +2722,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           '$obsborda8ParaInsert',
           '$numeroClienteString',
           '$balcaoInsert',
-          '$nomeClienteInsert'
+          '$nomeClienteInsert',
+          '$numeroAleatorioBalcaoInsert',
+          '$numeroPedidoBalcaoInset'
         )
       """;
       print('SQL: $sql');
@@ -2637,6 +2760,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String divisaoDeSabores, // 00000000
     String balcaoString,
     String nomeClienteString,
+    String numeroAleatorioBalcao,
+    String numeroPedidoBalcao,
   ) async {
     String divisaoDeSaboresParaInsert = completarComZeros(divisaoDeSabores);
     String numeroSerie = '1';
@@ -2653,6 +2778,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     String status = '1';
     String balcaoStringInsert = balcaoString;
     String nomeClienteStringInsert = nomeClienteString;
+    String numeroAleatorioBalcaoInsert = numeroAleatorioBalcao;
+    String numeroPedidoBalcaoInsert = numeroPedidoBalcao;
     try {
       String sql =
           """
@@ -2671,7 +2798,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           divisaosabores,
           numerocliente_FK,
           balcao,
-          nomeCliente
+          nomeCliente,
+          uid,
+          numerobalcao
         ) VALUES (
           '$numeroSerie',
           '$numeroTradepointParaInsert',
@@ -2687,7 +2816,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
           '$divisaoDeSaboresParaInsert',
           '$numeroClienteString',
           '$balcaoStringInsert',
-          '$nomeClienteStringInsert'
+          '$nomeClienteStringInsert',
+          '$numeroAleatorioBalcaoInsert',
+          '$numeroPedidoBalcaoInsert'
         )
       """;
 
@@ -2736,7 +2867,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       aparecerFazerPedido = false;
       comandaValida = false;
       mesaValida = false;
-      mostrarDentroComandaMesa = false;
+      mostrarDentroComandaMesaBalcao = false;
     });
   }
 
@@ -2916,6 +3047,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         """
       UPDATE cartoes SET atendimento = '0' WHERE atendimento = '$numeroDaLicencaSelecionada';
       UPDATE mesas SET atendimento = '0' WHERE atendimento = '$numeroDaLicencaSelecionada';
+      UPDATE delivery SET atendimento = '0' WHERE atendimento = '$numeroDaLicencaSelecionada';
     """;
 
     try {
@@ -2952,7 +3084,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     aparecerLista = false;
     aparecerConfiguracaoProduto = false;
     aparecerBotoes = true;
-    mostrarDentroComandaMesa = false;
+    mostrarDentroComandaMesaBalcao = false;
     mesaVinculada = false;
     produtoKilo = false;
     contadorPonto = 0;
@@ -3165,6 +3297,167 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       }
     }
   }
+ 
+  // Funcao para validar Balcao 
+  Future<void> validarBalcao(String numeroPedido) async {
+    try {
+      String dadosJson = await Connection().select(
+        "SELECT numero, atendimento, statuspedido, numeropedido_FK, "
+        "valorliquidopedido, numerodelivery, balcao "
+        "FROM delivery "
+        "WHERE numerodelivery='$numeroPedido' AND balcao='1';",
+      );
+
+      List<dynamic> lista = jsonDecode(dadosJson);
+
+      if (lista.isEmpty) {
+        print("Nenhum pedido de balcão encontrado!");
+
+        setState(() {
+          validaComanda = [];
+          mensagem = "Nenhum pedido de balcão encontrado!";
+          comandaValida = false;
+          mesaComandaNaoTemConta = true;
+        });
+
+        return;
+      }
+
+      Map<String, dynamic> balcao = lista[0];
+
+      setState(() {
+        numeropedido_FK = balcao['numeropedido_FK'];
+      });
+
+      // Pedido já está em conta/finalizado
+      if (balcao['statuspedido'] == '2') {
+        setState(() {
+          mesaComandaNaoTemConta = false;
+        });
+
+        shownDialogErrorTwoBottom(
+          context: context,
+          title: "Pedido em conta!",
+          message: "Deseja visualizar este pedido?",
+          icon: Icons.error,
+          onConfirm: () async {
+            mesaComandaNaoTemConta = true;
+
+            Get.to(
+              () => ContaPage(),
+              arguments: {
+                'numeropedido': balcao['numeropedido_FK'],
+                'comanda': '0',
+                'mesa': '0',
+                'page': "garcom",
+                'nome': nomeClienteController.text.isEmpty
+                    ? "0"
+                    : nomeClienteController.text,
+                'numeroBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : "0",
+              },
+            );
+
+            chamarFoco();
+          },
+          onCancel: () async {
+            mesaComandaNaoTemConta = true;
+            zerarAtendimento();
+          },
+        );
+
+        return;
+      }
+
+      // Verifica se outro PDV está atendendo o balcão
+      if (balcao['atendimento'] != null &&
+          balcao['atendimento'].toString() != '0' &&
+          balcao['atendimento'].toString().isNotEmpty) {
+        
+        await _loadNumeroLicenca();
+
+        String dadosAtendimento = await Connection().select(
+          "SELECT nome, numero "
+          "FROM tradepoints "
+          "WHERE numero='${balcao['atendimento']}';",
+        );
+
+        List<dynamic> listaAtendimento = jsonDecode(dadosAtendimento);
+
+        print(dadosAtendimento);
+
+        if (listaAtendimento.isNotEmpty) {
+          final valor = listaAtendimento[0]['nome'].toString();
+          final valor2 = listaAtendimento[0]['numero'].toString();
+
+          setState(() {
+            nomePVD = valor;
+            mobileId = valor2;
+          });
+        } else {
+          setState(() {
+            nomePVD = "Não foi possível rastrear PDV";
+          });
+        }
+
+        if (numeroDaLicencaSelecionada != mobileId) {
+          setState(() {
+            mensagem =
+                "Pedido já está sendo atendido pelo PVD $nomePVD!";
+            comandaValida = false;
+            icone = false;
+          });
+
+          return;
+        }
+      }
+
+      // Mesmo PDV ou pedido ainda não atendido
+      try {
+        setState(() {
+          isLoading = true;
+        });
+
+        await _loadNumeroLicenca();
+
+        await atualizarBalcao(numeroDaLicencaSelecionada, numeroPedido,);
+
+        double valorLiquido = double.tryParse(balcao['valorliquidopedido'].toString(),) ?? 0.0;
+
+        setState(() {
+          comandaValida = true;
+          mesaComandaNaoTemConta = true;
+          aparecerFazerPedido = true;
+
+          mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
+        });
+
+        print(
+          '[BALCAO] Pedido $numeroPedido validado com sucesso.',
+        );
+      } catch (e) {
+        print('[BALCAO] Erro ao abrir pedido: $e');
+
+        setState(() {
+          mensagem = "Erro ao abrir pedido de balcão.";
+          comandaValida = false;
+          icone = false;
+          mesaComandaNaoTemConta = true;
+        });
+      }
+
+      setState(() {
+        validaComanda = lista;
+      });
+    } catch (e) {
+      print("Erro ao carregar pedido de balcão: $e");
+
+      setState(() {
+        validaComanda = [];
+        comandaValida = false;
+        icone = false;
+      });
+    }
+  }
 
   // Função para validar comanda
   Future<void> validarComanda(String numeroComanda) async {
@@ -3231,7 +3524,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 'comanda': numeroComanda,
                 'mesa': comanda['numeromesa'],
                 'page': "garcom",
-                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
+                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text,
+                'numeroBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : "0",
               },
             );
             comandaController.clear();
@@ -3294,7 +3588,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 numeroComandaEmUso = numeroComanda;
                 comandaValida = true;
                 mesaComandaNaoTemConta = true;
-                mostrarDentroComandaMesa = valorLiquido != 0.0;
+                mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
               });
               _irParaCardapio();
             } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
@@ -3307,7 +3601,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 comandaValida = true;
                 mesaVinculada = mesaDoDb != '0';
                 mesaComandaNaoTemConta = true;
-                mostrarDentroComandaMesa = valorLiquido != 0.0;
+                mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
                 aparecerFazerPedido = true;
               });
             }
@@ -3335,7 +3629,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             numeroComandaEmUso = numeroComanda;
             comandaValida = true;
             mesaComandaNaoTemConta = true;
-            mostrarDentroComandaMesa = valorLiquido != 0.0;
+            mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
             _irParaCardapio();
           });
         } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
@@ -3348,7 +3642,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             comandaValida = true;
             mesaVinculada = true;
             mesaComandaNaoTemConta = true;
-            mostrarDentroComandaMesa = valorLiquido != 0.0;
+            mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
             aparecerFazerPedido = true;
           });
         }
@@ -3372,7 +3666,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
             comandaValida = true;
             aparecerFazerPedido = true;
             mesaComandaNaoTemConta = true;
-            mostrarDentroComandaMesa = valorLiquido!= 0.0;
+            mostrarDentroComandaMesaBalcao = valorLiquido!= 0.0;
           });
         } catch (e) {
           setState(() {
@@ -3414,6 +3708,29 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
       print("Cliente atualizado com sucesso!");
     } else {
       print("Erro ao atualizar cliente.");
+    }
+  }
+
+  // Funcao atualizar balcao
+  Future<void> atualizarBalcao(String numeroPVD, String numeroPedido) async {
+    String numeroPVDNoUpdate = numeroPVD;
+    String numeroPedidoNoUpdate = numeroPedido;
+
+    String sql =
+        '''
+        UPDATE delivery
+        SET atendimento = '$numeroPVDNoUpdate'
+        WHERE numerodelivery = '$numeroPedidoNoUpdate'
+          AND balcao = '1';
+        ''';
+
+    String resultado = await Connection().ipd(sql);
+
+    if (resultado == "sucesso") {
+      print(sql);
+      print("Balcão atualizado com sucesso!");
+    } else {
+      print("Erro ao atualizar balcão.");
     }
   }
 
@@ -3475,7 +3792,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 'comanda': mesa['comandavinculada'],
                 'mesa': numeroMesa,
                 'page': "garcom",
-                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
+                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text,
+                'numeroBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : "0",
               },
             );
             mesaController.clear();
@@ -3558,7 +3876,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 mesaValida = true;
                 aparecerFazerPedido = true;
                 mesaComandaNaoTemConta = true;
-                mostrarDentroComandaMesa = valorLiquido != 0.0;
+                mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
                 _campoAtivo = 'cardapioController';
                 showKeyboardQuantidade = false;
                 showKeyboardNumero = false;
@@ -3576,7 +3894,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                 mesaValida = true;
                 aparecerFazerPedido = true;
                 mesaComandaNaoTemConta = true;
-                // mostrarDentroComandaMesa = valorLiquido != 0.0;
+                // mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
               });
             }
           } catch (e) {
@@ -3610,7 +3928,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
         if((_usarVendaMesa)){
           setState(() {
-            mostrarDentroComandaMesa = valorLiquido != 0.0;
+            mostrarDentroComandaMesaBalcao = valorLiquido != 0.0;
           });
         }
       }
@@ -3901,7 +4219,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                         'clienteCpf': cpfClienteDialogoController.text,
                                         'clienteTelefone': telefoneClienteDialogoController.text,
                                         'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
-                                        'nomeCliente': nomeClienteController.text
+                                        'nomeCliente': nomeClienteController.text,
+                                        'numeroPedidoBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : '0',
                                       },
                                     )?.then((_) {
                                       if (mounted) {
@@ -8651,7 +8970,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                   ),
 
                                   // Ir para conta
-                                  if (mostrarDentroComandaMesa)
+                                  if (mostrarDentroComandaMesaBalcao)
                                     Expanded(
                                       child: GestureDetector(
                                         // quando clicar em fazer pedido
@@ -8664,7 +8983,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'comanda': numeroComandaEmUso,
                                                 'mesa': '0',
                                                 'page': "garcom",
-                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
+                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text,
+                                                'numeroBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : "0",
                                               },
                                             );
                                           } else if ((_usarVendaMesa)) {
@@ -8675,7 +8995,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'comanda': '0',
                                                 'mesa': numeroMesaEmUso,
                                                 'page': "garcom",
-                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
+                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text,
+                                                'numeroBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : "0",
                                               },
                                             );
                                           } else if ((_usarVendaComanda && _usarVendaComandaNaMesa)) {
@@ -8686,7 +9007,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                                 'comanda': numeroComandaEmUso,
                                                 'mesa': numeroMesaEmUso,
                                                 'page': "garcom",
-                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text
+                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text,
+                                                'numeroBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : "0",
                                               },
                                             );
                                           }
@@ -10040,7 +10362,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                     }, */
                                     onTap: () async {
                                       if (carrinhoController.carrinho.isNotEmpty) {
-                                        await zerarAtendimento();;
+                                        await zerarAtendimento();
 
                                         setState(() {
                                           aparecerCardapio = false;
@@ -10060,6 +10382,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                         });
                                       } else {
                                         nomeClienteController.clear();
+
+                                        await zerarAtendimento();
 
                                         setState(() {
                                           aparecerCardapio = false;
@@ -10281,23 +10605,31 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                             children: [
                               // Ícone do cardápio
                               Padding(
-                                padding: EdgeInsets.only(
-                                  left: 0,
-                                  right: 0,
-                                  top: 14,
-                                  bottom: 0,
-                                ),
+                                padding: EdgeInsets.only(left: 0, right: 0, top: 14, bottom: 0,),
                                 child: Column(
                                   children: [
                                     IconButton(
-                                      icon: Icon(
+                                      icon:  aparecerConfiguracaoProduto
+                                        ? (!modoAnteriorTouch
+                                          ? Icon(Icons.fingerprint, color: Theme.of(context).colorScheme.onTertiary,)
+                                          : carrinhoController.carrinho.isNotEmpty
+                                              ? iconeCarrinhoComQuantidade(carrinhoController.carrinho.length)
+                                              : Icon(Icons.shopping_cart, color: Theme.of(context).colorScheme.onTertiary,))
+                                        : (aparecerVendaTouch
+                                            ? aparecerCarrinhoForcado
+                                              ?  carrinhoController.carrinho.isNotEmpty
+                                                ? iconeCarrinhoComQuantidade(carrinhoController.carrinho.length)
+                                                : Icon(Icons.shopping_cart, color: Theme.of(context).colorScheme.onTertiary,)
+                                                : Icon(Icons.fingerprint, color: Theme.of(context).colorScheme.onTertiary,)
+                                            : Icon(Icons.fingerprint, color: Theme.of(context).colorScheme.onTertiary,)),       
+                                      /* Icon(
                                         aparecerConfiguracaoProduto 
-                                          ? (!modoAnteriorTouch ? Icons.fingerprint : Icons.shopping_cart)
+                                          ? (!modoAnteriorTouch ? Icons.fingerprint : carrinhoController.carrinho.length >= 1 ? icone com numero :  Icons.shopping_cart)
                                           : (aparecerVendaTouch ? aparecerCarrinhoForcado ? Icons.shopping_cart : Icons.fingerprint : Icons.fingerprint),
                                         // Icons.fingerprint,
                                         // size: 30,
                                         color: Theme.of(context,).colorScheme.onTertiary,
-                                      ),
+                                      ), */
                                       onPressed: () async {
                                         if (aparecerConfiguracaoProduto) {
                                           if (!modoAnteriorTouch) {
@@ -10798,7 +11130,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                           'clienteCpf': cpfClienteDialogoController.text,
                                           'clienteTelefone': telefoneClienteDialogoController.text,
                                           'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
-                                          'nomeCliente': nomeClienteController.text
+                                          'nomeCliente': nomeClienteController.text,
+                                          'numeroPedidoBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : '0',
                                         },
                                       )?.then((_) {
                                         if (mounted) {
@@ -11951,7 +12284,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                         'clienteCpf': cpfClienteDialogoController.text,
                                         'clienteTelefone': telefoneClienteDialogoController.text,
                                         'clienteDataNascimento': dataNascimentoClienteDialogoController.text,
-                                        'nomeCliente': nomeClienteController.text
+                                        'nomeCliente': nomeClienteController.text,
+                                        'numeroPedidoBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : '0',
                                       },
                                     )?.then((_) {
                                       if (mounted) {

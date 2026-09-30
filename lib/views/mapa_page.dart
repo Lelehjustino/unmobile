@@ -48,7 +48,7 @@ class MapaPageState extends State<MapaPage> {
   String? selectedModo;
 
   late Timer _timer;
-  late Timer _timerAtualizacao;
+  // late Timer _timerAtualizacao;
   String _horaAtual = '';
   String nomeEmpresa = '';
 
@@ -548,7 +548,7 @@ class MapaPageState extends State<MapaPage> {
     barraBusca.dispose();
     // Para fazer requisições em determinado tempo (3/3)
     _timerMesas?.cancel();
-    _timerAtualizacao?.cancel();
+    // _timerAtualizacao?.cancel();
     super.dispose();
   }
 
@@ -1237,7 +1237,33 @@ class MapaPageState extends State<MapaPage> {
           return InkWell(
             onTap: () {
               // Coloque aqui a navegação do balcao
+              if(temConta){
               Get.to(
+                () => ContaPage(),
+                arguments: {
+                  'numeropedido': numeroPedidoBalcao,
+                  'comanda': '0',
+                  'mesa': '0',
+                  'page': "mapa",
+                  'nome': nomeCliente,
+                  'numeroBalcao': numeroDelivery,
+                },
+              );
+              } else {
+                garcomController.retirarBalcaoRota.value = true;
+                Get.to(
+                  () => GarcomPage(),
+                  arguments: {
+                    'numeropedido': numeroPedidoBalcao,
+                    'comanda': "0",
+                    'mesa': "0",
+                    'rota': 'mesa',
+                    'nomeClienteBalcao': nomeCliente,
+                    'numeroClienteBalcao': numeroDelivery,
+                  },
+                );
+              }
+              /* Get.to(
                 () => ContaPage(),
                 arguments: {
                   'numeropedido': numeroPedidoBalcao,
@@ -1246,7 +1272,7 @@ class MapaPageState extends State<MapaPage> {
                   'page': "mapa",
                   'nome': nomeCliente
                 },
-              );
+              ); */
               // se for para garcom tem que deixar garcomController.retirarBalcaoRota.value;
             },
             child: Container(
@@ -1453,6 +1479,7 @@ class MapaPageState extends State<MapaPage> {
                       'mesa': item['numero'].toString(),
                       'page': "mapa",
                       'nome': "",
+                      'numeroBalcao': "0",
                     },
                   );
                 } else if (aberto) {
@@ -1464,6 +1491,8 @@ class MapaPageState extends State<MapaPage> {
                       'comanda': "0",
                       'mesa': item['numero'].toString(),
                       'rota': 'mesa',
+                      'nomeClienteBalcao': '',
+                      'numeroClienteBalcao': '',
                     },
                   );
                 } else if (!aberto) {
@@ -1475,6 +1504,8 @@ class MapaPageState extends State<MapaPage> {
                       'comanda': "0",
                       'mesa': item['numero'].toString(),
                       'rota': 'mesa',
+                      'nomeClienteBalcao': '',
+                      'numeroClienteBalcao': '',
                     },
                   );
                 }
@@ -1817,6 +1848,7 @@ class MapaPageState extends State<MapaPage> {
                     'mesa': comanda['numeromesa'].toString(),
                     'page': "mapa",
                     'nome': "",
+                    'numeroBalcao': "0",
                   },
                 );
               });
@@ -1831,6 +1863,8 @@ class MapaPageState extends State<MapaPage> {
                     'comanda': numeroComanda,
                     'mesa': comanda['numeromesa'].toString(),
                     'rota': 'comanda',
+                    'nomeClienteBalcao': '',
+                    'numeroClienteBalcao': '',
                   },
                 );
               });
@@ -1843,6 +1877,8 @@ class MapaPageState extends State<MapaPage> {
                     'comanda': numeroComanda,
                     'mesa': "",
                     'rota': 'comanda',
+                    'nomeClienteBalcao': '',
+                    'numeroClienteBalcao': '',
                   },
                 );
               });
@@ -1874,6 +1910,7 @@ class MapaPageState extends State<MapaPage> {
               'mesa': comanda['numeromesa'].toString(),
               'page': "mapa",
               'nome': "",
+              'numeroBalcao': "0",
             },
           );
         });
@@ -1895,6 +1932,8 @@ class MapaPageState extends State<MapaPage> {
                 'comanda': numeroComanda,
                 'mesa': comanda['numeromesa'].toString(),
                 'rota': 'comanda',
+                'nomeClienteBalcao': '',
+                'numeroClienteBalcao': '',
               },
             );
           });
@@ -1907,6 +1946,8 @@ class MapaPageState extends State<MapaPage> {
                 'comanda': numeroComanda,
                 'mesa': comanda['numeromesa'].toString(),
                 'rota': 'comanda',
+                'nomeClienteBalcao': '',
+                'numeroClienteBalcao': '',
               },
             );
           });
@@ -1932,6 +1973,8 @@ class MapaPageState extends State<MapaPage> {
                 'comanda': numeroComanda,
                 'mesa': (vendaComandaNaMesaClicado && mapaController.vendaComandaNaMesa.value) ? (mesaSelecionada ?? "") : "",
                 'rota': 'comanda',
+                'nomeClienteBalcao': '',
+                'numeroClienteBalcao': '',
               },
             );
           });

@@ -29,12 +29,15 @@ class ContaPageState extends State<ContaPage>
 
   final FuncoesController funcoesController = Get.find<FuncoesController>();
 
+  String detalhesPedido = "";
+
   // Variáveis para receber e ajeitar args
   String numeropedido = Get.arguments['numeropedido'];
   String comandaDoPedido = Get.arguments['comanda'];
   String mesaDoPedido = Get.arguments['mesa'];
   String rotaAnterior = Get.arguments['page'];
   String nomeClienteDoPedido = Get.arguments['nome'];
+  String numeroClienteDoPedidoBalcao = Get.arguments['numeroBalcao'];
   String comandaDoPedidoParaInsert = "";
   String mesaDoPedidoParaInsert = "";
   String rotaAnteriorPage = "";
@@ -205,6 +208,7 @@ class ContaPageState extends State<ContaPage>
     // buscarPagamento();
     //buscarCaixas();
     rotaAnteriorFuncao();
+    detalhesPedidoFunc();
   }
 
   rotaAnteriorFuncao() {
@@ -212,6 +216,29 @@ class ContaPageState extends State<ContaPage>
       rotaAnteriorPage = rotaAnterior;
     });
   }
+
+  void detalhesPedidoFunc(){
+    String texto = "";
+    (comandaDoPedido == "0" && mesaDoPedido != "0")
+    ? texto = 'MESA: $mesaDoPedido'
+    : (mesaDoPedido == "0" && comandaDoPedido != "0")
+    ? texto = 'COMANDA: $comandaDoPedido'
+    : (comandaDoPedido != "0" && mesaDoPedido != "0")
+    ? texto = 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
+    : (comandaDoPedido != "0")
+    ? texto = 'COMANDA: $comandaDoPedido'
+    : (mesaDoPedido != "0")
+    ? texto = 'MESA: $mesaDoPedido'
+    : (nomeClienteDoPedido != "0")
+    ? texto = '#$numeroClienteDoPedidoBalcao# $nomeClienteDoPedido'
+    : (numeroClienteDoPedidoBalcao != "0")
+    ? texto = '#$numeroClienteDoPedidoBalcao#'
+    : texto = '';
+
+    detalhesPedido = texto;
+  }
+
+  
 
   // Load nomeEmpresa
   Future<void> _loadNomeEmpresa() async {
@@ -240,6 +267,9 @@ class ContaPageState extends State<ContaPage>
     }
     if(nomeClienteDoPedido == ""){
       nomeClienteDoPedido = "0";
+    }
+    if(numeroClienteDoPedidoBalcao == ""){
+      numeroClienteDoPedidoBalcao = "0";
     }
   }
 
@@ -1079,7 +1109,8 @@ class ContaPageState extends State<ContaPage>
             'numeroCaixa': funcoesController.numeroCaixa.value,
             'nomeCaixa': funcoesController.nomeCaixa.value,
             'pageAnterior': rotaAnteriorPage,
-            'nome': nomeClienteDoPedido
+            'nome': nomeClienteDoPedido,
+            'numeroBalcao': numeroClienteDoPedidoBalcao
           },
         );
       } else {
@@ -1110,7 +1141,7 @@ class ContaPageState extends State<ContaPage>
             width: double.maxFinite,
             height: 300,
             child: funcoesController.listaCaixas.isEmpty
-                ? Center(child: Text("Nenhum caixa disponível!!!"))
+                ? Center(child: Text("Nenhum caixa disponivel para recebimento mobile!!!"))
                 : ListView.builder(
                     itemCount: funcoesController.listaCaixas.length,
                     itemBuilder: (context, index) {
@@ -1754,19 +1785,7 @@ class ContaPageState extends State<ContaPage>
                               ),
                               Flexible(
                                 child: Text(
-                                  (comandaDoPedido == "0" && mesaDoPedido != "0")
-                                      ? 'MESA: $mesaDoPedido'
-                                      : (mesaDoPedido == "0" && comandaDoPedido != "0")
-                                      ? 'COMANDA: $comandaDoPedido'
-                                      : (comandaDoPedido != "0" && mesaDoPedido != "0")
-                                      ? 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
-                                      : (comandaDoPedido != "0")
-                                      ? 'COMANDA: $comandaDoPedido'
-                                      : (mesaDoPedido != "0")
-                                      ? 'MESA: $mesaDoPedido'
-                                      : (nomeClienteDoPedido != "0")
-                                      ? '$nomeClienteDoPedido'
-                                      : '',
+                                  detalhesPedido,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(

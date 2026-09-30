@@ -21,6 +21,7 @@ class CarrinhoController extends GetxController {
   RxString clienteTelefone = "".obs;
   RxString clienteDataNascimento = "".obs;
   RxString nomeClienteBalcao = "".obs;
+  RxString numeroClienteBalcao = "".obs;
 
   void adicionarProdutoAoCarrinho(
     String produtoNome,

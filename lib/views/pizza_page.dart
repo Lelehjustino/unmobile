@@ -44,6 +44,7 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
   final String clienteDataNascimentoArgs = Get.arguments['clienteDataNascimento'] ?? '';
 
   final String nomeClienteArgs = Get.arguments['nomeCliente'] ?? '';
+  final String nuemroPedidoBalcaoArgs = Get.arguments['numeroPedidoBalcao'] ?? '';
 
   // edição de pizza
   final int index = Get.arguments['index'];
@@ -2908,7 +2909,8 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                     'clienteCpf': clienteCpfArgs,
                                     'clienteTelefone': clienteTelefoneArgs,
                                     'clienteDataNascimento': clienteDataNascimentoArgs,
-                                    'nomeCliente': nomeClienteArgs
+                                    'nomeCliente': nomeClienteArgs,
+                                    'numeroClienteBalcao': nuemroPedidoBalcaoArgs,
                                   },
                                 );
                               } else if (terminarPizza){
@@ -2931,7 +2933,8 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                     'clienteCpf': clienteCpfArgs,
                                     'clienteTelefone': clienteTelefoneArgs,
                                     'clienteDataNascimento': clienteDataNascimentoArgs,
-                                    'nomeCliente': nomeClienteArgs
+                                    'nomeCliente': nomeClienteArgs,
+                                    'numeroClienteBalcao': nuemroPedidoBalcaoArgs,
                                   },
                                 );
                               }
@@ -3020,7 +3023,8 @@ class PizzaPageState extends State<PizzaPage> with SingleTickerProviderStateMixi
                                         'clienteCpf': clienteCpfArgs,
                                         'clienteTelefone': clienteTelefoneArgs,
                                         'clienteDataNascimento': clienteDataNascimentoArgs,
-                                        'nomeCliente': nomeClienteArgs
+                                        'nomeCliente': nomeClienteArgs,
+                                        'numeroClienteBalcao': nuemroPedidoBalcaoArgs,
                                       },
                                     );
                                     return;

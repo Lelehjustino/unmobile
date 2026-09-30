@@ -42,6 +42,7 @@ class PagamentoPageState extends State<PagamentoPage>
   String numeroCaixa = Get.arguments['numeroCaixa'];
   String nomeCaixa = Get.arguments['nomeCaixa'];
   String rotaAnterior = Get.arguments['pageAnterior'];
+  String numeroClienteDoPedidoBalcao = Get.arguments['numeroBalcao'];
 
   String numeroTurnoCaixaSelecionado = "";
   String statusCaixaSelecionado = "";
@@ -195,6 +196,8 @@ class PagamentoPageState extends State<PagamentoPage>
 
   // List<dynamic> listaCaixas = [];
 
+  String detalhesPedido = "";
+
   @override
   void initState() {
     super.initState();
@@ -257,10 +260,32 @@ class PagamentoPageState extends State<PagamentoPage>
     _loadNomeEmpresa();
     calcularValorReceberInicial();
     arrumarDadosCaixa();
+    detalhesPedidoFunc();
 
     // buscarTipoPedido();
     // buscarPagamento();
     // buscarCaixas();
+  }
+
+  void detalhesPedidoFunc(){
+    String texto = "";
+    (comandaDoPedido == "0" && mesaDoPedido != "0")
+    ? texto = 'MESA: $mesaDoPedido'
+    : (mesaDoPedido == "0" && comandaDoPedido != "0")
+    ? texto = 'COMANDA: $comandaDoPedido'
+    : (comandaDoPedido != "0" && mesaDoPedido != "0")
+    ? texto = 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
+    : (comandaDoPedido != "0")
+    ? texto = 'COMANDA: $comandaDoPedido'
+    : (mesaDoPedido != "0")
+    ? texto = 'MESA: $mesaDoPedido'
+    : (nomeClienteDoPedido != "0")
+    ? texto = '#$numeroClienteDoPedidoBalcao# $nomeClienteDoPedido'
+    : (numeroClienteDoPedidoBalcao != "0")
+    ? texto = '#$numeroClienteDoPedidoBalcao#'
+    : texto = '';
+
+    detalhesPedido = texto;
   }
 
   /* pedirConta() async{
@@ -3148,19 +3173,7 @@ class PagamentoPageState extends State<PagamentoPage>
                                 ),
                               ),
                               Text(
-                               (comandaDoPedido == "0" && mesaDoPedido != "0")
-                                  ? 'MESA: $mesaDoPedido'
-                                  : (mesaDoPedido == "0" && comandaDoPedido != "0")
-                                  ? 'COMANDA: $comandaDoPedido'
-                                  : (comandaDoPedido != "0" && mesaDoPedido != "0")
-                                  ? 'COMANDA: $comandaDoPedido MESA: $mesaDoPedido'
-                                  : (comandaDoPedido != "0")
-                                  ? 'COMANDA: $comandaDoPedido'
-                                  : (mesaDoPedido != "0")
-                                  ? 'MESA: $mesaDoPedido'
-                                  : (nomeClienteDoPedido != "0")
-                                  ? '$nomeClienteDoPedido'
-                                  : '',
+                                detalhesPedido,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
