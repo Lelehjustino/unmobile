@@ -4544,6 +4544,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                               produtoNome,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                               // 'Adicionais e Observações',
                               style: TextStyle(
                                 fontSize: 26,

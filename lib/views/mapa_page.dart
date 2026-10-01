@@ -163,6 +163,20 @@ class MapaPageState extends State<MapaPage> {
     }
   }
 
+  void selecionarMapa(){
+    if(aparecerVoltar){
+      if(rotaBalcao){
+        vendaBalcao();
+      } else if (rotaComanda) {
+        vendaComanda();
+      } else if (rotaComandaNaMesa){
+        vendaComandaNaMesa();
+      } else if (rotaMesa){
+        vendaMesa();
+      }
+    }
+  }
+
   void voltarUltimaVenda() async {
     await arrumarRotas();
 
@@ -205,7 +219,12 @@ class MapaPageState extends State<MapaPage> {
 
   void carregar() async {
     await mapaController.carregarTudo();
-    clicarAutomaticamente();
+    
+    if(aparecerVoltar){
+      selecionarMapa();
+    } else {
+      clicarAutomaticamente();
+    }
   }
 
   void clicarAutomaticamente(){
