@@ -131,14 +131,18 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
   Future<void> atualizarStatusEntrega({
     required String numeroDelivery,
     required String numeroMotoboy,
+    required bool despacharintegracaobool,
   }) async {
+
+    String despacharintegracaoString = despacharintegracaobool ? '1' : '0';
 
     String sql = """
       UPDATE delivery
       SET
         statusentrega = '2',
         numeromotoboy_FK = '$numeroMotoboy',
-        datahorachegada = CURRENT_TIMESTAMP
+        datahorachegada = CURRENT_TIMESTAMP,
+        despacharintegracao = '$despacharintegracaoString'
       WHERE numerodelivery = '$numeroDelivery';
     """;
 
@@ -159,11 +163,8 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
     required String numeroPedido,
     required String numeroUsuario, // numero do motoboy 
     required String numeroTradepoint,
-    required String nomeMotoboy,
-    required bool despacharintegracaobool
+    required String nomeMotoboy
   }) async {
-
-    String despacharintegracaostring = despacharintegracaobool ? "1" : "0";
 
     String sql = """
       INSERT INTO pedidoslog (
@@ -172,8 +173,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
         numerotradepoint_FK,
         numerocaixa_FK,
         datahora,
-        log,
-        despacharintegracao
+        log
       )
       VALUES (
         '$numeroPedido',
@@ -181,8 +181,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
         '$numeroTradepoint',
         '0',
         CURRENT_TIMESTAMP,
-        'Confirmado a entrega do pedido para o motoboy: $nomeMotoboy',
-        '$despacharintegracaostring'
+        'Confirmado a entrega do pedido para o motoboy: $nomeMotoboy'
       );
     """;
 
@@ -3135,13 +3134,13 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                                             await atualizarStatusEntrega(
                                               numeroDelivery: pedido['numerodelivery'].toString(),
                                               numeroMotoboy: motoboyNumeroLocal,
+                                              despacharintegracaobool: integradorBool
                                             );
                                             await inserirLogEntrega(
                                               numeroPedido: pedido['numero'],
                                               numeroUsuario: motoboyNumeroLocal,
                                               numeroTradepoint: numeroTradepointSelecionada,
-                                              nomeMotoboy: motoboyNomeLocal,
-                                              despacharintegracaobool: integradorBool
+                                              nomeMotoboy: motoboyNomeLocal
                                             );
                                           }
                                           if (mounted) {

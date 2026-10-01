@@ -388,7 +388,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
   bool clienteCadastradoVisual = false;
 
-  String numeroPedidoBalcao = '';
+  String numeroPedidoBalcao = '0';
 
   // A máscara permite 10 ou 11 dígitos para o número (com DDD)
   final _maskFormatter = MaskTextInputFormatter(
@@ -483,6 +483,22 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     garcomController.configuracoesCadastroCliente();
     garcomController.carregarModoCarrinhoComandas();
     garcomController.carregarRetiradaBalcao();
+  }
+
+  String verificarLogica(){
+    String rota = "";
+
+    if((garcomController.retirarBalcaoRota.value)){
+      rota = "balcao";
+    } else if (((_usarVendaComanda && !_usarVendaComandaNaMesa) && !garcomController.retirarBalcaoRota.value)) {
+      rota = "comanda";
+    } else if (((_usarVendaComanda && _usarVendaComandaNaMesa) && !garcomController.retirarBalcaoRota.value)){
+      rota = "comandaNaMesa";
+    } else if (((_usarVendaMesa) && !garcomController.retirarBalcaoRota.value)){
+      rota = "mesa";
+    } 
+
+    return rota;
   }
 
   // Icone de carrinho com quantidade de itens
@@ -1621,11 +1637,13 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
         await verificarSeTemConta(numeroClienteBalcao);
         await validarBalcao(numeroClienteBalcao);
         nomeClienteController.text = nomeClienteController.text;
+        clienteValido = true;
       } else {
         if (carrinhoController.carrinho.isEmpty) {
           _fluxoRetirarBalcao();
           await verificarSeTemConta(numeroClienteBalcao);
           await validarBalcao(numeroClienteBalcao);
+          clienteValido = true;
         }
       }
       return;
@@ -1724,6 +1742,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
 
       mesaValida = mesa.isNotEmpty && mesa != '0';
       aparecerFazerPedido = true;
+
+      clienteValido = true;
 
       _campoAtivo = 'cardapioController';
     });
@@ -2017,7 +2037,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     bool todasSucesso = true;
 
     String numeroAleatorio = await garcomController.numeroAleatorio();
-    String numeroPedidoBalcaoInterno = Get.arguments['numeroClienteBalcao' ] ?? '0';
+    String numeroPedidoBalcaoInterno = numeroPedidoBalcao;
 
     for (final produto in carrinhoSnapshot) {
       bool sucesso = false;
@@ -2184,7 +2204,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     bool todasSucesso = true;
 
     String numeroAleatorio = await garcomController.numeroAleatorio();
-    String numeroPedidoBalcaoInterno = Get.arguments['numeroClienteBalcao' ] ?? '0';
+    String numeroPedidoBalcaoInterno = numeroPedidoBalcao;
 
     for (final produto in carrinhoSnapshot) {
       bool sucesso = false;
@@ -3033,6 +3053,20 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     }
   }
 
+  Future<void> limparValorDosArgumentos() async {
+    numeroDoPedido = '';
+    numeroPedidoBalcao = '0';
+
+    carrinhoController.numeroPedido.value = '';
+    carrinhoController.clienteId.value = '';
+    carrinhoController.clienteNome.value = '';
+    carrinhoController.clienteCpf.value = '';
+    carrinhoController.clienteTelefone.value = '';
+    carrinhoController.clienteDataNascimento.value = '';
+    carrinhoController.nomeClienteBalcao.value = '';
+    carrinhoController.numeroClienteBalcao.value = '0';
+  }
+
   // Função para realizar a limpeza geral de estado e banco - FUNÇÃO AUXILIAR DE ZERARATENDIMENTO
   Future<void> _executarLimpezaGeral() async {
     // tirar o foco
@@ -3055,6 +3089,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     } catch (e) {
       print("Erro ao zerar atendimento no banco: $e");
     }
+
+    await limparValorDosArgumentos();
 
     nomeClienteController.clear();
 
@@ -4772,19 +4808,18 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                               setModalState(() {
                                                 quantidadeInicial--;
 
-                                                final texto =
-                                                    quantidadeInicial.toInt().toString();
+                                                final texto = quantidadeInicial.toInt().toString();
 
-                                                quantidadeProdutoSelecionadoController.text =
-                                                    texto;
+                                                quantidadeProdutoSelecionadoController.text = texto;
 
-                                                quantidadeProdutoSelecionadoModalController.text =
-                                                    texto;
+                                                quantidadeProdutoSelecionadoModalController.text = texto;
                                               });
                                             }
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color.fromRGBO(216, 216, 216, 0.843),
+                                            // backgroundColor: const Color.fromRGBO(216, 216, 216, 0.843),
+                                            elevation: 0,
+                                            backgroundColor: Theme.of(context).colorScheme.onPrimary,
                                             padding: EdgeInsets.zero,
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(16),
@@ -4792,7 +4827,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                           ),
                                           child: Icon(
                                             Icons.remove,
-                                            color: Theme.of(context).colorScheme.onPrimary,
+                                            // color: Theme.of(context).colorScheme.onPrimary,
+                                            color: const Color.fromRGBO(216, 216, 216, 0.843),
                                             size: 28,
                                           ),
                                         ),
@@ -4804,8 +4840,54 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                     padding: EdgeInsets.all(4.0),
                                     child: SizedBox(
                                       width: constraints.maxWidth * 0.3,
-                                      height: alturaBotao,
-                                      child: TextField(
+                                      height: alturaBotao * 1.2,
+                                      child: 
+                                      TextField(
+                                        controller: quantidadeProdutoSelecionadoModalController,
+                                        focusNode: quantidadeProdutoSelecionadoModalFocus,
+
+                                        style: TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1,
+                                        ),
+
+                                        readOnly: true,
+                                        showCursor: false,
+                                        keyboardType: TextInputType.none,
+                                        enableInteractiveSelection: false,
+
+                                        // Centraliza horizontalmente
+                                        textAlign: TextAlign.center,
+
+                                        // Centraliza verticalmente
+                                        textAlignVertical: TextAlignVertical.center,
+
+                                        onTap: () {
+                                          if (produtoKilo) {
+                                            showKeyboardNumero = false;
+                                            showKeyboardAlfa = false;
+                                            showKeyboardQuantidade = true;
+                                          } else {
+                                            showKeyboardNumero = true;
+                                            showKeyboardAlfa = false;
+                                            showKeyboardQuantidade = false;
+                                          }
+                                        },
+
+                                        decoration: InputDecoration(
+                                          filled: true,
+                                          fillColor: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.2),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                        ),
+                                      ),
+                                      /* TextField(
                                         controller: quantidadeProdutoSelecionadoModalController,
                                         focusNode: quantidadeProdutoSelecionadoModalFocus,
                                         style: TextStyle(
@@ -4817,7 +4899,10 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                         showCursor: false,
                                         keyboardType: TextInputType.none,
                                         enableInteractiveSelection: false,
+                                        // Centraliza horizontalmente
                                         textAlign: TextAlign.center,
+                                        // Centraliza verticalmente
+                                        textAlignVertical: TextAlignVertical.center,
                                         onTap: () {
                                           if (produtoKilo) {
                                             showKeyboardNumero = false;
@@ -4837,7 +4922,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                             borderSide: BorderSide.none,
                                           ),
                                         ),
-                                      ),
+                                      ), */
                                     ),
                                   ),
 
@@ -4861,7 +4946,9 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                             });
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color.fromRGBO(216, 216, 216, 0.843),
+                                            elevation: 0,
+                                            backgroundColor: Theme.of(context).colorScheme.onPrimary,
+                                            // backgroundColor: const Color.fromRGBO(216, 216, 216, 0.843),
                                             padding: EdgeInsets.zero,
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(16),
@@ -4869,7 +4956,8 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                           ),
                                           child: Icon(
                                             Icons.add,
-                                            color: Theme.of(context).colorScheme.onPrimary,
+                                            color: const Color.fromRGBO(216, 216, 216, 0.843),
+                                            // color: Theme.of(context).colorScheme.onPrimary,
                                             size: 28,
                                           ),
                                         ),
@@ -8975,7 +9063,19 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                       child: GestureDetector(
                                         // quando clicar em fazer pedido
                                         onTap: () async {
-                                          if ((_usarVendaComanda && !_usarVendaComandaNaMesa)) {
+                                          if(garcomController.retirarBalcaoRota.value){
+                                            Get.to(
+                                              () => ContaPage(),
+                                              arguments: {
+                                                'numeropedido': numeroDoPedido,
+                                                'comanda': numeroComandaEmUso,
+                                                'mesa': '0',
+                                                'page': "garcom",
+                                                'nome': nomeClienteController.text.isEmpty ? "0" : nomeClienteController.text,
+                                                'numeroBalcao': garcomController.retirarBalcaoRota.value ? numeroPedidoBalcao : "0",
+                                              },
+                                            );
+                                          } else if ((_usarVendaComanda && !_usarVendaComandaNaMesa)) {
                                             Get.to(
                                               () => ContaPage(),
                                               arguments: {
@@ -10580,6 +10680,135 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                       ),
                   ],
                 ),
+                if (!comandaValida && !mesaValida && !clienteValido)
+                Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          String logica = verificarLogica();
+                          Get.to(
+                            () => MapaPage(),
+                            arguments: {
+                              'rota_garcom': logica,
+                            },
+                          );
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Bolinha com o ícone
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: colorScheme.shadow.withOpacity(0.7),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withOpacity(0.4),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.map,
+                                    color: colorScheme.onPrimary,
+                                    size: 28,
+                                  ),
+                                  Text(
+                                    "Mapa",
+                                    style: TextStyle(
+                                      color: colorScheme.onPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                      
+                            /* SizedBox(height: 5),
+                      
+                            // Texto abaixo da bolinha
+                            Text(
+                              "Visualizar mapa",
+                              style: TextStyle(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ), */
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                /* if (!comandaValida && !mesaValida && !clienteValido)
+                GestureDetector(
+                  onTap: () {
+                    // mapa 
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => MapaPage()));
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            colorScheme.scrim,
+                            colorScheme.scrim,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorScheme.primary.withOpacity(0.4),
+                            blurRadius: 6,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.map,
+                            color: colorScheme.onPrimary,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              "Visualizar mapa",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ), */
+
                 if (aparecerCardapio)
                   Padding(
                     /* padding: EdgeInsets.only(left: 8,right: 8, top: 4,bottom: 4,), */
@@ -12437,6 +12666,72 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
               ],
             ),
           ),
+          // Botão flutuante
+          /* if (!comandaValida && !mesaValida && !clienteValido)
+          Positioned(
+            right: 15,
+            bottom: MediaQuery.of(context).size.height * 0.62,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MapaPage(),
+                  ),
+                );
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Bolinha com o ícone
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: colorScheme.shadow,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withOpacity(0.4),
+                          blurRadius: 6,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.map,
+                          color: colorScheme.onPrimary,
+                          size: 28,
+                        ),
+                        Text(
+                          "Mapa",
+                          style: TextStyle(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  */
+                  /* SizedBox(height: 5),
+
+                  // Texto abaixo da bolinha
+                  Text(
+                    "Visualizar mapa",
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );*/
           /* if(aparecerVendaTouch)
           Positioned(
             bottom: 110,

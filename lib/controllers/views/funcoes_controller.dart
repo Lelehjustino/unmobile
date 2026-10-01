@@ -198,6 +198,7 @@ class FuncoesController extends GetxController {
         """
           UPDATE cartoes SET atendimento = '0' WHERE atendimento = '$numeroDaLicencaSelecionada';
           UPDATE mesas SET atendimento = '0' WHERE atendimento = '$numeroDaLicencaSelecionada';
+          UPDATE delivery SET atendimento = '0' WHERE atendimento = '$numeroDaLicencaSelecionada';
         """;
 
       try {

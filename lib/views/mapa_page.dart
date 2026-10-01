@@ -109,11 +109,19 @@ class MapaPageState extends State<MapaPage> {
   bool vendaComandaNaMesaClicado = false;
   bool vendaMesaClicado = false;
 
+  bool aparecerVoltar = false;
+  bool rotaBalcao = false;
+  bool rotaComanda = false;
+  bool rotaComandaNaMesa = false;
+  bool rotaMesa = false; 
+  String rotaGarcom = "";
+
   @override
   void initState() {
     super.initState();
 
     arrumarFoco();
+    arrumarRotaGarcom();
 
     painelController.estaNoPainelCozinha.value = false;
 
@@ -126,6 +134,73 @@ class MapaPageState extends State<MapaPage> {
       Duration(seconds: 15),
       (_) => GarcomController().carregarTudo(),
     ); */
+    arrumarRotas();
+  }
+
+  void arrumarRotaGarcom() async {
+    rotaGarcom = Get.arguments?['rota_garcom'] ?? "";
+    await arrumarRotas();
+  }
+
+  Future<void> arrumarRotas() async {
+
+    if(rotaGarcom == ""){
+      rotaGarcom = "0";
+    } else {
+      aparecerVoltar = true;
+      if(rotaGarcom == "balcao"){
+        rotaBalcao = true;
+      } else if (rotaGarcom == "comanda") {
+        rotaComanda = true;
+      } else if (rotaGarcom == "comandaNaMesa"){
+        rotaComandaNaMesa = true;
+      } else if (rotaGarcom == "mesa"){
+        rotaMesa = true; 
+      } else {
+        aparecerVoltar = false;
+      }
+
+    }
+  }
+
+  void voltarUltimaVenda() async {
+    await arrumarRotas();
+
+    if(rotaBalcao){
+      garcomController.retirarBalcaoRota.value = true;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GarcomPage(),
+        ),
+      );
+    } else if (rotaComanda) {
+      garcomController.retirarBalcaoRota.value = false;
+      garcomController.vendaComanda.value = true;
+      garcomController.vendaMesa.value = false;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GarcomPage(),
+        ),
+      );
+    } else if (rotaComandaNaMesa){
+      garcomController.retirarBalcaoRota.value = false;
+      garcomController.vendaComanda.value = true;
+      garcomController.vendaMesa.value = false;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GarcomPage(),
+        ),
+      );
+    } else if (rotaMesa){
+      garcomController.retirarBalcaoRota.value = false;
+      garcomController.vendaComanda.value = false;
+      garcomController.vendaMesa.value = true;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GarcomPage(),
+        ),
+      );
+    }
   }
 
   void carregar() async {
@@ -528,6 +603,38 @@ class MapaPageState extends State<MapaPage> {
     } catch (e) {
       print("Erro ao carregar comandas: $e");
       return [];
+    }
+  }
+
+  Future<bool> verificarAtendimentoBalcao(String numeroDelivery) async {
+    try {
+      final dadosJson = await Connection().select(
+        '''
+        SELECT atendimento
+        FROM delivery
+        WHERE numerodelivery = '$numeroDelivery'
+          AND balcao = '1';
+        ''',
+      );
+
+      final lista = jsonDecode(dadosJson);
+
+      if (lista.isEmpty) {
+        return false;
+      }
+
+      final atendimento = lista[0]['atendimento']?.toString() ?? '';
+
+      // Não está em atendimento
+      if (atendimento.isEmpty || atendimento == '0') {
+        return false;
+      }
+
+      // Está em atendimento
+      return true;
+    } catch (e) {
+      print('[BALCAO] Erro ao verificar atendimento: $e');
+      return false;
     }
   }
 
@@ -1235,7 +1342,7 @@ class MapaPageState extends State<MapaPage> {
           final numeroPedidoBalcao = item['numeropedido_FK'].toString();
 
           return InkWell(
-            onTap: () {
+            onTap: () async {
               // Coloque aqui a navegação do balcao
               if(temConta){
               Get.to(
@@ -1250,30 +1357,33 @@ class MapaPageState extends State<MapaPage> {
                 },
               );
               } else {
-                garcomController.retirarBalcaoRota.value = true;
-                Get.to(
-                  () => GarcomPage(),
-                  arguments: {
-                    'numeropedido': numeroPedidoBalcao,
-                    'comanda': "0",
-                    'mesa': "0",
-                    'rota': 'mesa',
-                    'nomeClienteBalcao': nomeCliente,
-                    'numeroClienteBalcao': numeroDelivery,
-                  },
-                );
+                bool atendimento = await verificarAtendimentoBalcao(numeroDelivery);
+
+                if (atendimento){
+                  // mensagem que fala que esta em atendimento 
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Balcão em atendimento!',
+                      ),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                } else {
+                  garcomController.retirarBalcaoRota.value = true;
+                  Get.to(
+                    () => GarcomPage(),
+                    arguments: {
+                      'numeropedido': numeroPedidoBalcao,
+                      'comanda': "0",
+                      'mesa': "0",
+                      'rota': 'mesa',
+                      'nomeClienteBalcao': nomeCliente,
+                      'numeroClienteBalcao': numeroDelivery,
+                    },
+                  );
+                }
               }
-              /* Get.to(
-                () => ContaPage(),
-                arguments: {
-                  'numeropedido': numeroPedidoBalcao,
-                  'comanda': '0',
-                  'mesa': '0',
-                  'page': "mapa",
-                  'nome': nomeCliente
-                },
-              ); */
-              // se for para garcom tem que deixar garcomController.retirarBalcaoRota.value;
             },
             child: Container(
               decoration: BoxDecoration(
@@ -2988,6 +3098,54 @@ class MapaPageState extends State<MapaPage> {
             if(mapaController.vendaBalcao.value && vendaBalcaoClicado)
             _buildGridBalcao(itensParaMostrarBalcao)
             ],
+          ),
+          if (aparecerVoltar)
+          Positioned(
+            right: 15,
+            bottom: 20,
+            child: GestureDetector(
+              onTap: () {
+                voltarUltimaVenda();
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: colorScheme.shadow,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withOpacity(0.4),
+                          blurRadius: 6,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.arrow_back,
+                          color: colorScheme.onPrimary,
+                          size: 26,
+                        ),
+                        Text(
+                          "Venda",
+                          style: TextStyle(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
