@@ -306,19 +306,19 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       // } else if (footerButtonsController.aparecerGarcom.value) {
       } else if (vendaComandaSelecionados.isNotEmpty || vendaMesaSelecionados.isNotEmpty || retirarBalcaoSelecionados.isNotEmpty) {
         // venda comanda marcada 
-        if(footerButtonsController.vendaComanda.value){
+        if(footerButtonsController.vendaComanda.value && garcomController.vendaComanda.value){
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = true;
           garcomController.vendaMesa.value = false;
         } 
         // venda mesa marcada 
-        else if (footerButtonsController.vendaMesa.value) {
+        else if (footerButtonsController.vendaMesa.value && garcomController.vendaMesa.value) {
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = true;
         } 
         // venda balcao marcada 
-        else if (footerButtonsController.retirarBalcao.value) {
+        else if (footerButtonsController.retirarBalcao.value && funcoesController.vendaBalcao.value) {
           garcomController.retirarBalcaoRota.value = true;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = false;
