@@ -657,6 +657,37 @@ class MapaPageState extends State<MapaPage> {
     }
   }
 
+  Future<bool> verificarAtendimentoMesa(String numeroMesa) async {
+    try {
+      final dadosJson = await Connection().select(
+        '''
+        SELECT atendimento
+        FROM mesas
+        WHERE numero = '$numeroMesa';
+        ''',
+      );
+
+      final lista = jsonDecode(dadosJson);
+
+      if (lista.isEmpty) {
+        return false;
+      }
+
+      final atendimento = lista[0]['atendimento']?.toString() ?? '';
+
+      // Não está em atendimento
+      if (atendimento.isEmpty || atendimento == '0') {
+        return false;
+      }
+
+      // Está em atendimento
+      return true;
+    } catch (e) {
+      print('[MESA] Erro ao verificar atendimento: $e');
+      return false;
+    }
+  }
+
   void _atualizarHora() {
     if (mounted) {
       setState(() {
@@ -1589,12 +1620,21 @@ class MapaPageState extends State<MapaPage> {
           }
 
           return InkWell(
-            onTap: () {
+            onTap: () async {
               if ((vendaMesaClicado && mapaController.vendaMesa.value)) {
+                bool atendimento = await verificarAtendimentoMesa(numeroMesa.toString());
+
                 if (comandavinculada) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Mesa vinculada a uma comanda!'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                } else if (atendimento) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Mesa em atendimento!'),
                       backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
@@ -2961,15 +3001,33 @@ class MapaPageState extends State<MapaPage> {
                                 elevation: 8, // Define a altura da sombra (quanto maior, mais "profunda" será a sombra)
                                 shadowColor: Colors.black, // Cor da sombra com opacidade (ajuste conforme necessário)
                               ),
-                              child: Icon(
+                              child: 
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 3,
+                                    height: 20,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                                  SizedBox(width: 1),
+                                  Icon(
+                                    Icons.grid_view,
+                                    size: 25,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                                ],
+                              ),
+                              /* Icon(
                                 Icons.grid_view,
                                 // modoCarrossel ? Icons.grid_view :  Icons.list,
                                 size: 25,
                                 color: colorScheme.onPrimary,
-                              ),
+                              ), */
                             ),
                             Text(
-                              'Touch',
+                              /* 'Touch', */
+                              'Mesa|Com.',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: !vendaComandaNaMesaClicado ? colorScheme.surfaceDim : colorScheme.primary,
@@ -3152,7 +3210,7 @@ class MapaPageState extends State<MapaPage> {
                           size: 26,
                         ),
                         Text(
-                          "Venda",
+                          "Voltar",
                           style: TextStyle(
                             color: colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,

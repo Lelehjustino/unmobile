@@ -4841,7 +4841,7 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
                                     padding: EdgeInsets.all(4.0),
                                     child: SizedBox(
                                       width: constraints.maxWidth * 0.3,
-                                      height: alturaBotao * 1.2,
+                                      height: alturaBotao * 1.3,
                                       child: 
                                       TextField(
                                         controller: quantidadeProdutoSelecionadoModalController,
