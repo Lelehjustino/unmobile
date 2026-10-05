@@ -2787,6 +2787,18 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
     String nomeClienteLocal = nomeCliente;
     String valorPedidoLocal = valorPedido;
 
+    final corTexto = integrador.contains("PEDEAQUI")
+      ? const Color.fromARGB(255, 73, 21, 82)
+      : integrador.contains("IFOOD") || integrador.contains("P10") || integrador.contains("P 10")
+      ? const Color.fromARGB(255, 154, 33, 24)
+      : integrador.contains("NEEMO")
+      ? Theme.of(context).colorScheme.scrim
+      : integrador.contains("99FOOD")
+      ? const Color.fromARGB(255, 236, 162, 2)
+      : integrador.contains("ANOTA AI")
+      ? const Color.fromARGB(255, 27, 88, 220)
+      : Theme.of(context).colorScheme.primary;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -2817,7 +2829,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                       width: double.infinity,
                       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary,
+                        color: integrador != "" ? corTexto : colorScheme.primary,
                         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                       ),
                       child: Row(
@@ -2868,6 +2880,15 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: colorScheme.primary,
+                            ),
+                          ),
+                          if(integrador != "")
+                          Text(
+                            "$integrador",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: corTexto,
                             ),
                           ),
                           Row(
