@@ -42,14 +42,56 @@ object CieloBridge {
      * Decodifica o query param "response" (Base64 JSON) e entrega ao Flutter.
      */
     fun processarRetorno(intent: Intent) {
-        if (Intent.ACTION_VIEW != intent.action) return
-        val uri: Uri = intent.data ?: return
-        val responseBase64 = uri.getQueryParameter("response") ?: return
-        val json = try {
-            String(Base64.decode(responseBase64, Base64.DEFAULT))
-        } catch (e: Exception) {
+
+        println("CIELO: onNewIntent recebido")
+        println("CIELO: action = ${intent.action}")
+        println("CIELO: data = ${intent.data}")
+
+        if (Intent.ACTION_VIEW != intent.action) {
+            println("CIELO: action não é ACTION_VIEW")
             return
         }
-        channel?.invokeMethod(METHOD_RETORNO, json)
+
+        val uri: Uri = intent.data ?: run {
+            println("CIELO: intent.data é null")
+            return
+        }
+
+        println("CIELO: URI recebida = $uri")
+
+        val responseBase64 =
+            uri.getQueryParameter("response")
+
+        if (responseBase64.isNullOrBlank()) {
+            println("CIELO: parâmetro response não encontrado")
+            return
+        }
+
+        println("CIELO: response Base64 recebido")
+
+        val json = try {
+
+            String(
+                Base64.decode(
+                    responseBase64,
+                    Base64.DEFAULT
+                )
+            )
+
+        } catch (e: Exception) {
+
+            println("CIELO: erro ao decodificar response: ${e.message}")
+
+            return
+        }
+
+        println("CIELO: JSON recebido = $json")
+
+        channel?.invokeMethod(
+            METHOD_RETORNO,
+            json
+        )
+
+        println("CIELO: retorno enviado para Flutter")
     }
 }

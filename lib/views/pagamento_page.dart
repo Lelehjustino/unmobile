@@ -4,11 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
+import 'package:un_recepcao/controllers/maquininhas/paymentServiceOficial.dart';
 import 'package:un_recepcao/controllers/payment_service.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/garcom_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
+import 'package:un_recepcao/services/cielo/cielo_payment_service.dart';
+import 'package:un_recepcao/services/cielo/cielo_service.dart';
+import 'package:un_recepcao/services/maquininhas/paymentProvider.dart';
 import 'package:un_recepcao/services/pagBank/smartPos/pagbank_smartpos.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
@@ -265,6 +269,19 @@ class PagamentoPageState extends State<PagamentoPage>
     // buscarTipoPedido();
     // buscarPagamento();
     // buscarCaixas();
+
+    CieloService.escutarRetorno((jsonRetorno) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '✅ RETORNO DA CIELO!\n$jsonRetorno',
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    });
   }
 
   void detalhesPedidoFunc(){
@@ -1717,6 +1734,23 @@ class PagamentoPageState extends State<PagamentoPage>
           return tipoPagamentoPagBank = "";
       }
   }
+  
+  // Funcao para pagar usando ciello 
+    Future<void> pagarPedidoCielo() async {
+    try {
+      await CieloPaymentService.pagar(
+        valorCentavos: 6750,
+        referencia: 'TESTE_UNMOBILE_001',
+      );
+
+      // Aqui NÃO finalizamos a venda ainda.
+      //
+      // A venda somente será finalizada
+      // quando recebermos o retorno aprovado da Cielo.
+    } catch (e) {
+      // mostrar erro
+    }
+  }
 
   // Funcao chamada quando clicar em pagar e eu estiver dentro de uma maquininha da pagbank
   // Segue o fluxo oficial SmartCoffee: doPayment bloqueante + PlugPagEventListener
@@ -2090,6 +2124,24 @@ class PagamentoPageState extends State<PagamentoPage>
     return true;
   }
 
+  Future<void> realizarPagamentoMaquininhas(List<dynamic> listaFormasDePagamentoSelecionadas) async {
+    final provedor = await PaymentServiceOficial.identificarProvedor();
+
+    switch (provedor) {
+      case PaymentProvider.pagBank:
+        await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
+        break;
+
+      case PaymentProvider.cielo:
+        await pagarPedidoCielo();
+        break;
+
+      case PaymentProvider.desconhecido:
+        // mostrar erro
+        break;
+    }
+  }
+
   // Funcoo chamanda quando clicar em pagar
   Future<void> pagarPedido() async {
     // com a conta pedida / sem conta
@@ -2186,10 +2238,8 @@ class PagamentoPageState extends State<PagamentoPage>
             return;
           }
 
-          final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
-
-          /* await pagarPedidoPagBank(listaFormasDePagamentoSelecionadas);
-          await pagarPedido(); */
+          // ----------------------------------------------------------- OFICIAL ---------------------------------------------------------------
+          /* final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
 
           if (maquininhaDisponivel) {
             // SmartPOS disponível: executa pagamento PagBank primeiro
@@ -2202,7 +2252,13 @@ class PagamentoPageState extends State<PagamentoPage>
           } else {
             // Sem SmartPOS: finaliza o pedido diretamente
             await pagarPedido();
-          }
+          } */
+
+          // -------------------------------------------------------------------------------------------------------------------------------
+
+          // await realizarPagamentoMaquininhas(listaFormasDePagamentoSelecionadas);
+
+          await pagarPedidoCielo();
 
           dialogoConfirmacaoAberto = false;
         },

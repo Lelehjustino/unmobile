@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
 import 'package:un_recepcao/models/itemPizzaGrafico.dart';
 import 'package:un_recepcao/models/pagBank/order_class_pb.dart';
+import 'package:un_recepcao/services/cielo/cielo_service.dart';
 import 'package:un_recepcao/services/remote_config_service.dart';
 import 'package:un_recepcao/services/mobile_id_service.dart';
 import 'package:un_recepcao/services/stone_service.dart';

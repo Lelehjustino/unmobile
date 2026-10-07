@@ -9,6 +9,7 @@ import io.flutter.plugin.common.MethodChannel
 import com.un.mobile.stone.StoneBridge
 import com.un.mobile.pagbank.PagBankBridge
 import com.un.mobile.cielo.CieloBridge
+import com.un.mobile.payment.PaymentDetector
 
 class MainActivity : FlutterActivity() {
 
@@ -17,6 +18,7 @@ class MainActivity : FlutterActivity() {
     private val PAGBANK_CHANNEL = "unmobile/pagbank"
     private val PAGBANK_EVENTOS_CHANNEL = "unmobile/pagbank/eventos"
     private val CIELO_CHANNEL = "unmobile/cielo"
+    private val PAYMENT_DETECTOR_CHANNEL = "unmobile/payment_detector"
 
     override fun configureFlutterEngine(
         flutterEngine: FlutterEngine
@@ -73,6 +75,14 @@ class MainActivity : FlutterActivity() {
         )
         CieloBridge.configurar(cieloChannel, this)
         println("CIELO: CieloBridge registrado")
+
+        // ── Payment Detector MethodChannel ──
+        val detectorChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            PAYMENT_DETECTOR_CHANNEL
+        )
+        PaymentDetector.configurar(detectorChannel, this)
+        println("PAYMENT DETECTOR: registrado")
     }
 
     // Recebe o retorno da Cielo Smart via urlCallback (launchMode=singleTop preserva a tarefa).
