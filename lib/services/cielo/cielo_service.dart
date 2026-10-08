@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:un_recepcao/models/cielo/cieloCredentials.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CieloService {
@@ -13,6 +16,12 @@ class CieloService {
   static void escutarRetorno(void Function(String jsonRetorno) onRetorno) {
     _listener = onRetorno;
     _channel.setMethodCallHandler(_onRetornoCieloHandler);
+    // Sinaliza ao nativo que o listener está pronto.
+    // Se houver um JSON pendente (app recriado ao receber o callback),
+    // o CieloBridge o despachará imediatamente via invokeMethod.
+    _channel.invokeMethod<void>('registrarListener').catchError((e) {
+      // Ignora: método opcional, não crítico
+    });
   }
 
   static Future<dynamic> _onRetornoCieloHandler(MethodCall call) async {
@@ -23,7 +32,6 @@ class CieloService {
   }
 
   /// Dispara o deep link `lio://` para a Cielo Smart.
-  /// [uri] — URI completa com scheme lio://, parâmetros request (Base64) e urlCallback.
   static Future<void> iniciarDeepLink(String uri) async {
     await _channel.invokeMethod<void>('iniciarDeepLink', {'uri': uri});
   }

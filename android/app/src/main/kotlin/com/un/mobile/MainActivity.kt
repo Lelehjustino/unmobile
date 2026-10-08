@@ -1,6 +1,7 @@
 package com.un.mobile
 
 import android.content.Intent
+import android.os.Bundle
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -85,10 +86,31 @@ class MainActivity : FlutterActivity() {
         println("PAYMENT DETECTOR: registrado")
     }
 
-    // Recebe o retorno da Cielo Smart via urlCallback (launchMode=singleTop preserva a tarefa).
+    // ── Tratamento do intent inicial ────────────────────────────────────────
+    // Cenário: o sistema recriou a Activity (o app foi para background e o
+    // Android o destruiu). Nesse caso o callback `unmobile://cielo` chega
+    // via onCreate, NÃO via onNewIntent. Processamos aqui para garantir que
+    // o Completer do CieloPaymentService seja resolvido mesmo nesse caso.
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Só processa se vier do scheme unmobile://cielo (evita loop na rota normal)
+        val intentData = intent?.data
+        if (intentData?.scheme == "unmobile" && intentData.host == "cielo") {
+            println("CIELO: intent inicial detectado em onCreate → processando")
+            CieloBridge.processarRetorno(intent)
+            // Consome o intent para não ser reprocessado em onResume
+            intent = Intent()
+        }
+    }
+
+    // ── Tratamento singleTop: Activity já no topo ────────────────────────────
+    // Cenário normal: launchMode=singleTop mantém a Activity viva; o retorno
+    // da Cielo chega aqui.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         CieloBridge.processarRetorno(intent)
+        // Consome o intent para não reprocessar em retomadas futuras
+        this.intent = Intent()
     }
 }
