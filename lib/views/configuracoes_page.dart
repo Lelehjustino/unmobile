@@ -291,6 +291,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   } */
 
   navegar() async {
+
     setState(() {
       nadaMarcado = false;
     });
@@ -303,15 +304,15 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
       // } else if (footerButtonsController.aparecerGarcom.value) {
-      } else if (garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) {
+      } else if (funcoesController.vendaComanda.value || funcoesController.vendaMesa.value || funcoesController.vendaBalcao.value) {
         // venda comanda marcada 
-        if(garcomController.vendaComanda.value){
+        if(funcoesController.vendaComanda.value){
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = true;
           garcomController.vendaMesa.value = false;
         } 
         // venda mesa marcada 
-        else if (garcomController.vendaMesa.value) {
+        else if (funcoesController.vendaMesa.value) {
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = true;
@@ -330,7 +331,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
-      } else if (garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) {
+      } else if (funcoesController.vendaComanda.value || funcoesController.vendaMesa.value || funcoesController.vendaBalcao.value) {
         Get.toNamed('/mapa');
       } else if (footerButtonsController.aparecerRecepcao.value) {
         Get.toNamed('/recepcao');
@@ -3536,7 +3537,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               Flexible(
                                 child: Text(
                                   textAlign: TextAlign.center,
-                                  'Nenhuma configuração de venda selecionada no engine!',
+                                  'Nenhuma configuração de venda foi selecionada! Por favor selecione as configurações de venda no app principal!',
                                   style: TextStyle(
                                     color: colorScheme.error,
                                     fontSize: 15,
@@ -3592,6 +3593,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             if (!mounted) return;
 
                             if (conectado) {
+                              await funcoesController.buscarTipoPedido();
                               await salvarNomeEmpresa();
 
                               if (servidorMudou) {
@@ -3608,6 +3610,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                                   return;
                                 }
                                 // Servidor não mudou: navega com booleanos já atualizados
+                                
                                 await navegar();
                                 footerButtonsController.carregarConfiguracoes();
                                 carrinhoController.carrinho.clear();

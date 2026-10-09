@@ -163,15 +163,15 @@ class InicialPageState extends State<InicialPage> {
     } else {
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
-      } else if ((garcomController.vendaComanda.value) || (garcomController.vendaMesa.value) || (funcoesController.vendaBalcao.value)) {
+      } else if ((funcoesController.vendaComanda.value) || (funcoesController.vendaMesa.value) || (funcoesController.vendaBalcao.value)) {
         // venda comanda marcada 
-        if(garcomController.vendaComanda.value){
+        if(funcoesController.vendaComanda.value){
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = true;
           garcomController.vendaMesa.value = false;
         } 
         // venda mesa marcada 
-        else if (garcomController.vendaMesa.value) {
+        else if (funcoesController.vendaMesa.value) {
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = true;
@@ -185,7 +185,7 @@ class InicialPageState extends State<InicialPage> {
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
-      } else if (garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) {
+      } else if (funcoesController.vendaComanda.value || funcoesController.vendaMesa.value || funcoesController.vendaBalcao.value) {
         Get.toNamed('/mapa');
       } else if (footerButtonsController.aparecerRecepcao.value) {
         Get.toNamed('/recepcao');

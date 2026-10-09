@@ -754,7 +754,7 @@ class SideNavState extends State<SideNav> {
                   if (footerButtonsController.aparecerKDS.value && footerButtonsController.rotaHome.value)
                   kdsPage(currentRoute, colorScheme),
 
-                  if ((garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) && footerButtonsController.rotaHome.value)
+                  if ((funcoesController.vendaComanda.value || funcoesController.vendaMesa.value || funcoesController.vendaBalcao.value) && footerButtonsController.rotaHome.value)
                   mapPage(currentRoute, colorScheme),
 
                   if (footerButtonsController.aparecerNote.value && footerButtonsController.rotaHome.value)
