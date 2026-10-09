@@ -14,11 +14,6 @@ class MapaController extends GetxController {
   RxList<dynamic> fechadasMesas = <dynamic>[].obs;
   RxList<dynamic> balcao = <dynamic>[].obs;
 
-  RxBool vendaBalcao = false.obs;
-  RxBool vendaComanda = false.obs;
-  RxBool vendaComandaNaMesa = false.obs;
-  RxBool vendaMesa = false.obs;
-
   @override
   void onInit() {
     super.onInit();
@@ -26,7 +21,7 @@ class MapaController extends GetxController {
   }
 
   Future<void> carregarTudo() async {
-    await carregarConfiguracoesVendas();
+    //  await carregarConfiguracoesVendas();
     await carregarTodasAsComandas();
     await carregarTodasAsMesas();
     await carregarAsComandasAbertas();
@@ -36,7 +31,7 @@ class MapaController extends GetxController {
     await carregarBalcao();
   }
 
-  Future<void> carregarConfiguracoesVendas() async {
+  /* Future<void> carregarConfiguracoesVendas() async {
     final prefs = await SharedPreferences.getInstance();
     final vendasJson = prefs.getString('vendas_selecionados');
 
@@ -75,7 +70,7 @@ class MapaController extends GetxController {
       vendaMesa.value = false;
     }
   }
-
+ */
   // Função carregar TODAS as comandas
   Future<void> carregarBalcao() async {
     try {

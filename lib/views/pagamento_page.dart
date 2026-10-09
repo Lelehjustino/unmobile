@@ -270,19 +270,6 @@ class PagamentoPageState extends State<PagamentoPage>
     // buscarTipoPedido();
     // buscarPagamento();
     // buscarCaixas();
-
-    /* CieloService.escutarRetorno((jsonRetorno) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'RETORNO DA CIELO!\n$jsonRetorno',
-          ),
-          duration: const Duration(seconds: 8),
-        ),
-      );
-    }); */
   }
 
   void detalhesPedidoFunc(){
@@ -1839,9 +1826,11 @@ class PagamentoPageState extends State<PagamentoPage>
         // que usa rotaAnterior (vinda dos arguments) — sem depender do nativo.
         bool pagamentoSucesso = await insertPagamentos();
         if (pagamentoSucesso) {
-          pedidoPagoComSucesso();
+           pedidoPagoComSucesso();
+          await volteiDoCielo(true);
         } else {
           erroAoPagarPedido();
+          await volteiDoCielo(false);
         }
         break;
 
@@ -1928,6 +1917,18 @@ class PagamentoPageState extends State<PagamentoPage>
 
       default:
         return "";
+    }
+  }
+
+  // Funcao chamada quando volta da aplicao da cielo 
+  Future<void> volteiDoCielo(bool sucesso) async {
+    // Se teve sucesso no pagamento 
+    if(sucesso) {
+
+    } 
+    // Se pagamento deu errado
+    else {
+
     }
   }
 
@@ -2418,7 +2419,7 @@ class PagamentoPageState extends State<PagamentoPage>
           }
 
           // ----------------------------------------------------------- OFICIAL ---------------------------------------------------------------
-          /* final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
+          final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
 
           if (maquininhaDisponivel) {
             // SmartPOS disponível: executa pagamento PagBank primeiro
@@ -2431,13 +2432,13 @@ class PagamentoPageState extends State<PagamentoPage>
           } else {
             // Sem SmartPOS: finaliza o pedido diretamente
             await pagarPedido();
-          } */
+          }
 
           // -------------------------------------------------------------------------------------------------------------------------------
 
           // await realizarPagamentoMaquininhas(listaFormasDePagamentoSelecionadas);
 
-          await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
+          // await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
 
           dialogoConfirmacaoAberto = false;
         },

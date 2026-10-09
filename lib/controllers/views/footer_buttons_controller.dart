@@ -11,7 +11,6 @@ class FooterButtonsController extends GetxController {
   RxBool aparecerNote = false.obs;
   RxBool aparecerRecepcao = false.obs;
   RxBool aparecerGarcom = false.obs;
-  RxBool aparecerMapa = false.obs;
   RxBool aparecerKDS = false.obs;
   RxBool aparecerPedidos = false.obs;
   RxBool aparecerExpedicaoMotoboy = false.obs;
@@ -20,9 +19,6 @@ class FooterButtonsController extends GetxController {
   RxBool rotaPainelCliente = false.obs;
   RxBool rotaExpedicaoMotoboy = false.obs;
   RxBool aparecerCupomAvulso = false.obs;
-  RxBool retirarBalcao = false.obs;
-  RxBool vendaComanda = false.obs;
-  RxBool vendaMesa = false.obs;
 
   RxBool cadastroCliente = false.obs;
   RxBool tipoCadastroClienteCpf = false.obs;
@@ -42,17 +38,17 @@ class FooterButtonsController extends GetxController {
     await carregarNote();
     await carregarRecepcao();
     await carregargarcom();
-    await carregarMapa();
+   /*  await carregarMapa(); */
     await carregarRota();
     await carregarPaineis();
     await carregarCupomAvulso();
     await configuracoesCadastroCliente();
-    await carregarRetiradaBalcao();
+    /* await carregarRetiradaBalcao();
     await carregarVendaComanda();
-    await carregarVendaMesa();
+    await carregarVendaMesa(); */
   }
 
-  Future<void> carregarVendaComanda() async {
+  /* Future<void> carregarVendaComanda() async {
     final prefs = await SharedPreferences.getInstance();
     final recepcaoJson = prefs.getString('venda_comanda');
 
@@ -110,7 +106,7 @@ class FooterButtonsController extends GetxController {
       // configuração padrao
       retirarBalcao.value = false;
     }
-  }
+  } */
 
   // Checkin e Checkout
   Future<void> carregarchecks() async {
@@ -201,7 +197,7 @@ class FooterButtonsController extends GetxController {
     }
   }
 
-  // Mapa 
+  /* // Mapa 
   Future<void> carregarMapa() async {
     final prefs = await SharedPreferences.getInstance();
     final modoJson = prefs.getString('modo_padrao');
@@ -214,7 +210,7 @@ class FooterButtonsController extends GetxController {
       // Se não existir configuração salva (primeira execução), mapa deve vir DESABILITADO
       aparecerMapa.value = false;
     }
-  }
+  } */
 
   // Garcom
   Future<void> carregargarcom() async {

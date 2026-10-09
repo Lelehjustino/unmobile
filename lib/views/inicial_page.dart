@@ -163,34 +163,29 @@ class InicialPageState extends State<InicialPage> {
     } else {
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
-      } else if ((footerButtonsController.vendaComanda.value && garcomController.vendaComanda.value) || (footerButtonsController.vendaMesa.value && garcomController.vendaMesa.value) || (footerButtonsController.retirarBalcao.value && funcoesController.vendaBalcao.value)) {
+      } else if ((garcomController.vendaComanda.value) || (garcomController.vendaMesa.value) || (funcoesController.vendaBalcao.value)) {
         // venda comanda marcada 
-        if(footerButtonsController.vendaComanda.value && garcomController.vendaComanda.value){
+        if(garcomController.vendaComanda.value){
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = true;
           garcomController.vendaMesa.value = false;
         } 
         // venda mesa marcada 
-        else if (footerButtonsController.vendaMesa.value && garcomController.vendaMesa.value) {
+        else if (garcomController.vendaMesa.value) {
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = true;
         } 
         // venda balcao marcada 
-        else if (footerButtonsController.retirarBalcao.value && funcoesController.vendaBalcao.value) {
+        else if (funcoesController.vendaBalcao.value) {
           garcomController.retirarBalcaoRota.value = true;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = false;
         } 
-        else {
-          garcomController.retirarBalcaoRota.value = false;
-          garcomController.vendaComanda.value = true;
-          garcomController.vendaMesa.value = false;
-        }
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
-      } else if (footerButtonsController.aparecerMapa.value) {
+      } else if (garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) {
         Get.toNamed('/mapa');
       } else if (footerButtonsController.aparecerRecepcao.value) {
         Get.toNamed('/recepcao');
@@ -214,21 +209,7 @@ class InicialPageState extends State<InicialPage> {
         Get.toNamed('/cupom_avulso');
       }
       else {
-        Get.toNamed('/garcom');
-        // venda comanda 
-        if(garcomController.vendaComanda.value){
-          garcomController.retirarBalcaoRota.value = false;
-          garcomController.vendaComanda.value = true;
-          garcomController.vendaMesa.value = false;
-        } else if (garcomController.vendaMesa.value){
-          garcomController.retirarBalcaoRota.value = false;
-          garcomController.vendaComanda.value = false;
-          garcomController.vendaMesa.value = true;
-        } else if (funcoesController.vendaBalcao.value){
-          garcomController.retirarBalcaoRota.value = true;
-          garcomController.vendaComanda.value = false;
-          garcomController.vendaMesa.value = false;
-        }
+        Get.toNamed('/configuracoes');
       }
     }
   }

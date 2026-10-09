@@ -189,8 +189,8 @@ class MapaPageState extends State<MapaPage> {
       );
     } else if (rotaComanda) {
       garcomController.retirarBalcaoRota.value = false;
-      garcomController.vendaComanda.value = true;
-      garcomController.vendaMesa.value = false;
+      funcoesController.vendaComanda.value = true;
+      funcoesController.vendaMesa.value = false;
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => GarcomPage(),
@@ -198,8 +198,8 @@ class MapaPageState extends State<MapaPage> {
       );
     } else if (rotaComandaNaMesa){
       garcomController.retirarBalcaoRota.value = false;
-      garcomController.vendaComanda.value = true;
-      garcomController.vendaMesa.value = false;
+      funcoesController.vendaComanda.value = true;
+      funcoesController.vendaMesa.value = false;
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => GarcomPage(),
@@ -207,8 +207,8 @@ class MapaPageState extends State<MapaPage> {
       );
     } else if (rotaMesa){
       garcomController.retirarBalcaoRota.value = false;
-      garcomController.vendaComanda.value = false;
-      garcomController.vendaMesa.value = true;
+      funcoesController.vendaComanda.value = false;
+      funcoesController.vendaMesa.value = true;
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => GarcomPage(),
@@ -228,13 +228,13 @@ class MapaPageState extends State<MapaPage> {
   }
 
   void clicarAutomaticamente(){
-    if(mapaController.vendaBalcao.value){
+    if(funcoesController.vendaBalcao.value){
       vendaBalcao();
-    } else if (mapaController.vendaComanda.value){
+    } else if (funcoesController.vendaComanda.value){
       vendaComanda();
-    } else if (mapaController.vendaComandaNaMesa.value){
+    } else if (funcoesController.vendaComandaNaMesa.value){
       vendaComandaNaMesa();
-    } else if (mapaController.vendaMesa.value){
+    } else if (funcoesController.vendaMesa.value){
       vendaMesa();
     } else {
       vendaComanda();
@@ -731,7 +731,7 @@ class MapaPageState extends State<MapaPage> {
   } */
 
   Future<void> _selecionarPrimeiroGrupo(List<dynamic> mesas) async {
-    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
+    if(vendaComandaClicado && funcoesController.vendaComandaNaMesa.value){
       final primeiro = mesas.first;
       indexMesa = 0;
       setState(() {
@@ -742,7 +742,7 @@ class MapaPageState extends State<MapaPage> {
   }
 
   Future<void> _selecionarNenhumGrupo() async {
-    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
+    if(vendaComandaClicado && funcoesController.vendaComandaNaMesa.value){
       indexMesa = 0;
       setState(() {
         mesaSelecionada = null;
@@ -755,7 +755,7 @@ class MapaPageState extends State<MapaPage> {
     setState(() {
       modoCarrossel = true;
     });
-    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
+    if(vendaComandaClicado && funcoesController.vendaComandaNaMesa.value){
       final mesa = mesas[index];
       setState(() {
         mesaSelecionada = mesa['numero'].toString();
@@ -992,7 +992,7 @@ class MapaPageState extends State<MapaPage> {
                                     return InkWell(
                                       borderRadius: BorderRadius.circular(10),
                                       onTap: () async {
-                                        if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
+                                        if (vendaComandaNaMesaClicado && funcoesController.vendaComandaNaMesa.value) {
                                           await validarComanda(numeroComanda);
                                         }
                                       },
@@ -1148,7 +1148,7 @@ class MapaPageState extends State<MapaPage> {
                                         return InkWell(
                                           borderRadius: BorderRadius.circular(10),
                                           onTap: () async {
-                                            if (vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
+                                            if (vendaComandaNaMesaClicado && funcoesController.vendaComandaNaMesa.value) {
                                               await validarComanda(numeroComanda);
                                             }
                                           },
@@ -1621,7 +1621,7 @@ class MapaPageState extends State<MapaPage> {
 
           return InkWell(
             onTap: () async {
-              if ((vendaMesaClicado && mapaController.vendaMesa.value)) {
+              if ((vendaMesaClicado && funcoesController.vendaMesa.value)) {
                 bool atendimento = await verificarAtendimentoMesa(numeroMesa.toString());
 
                 if (comandavinculada) {
@@ -2023,7 +2023,7 @@ class MapaPageState extends State<MapaPage> {
               });
             }
 
-            if (vendaComandaNaMesaClicado && mapaController.vendaComandaNaMesa.value) {
+            if (vendaComandaNaMesaClicado && funcoesController.vendaComandaNaMesa.value) {
               setState(() {
                 Get.to(
                   () => GarcomPage(),
@@ -2037,7 +2037,7 @@ class MapaPageState extends State<MapaPage> {
                   },
                 );
               });
-            } else if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
+            } else if ((vendaComandaClicado && funcoesController.vendaComanda.value)) {
               setState(() {
                 Get.to(
                   () => GarcomPage(),
@@ -2092,7 +2092,7 @@ class MapaPageState extends State<MapaPage> {
         double valorLiquido =
             double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
-        if (vendaComandaNaMesaClicado && mapaController.vendaComandaNaMesa.value) {
+        if (vendaComandaNaMesaClicado && funcoesController.vendaComandaNaMesa.value) {
           setState(() {
             Get.to(
               () => GarcomPage(),
@@ -2106,7 +2106,7 @@ class MapaPageState extends State<MapaPage> {
               },
             );
           });
-        } else if ((vendaComandaClicado && mapaController.vendaComanda.value)) {
+        } else if ((vendaComandaClicado && funcoesController.vendaComanda.value)) {
           setState(() {
             Get.to(
               () => GarcomPage(),
@@ -2131,21 +2131,27 @@ class MapaPageState extends State<MapaPage> {
           await saveComanda(numeroComanda);
 
           // Verificação se ja tem itens no pedido da comanda
-          double valorLiquido =
-              double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
+          double valorLiquido = double.tryParse(comanda['valorliquidopedido'].toString()) ?? 0.0;
 
           setState(() {
+            garcomController.retirarBalcaoRota.value = false;
+            garcomController.vendaComanda.value = true;
+            garcomController.vendaMesa.value = false;
+            
             Get.to(
               () => GarcomPage(),
               arguments: {
                 'numeropedido': comanda['numeropedido_FK'].toString(),
                 'comanda': numeroComanda,
-                'mesa': (vendaComandaNaMesaClicado && mapaController.vendaComandaNaMesa.value) ? (mesaSelecionada ?? "") : "",
+                'mesa': (vendaComandaNaMesaClicado && funcoesController.vendaComandaNaMesa.value) ? (mesaSelecionada ?? "") : "",
                 'rota': 'comanda',
                 'nomeClienteBalcao': '',
                 'numeroClienteBalcao': '',
               },
             );
+
+            // abrir modelo comanda 
+
           });
         } catch (e) {
           setState(() {
@@ -2204,8 +2210,7 @@ class MapaPageState extends State<MapaPage> {
 
           // Cada mesa decide seu estado individual
           final aberto = item['numeropedido_FK'].toString() != '0';
-          final temConta =
-              item['numeropedido_FK'].toString() != '0' && status == 2;
+          final temConta = item['numeropedido_FK'].toString() != '0' && status == 2;
           final mesaVinculada = item['numeromesa'].toString() != '0';
           final valorContaRaw = item['valorliquidopedido'];
           final valorConta =
@@ -2238,7 +2243,7 @@ class MapaPageState extends State<MapaPage> {
 
           return InkWell(
             onTap: () async {
-              if ((vendaComandaClicado && mapaController.vendaComanda.value) || vendaComandaClicado && mapaController.vendaComandaNaMesa.value) {
+              if ((vendaComandaClicado && funcoesController.vendaComanda.value) || vendaComandaClicado && funcoesController.vendaComandaNaMesa.value) {
                 await validarComanda(numeroComanda);
 
                 /* if (temConta) {
@@ -2508,7 +2513,7 @@ class MapaPageState extends State<MapaPage> {
     List<dynamic> itensParaMostrarComanda = [];
     List<dynamic> itensParaMostrarBalcao = [];
 
-    if((vendaComandaClicado && mapaController.vendaComanda.value) || (vendaMesaClicado && mapaController.vendaMesa.value)){
+    if((vendaComandaClicado && funcoesController.vendaComanda.value) || (vendaMesaClicado && funcoesController.vendaMesa.value)){
       // 1. Determina qual lista de DADOS usar (mesas ou comandas)
       if (mostrarMesas) {
         // 2. Filtra a lista com base no botão selecionado (Todas, Abertas, Fechadas)
@@ -2544,7 +2549,7 @@ class MapaPageState extends State<MapaPage> {
       }).toList();
     }
 
-    if(vendaComandaClicado && mapaController.vendaComandaNaMesa.value){
+    if(vendaComandaClicado && funcoesController.vendaComandaNaMesa.value){
       if (mostrarMesas) {
         // 2. Filtra a lista com base no botão selecionado (Todas, Abertas, Fechadas)
         if (mostrarTodas) {
@@ -2593,7 +2598,7 @@ class MapaPageState extends State<MapaPage> {
       }).toList();
     }
 
-    if(vendaBalcaoClicado && mapaController.vendaBalcao.value){
+    if(vendaBalcaoClicado && funcoesController.vendaBalcao.value){
       itensParaMostrarBalcao = mapaController.balcao.toList();
 
       // Busca na barra de pesquisa
@@ -2947,7 +2952,7 @@ class MapaPageState extends State<MapaPage> {
                           ],
                         ),
                         /* // SizedBox(width: 3),
-                        if(mapaController.vendaComandaNaMesa.value)
+                        if(funcoesController.vendaComandaNaMesa.value)
                         Column(
                           children: [
                             ElevatedButton(
@@ -2987,7 +2992,7 @@ class MapaPageState extends State<MapaPage> {
                           ],
                         ), */
                         // // SizedBox(width: 3),
-                        if(mapaController.vendaComandaNaMesa.value && garcomController.vendaComandaNaMesa.value)
+                        if(funcoesController.vendaComandaNaMesa.value && funcoesController.vendaComandaNaMesa.value)
                         Column(
                           children: [
                             ElevatedButton(
@@ -3038,7 +3043,7 @@ class MapaPageState extends State<MapaPage> {
                         ),
                         // SizedBox(width: 3),
                         // botão mesa
-                        if (mapaController.vendaMesa.value && garcomController.vendaComandaNaMesa.value)
+                        if (funcoesController.vendaMesa.value)
                           Column(
                             children: [
                               ElevatedButton(
@@ -3079,7 +3084,7 @@ class MapaPageState extends State<MapaPage> {
 
                         // SizedBox(width: 3),
                         // botão comanda
-                        if (mapaController.vendaComanda.value && funcoesController.vendaComanda.value)
+                        if (funcoesController.vendaComanda.value)
                           Column(
                             children: [
                               ElevatedButton(
@@ -3113,7 +3118,7 @@ class MapaPageState extends State<MapaPage> {
                           ),
                           // SizedBox(width: 3),
                         // botão balcao
-                        if (mapaController.vendaBalcao.value)
+                        if (funcoesController.vendaBalcao.value)
                           Column(
                             children: [
                               ElevatedButton(
@@ -3160,19 +3165,19 @@ class MapaPageState extends State<MapaPage> {
             ),
             // body
             // mapa mesa 
-            if(mapaController.vendaMesa.value && vendaMesaClicado)
+            if(funcoesController.vendaMesa.value && vendaMesaClicado)
             _buildGridMesas(itensParaMostrar, true),
 
             // mapa comanda 
-            if(mapaController.vendaComanda.value && vendaComandaClicado)
+            if(funcoesController.vendaComanda.value && vendaComandaClicado)
             _buildGridComandas(itensParaMostrar, false),
 
             // mapa comanda na mesa 
-            if(mapaController.vendaComandaNaMesa.value && vendaComandaNaMesaClicado && modoCarrossel)
+            if(funcoesController.vendaComandaNaMesa.value && vendaComandaNaMesaClicado && modoCarrossel)
             _buildGridComandaNaMesa(mapaController.abertasMesas.toList(), mapaController.abertasComandas.toList()),
 
             // mapa balcao (corrigido duplicidade)
-            if(mapaController.vendaBalcao.value && vendaBalcaoClicado)
+            if(funcoesController.vendaBalcao.value && vendaBalcaoClicado)
             _buildGridBalcao(itensParaMostrarBalcao)
             ],
           ),

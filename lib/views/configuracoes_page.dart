@@ -63,11 +63,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   List<String> recepcao = ['Recepção'];
   Set<String> recepcaoSelecionados = {};
 
-  List<String> modos = ['Mapa'];
-  Set<String> modosSelecionados = {};
-
-  List<String> vendas = ['Venda Balcão', 'Venda Comanda', 'Venda Comanda Na Mesa','Venda Mesa'];
-  Set<String> vendasSelecionados = {};
+  // List<String> vendas = ['Venda Balcão', 'Venda Comanda', 'Venda Comanda Na Mesa','Venda Mesa'];
+  // Set<String> vendasSelecionados = {};
 
   List<String> notes = ['Fila de espera'];
   Set<String> notesSelecionados = {};
@@ -191,6 +188,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
   bool aparecerCadastroCliente = false;
 
+  bool nadaMarcado = false;
+
   // Listener nomeado para poder ser removido corretamente no dispose
   void _onServidorFocusChange() {
     if (!mounted) return;
@@ -217,7 +216,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     servidorFocusNode.addListener(_onServidorFocusChange);
 
     _loadServidor();
-    _loadModoSalvo();
+    // _loadModoSalvo();
     _loadNoteSalvo();
     _loadRecepcaoSalvo();
     _loadCheckSalvo();
@@ -242,10 +241,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     _loadFocarCadastroClienteSalvo();
     _loadModoCarrinhoComandasSalvo();
     _loadRetirarBalcao();
-    _loadVendas();
-    _loadVendas().then((_) {
+    // _loadVendas();
+    /* _loadVendas().then((_) {
       arrumarListaVendas();
-    });
+    }); */
   }
 
   @override
@@ -262,40 +261,40 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {}
 
-  arrumarListaVendas() {
+  /* arrumarListaVendas() {
     bool changed = false;
     if(!funcoesController.vendaBalcao.value){
       // venda balcao 
       vendas.remove('Venda Balcão');
-      footerButtonsController.retirarBalcao.value = false;
       retirarBalcaoSelecionados.clear();
       if (vendasSelecionados.remove('0')) changed = true;
     }
     if (!funcoesController.vendaComanda.value){
       // venda comanda
       vendas.remove('Venda Comanda');
-      footerButtonsController.vendaComanda.value = false;
       if (vendasSelecionados.remove('1')) changed = true;
     }
     if (!garcomController.vendaComandaNaMesa.value){
       // venda comanda na mesa 
       vendas.remove('Venda Comanda Na Mesa');
-      footerButtonsController.vendaComanda.value = false;
       if (vendasSelecionados.remove('2')) changed = true;
     }
     if (!funcoesController.vendaMesa.value){
       // venda mesa 
       vendas.remove('Venda Mesa');
-      footerButtonsController.vendaMesa.value = false;
       if (vendasSelecionados.remove('3')) changed = true;
     } 
     // Só salva novamente as configurações se alguma coisa realmente foi removida.
     if (changed) {
       _saveVendas(vendasSelecionados);
     }
-  }
+  } */
 
   navegar() async {
+    setState(() {
+      nadaMarcado = false;
+    });
+    
     if (footerButtonsController.rotaPainelCliente.value) {
       Get.toNamed('/painel_cliente');
     } else if (footerButtonsController.rotaExpedicaoMotoboy.value) {
@@ -304,21 +303,21 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
       if (footerButtonsController.aparecerCheckIn.value) {
         Get.toNamed('/checkin');
       // } else if (footerButtonsController.aparecerGarcom.value) {
-      } else if (vendaComandaSelecionados.isNotEmpty || vendaMesaSelecionados.isNotEmpty || retirarBalcaoSelecionados.isNotEmpty) {
+      } else if (garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) {
         // venda comanda marcada 
-        if(footerButtonsController.vendaComanda.value && garcomController.vendaComanda.value){
+        if(garcomController.vendaComanda.value){
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = true;
           garcomController.vendaMesa.value = false;
         } 
         // venda mesa marcada 
-        else if (footerButtonsController.vendaMesa.value && garcomController.vendaMesa.value) {
+        else if (garcomController.vendaMesa.value) {
           garcomController.retirarBalcaoRota.value = false;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = true;
         } 
         // venda balcao marcada 
-        else if (footerButtonsController.retirarBalcao.value && funcoesController.vendaBalcao.value) {
+        else if (funcoesController.vendaBalcao.value) {
           garcomController.retirarBalcaoRota.value = true;
           garcomController.vendaComanda.value = false;
           garcomController.vendaMesa.value = false;
@@ -331,7 +330,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         Get.toNamed('/garcom');
       } else if (footerButtonsController.aparecerCheckOut.value) {
         Get.toNamed('/checkout');
-      } else if (footerButtonsController.aparecerMapa.value) {
+      } else if (garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) {
         Get.toNamed('/mapa');
       } else if (footerButtonsController.aparecerRecepcao.value) {
         Get.toNamed('/recepcao');
@@ -354,14 +353,28 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
         Get.toNamed('/cupom_avulso');
       }
       else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Selecione uma rota!',
+        await funcoesController.buscarTipoPedido();
+
+        bool marcou = funcoesController.vendaComanda.value || funcoesController.vendaMesa.value || funcoesController.vendaBalcao.value;
+
+        if(marcou){
+          setState(() {
+            nadaMarcado = false;
+          });
+          navegar();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Marque as configurações no engine!',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+          );
+          setState(() {
+            nadaMarcado = true;
+          });
+        }
       }
     }
   }
@@ -466,7 +479,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     });
   }
 
-  // Carrega se retirar balcao esta marcado 
+  /* // Carrega se retirar balcao esta marcado 
   Future<void> _loadVendas() async {
     final prefs = await SharedPreferences.getInstance();
     final valor = prefs.getString('vendas_selecionados');
@@ -486,7 +499,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     setState(() {
       vendasSelecionados = setLocal;
     });
-  }
+  } */
 
   // salvar retirar balcao 
   _saveVendas(Set<String> vendasSelecionados) async {
@@ -1296,7 +1309,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     }
   }
 
-  Future<void> _loadModoSalvo() async {
+  /* Future<void> _loadModoSalvo() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedModo = prefs.getString('modo_padrao');
@@ -1310,7 +1323,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     } catch (e, st) {
       // debugPrint("Erro _loadModoSalvo(): $e\n$st");
     }
-  }
+  } */
 
   Future<void> salvarModoSalvo(Set<String> modosSalvos) async {
     try {
@@ -1498,7 +1511,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
 
   Future<void> _salvarConfiguracoes() async {
-    await salvarModoSalvo(modosSelecionados);
+    // await salvarModoSalvo(modosSelecionados);
     await salvarNoteSalvo(notesSelecionados);
     await salvarRecepcaoSalvo(recepcaoSelecionados);
     await _saveServidor(servidorController.text);
@@ -1513,7 +1526,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
     await _saveForcarCadastroCliente(forcarCadastroClienteSelecionados);
     await _saveModoCarrinhoComandas(modoCarrinhoComandasSelecionados);
     await _saveRetirarBalcao(retirarBalcaoSelecionados);
-    await _saveVendas(vendasSelecionados);
+    // await _saveVendas(vendasSelecionados);
   }
 
   // Deriva as variáveis booleanas de navegação diretamente dos Sets já em memória.
@@ -1521,8 +1534,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
   // Faz apenas 1 setState, eliminando os ~14 rebuilds por salvamento.
   Future<void> _aplicarConfiguracoesDaMemoria() async {
     // --- mapa ---
-    final bool novoNaoAparecerMapa = !modosSelecionados.contains('0');
-    final bool novoAparecerCheckInOut = modosSelecionados.contains('0');
+    /* final bool novoNaoAparecerMapa = !modosSelecionados.contains('0');
+    final bool novoAparecerCheckInOut = modosSelecionados.contains('0'); */
 
     // --- check ---
     final bool novoCheckIn  = checkSelecionados.contains('0');
@@ -1567,8 +1580,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
 
     if (!mounted) return;
     setState(() {
-      naoAparecerMapa = novoNaoAparecerMapa;
-      aparecerCheckInOut = novoAparecerCheckInOut;
+     /*  naoAparecerMapa = novoNaoAparecerMapa;
+      aparecerCheckInOut = novoAparecerCheckInOut; */
       aparecerCheckIn = novoCheckIn;
       aparecerCheckOut = novoCheckOut;
       aparecerVendaComanda = novoVendaComanda;
@@ -2522,7 +2535,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                           ),
                         ],
                       ),
-                      // Venda comanda
+                      /* // Venda comanda
                       if(funcoesController.vendaComanda.value)
                       Padding(
                           padding: EdgeInsets.only(right: 8),
@@ -2651,7 +2664,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               );
                             },
                           ),
-                        ),
+                        ), */
                       // check in e check out
                       if (check.isEmpty)
                         Padding(
@@ -2770,7 +2783,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ],
                       ), */
                       // SizedBox(height: 2),
-                      // MAPA 
+                      /* // MAPA 
                       if (modos.isEmpty)
                         Padding(
                           padding: EdgeInsets.all(10.0),
@@ -2814,8 +2827,8 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               );
                             },
                           ),
-                        ),
-                        // CONFIGURACOES DO MAPA 
+                        ), */
+                        /* // CONFIGURACOES DO MAPA 
                         if (modosSelecionados.contains('0'))
                         Padding(
                           padding: EdgeInsets.only(right: 8, left: 20),
@@ -2859,7 +2872,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                               );
                             },
                           ),
-                        ),
+                        ), */
                       // SizedBox(height: 2),
                       /* Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -3085,7 +3098,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ],
                       ), */
                       /* // SizedBox(height: 2), */
-
+                      if(funcoesController.vendaComanda.value || funcoesController.vendaComandaNaMesa.value)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -3104,12 +3117,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ],
                       ),
                       // SizedBox(height: 2),
-                      if (cadastroCliente.isEmpty)
-                        Padding(
-                          padding: EdgeInsets.all(10.0),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else
+                      if (funcoesController.vendaComanda.value || funcoesController.vendaComandaNaMesa.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
@@ -3367,10 +3375,10 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             },
                           ),
                         ), */
-
+                        if(funcoesController.vendaComanda.value || funcoesController.vendaComandaNaMesa.value)
                         Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Flexible(
                             child: Text(
@@ -3386,12 +3394,7 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                         ],
                       ),
                       // SizedBox(height: 2),
-                      if (modoCarrinhoComandas.isEmpty)
-                        Padding(
-                          padding: EdgeInsets.all(10.0),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else
+                      if (funcoesController.vendaComanda.value || funcoesController.vendaComandaNaMesa.value)
                         Padding(
                           padding: EdgeInsets.only(right: 8),
                           child: ListView.builder(
@@ -3463,59 +3466,85 @@ class ConfiguracoesPageState extends State<ConfiguracoesPage>
                             physics: NeverScrollableScrollPhysics(),
                             itemCount: rotas.length,
                             itemBuilder: (context, index) {
-                              String modo = rotas[index];
-                              String indexStr = index.toString();
-                              bool isChecked = rotasSelecionadas.contains(indexStr);
-                              
-                              return RadioListTile<String>(
-                                controlAffinity: ListTileControlAffinity.leading,
-                                // Diminui o espaço vertical
-                                dense: true,
-                                visualDensity: const VisualDensity(
-                                  horizontal: -2,
-                                  vertical: -3,
-                                ),
-                                activeColor: colorScheme.scrim,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
-                                title: Text(modo, style: TextStyle(
-                                  fontSize: 15
-                                ),),
-                                value: indexStr,
-                                groupValue: rotasSelecionadas.isNotEmpty
-                                    ? rotasSelecionadas.first
-                                    : null,
-                                onChanged: (String? value) {
-                                  if (value == null) return;
+                                String modo = rotas[index];
+                                String indexStr = index.toString();
 
-                                  setState(() {
-                                    rotasSelecionadas.clear();
-                                    rotasSelecionadas.add(value);
-                                  });
-                                },
-                              );/* 
-                              CheckboxListTile(
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
-                                title: Text(modo, style: TextStyle(
-                                fontSize: 15),),
-                                value: isChecked,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    if (value == true) {
+                                bool isChecked = rotasSelecionadas.contains(indexStr);
+
+                                // Substitua pela sua condição real
+                                bool condicao = nadaMarcado;
+
+                                bool destacarPrimeiro = condicao && index == 0;
+
+                                return RadioListTile<String>(
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                  dense: true,
+                                  visualDensity: const VisualDensity(
+                                    horizontal: -2,
+                                    vertical: -3,
+                                  ),
+                                  activeColor: colorScheme.scrim,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                  ),
+                                  /* title: Text(
+                                    modo,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      decoration: destacarPrimeiro ? TextDecoration.underline : TextDecoration.none,
+                                      decorationColor: Colors.red,
+                                      decorationThickness: 2,
+                                    ),
+                                  ), */
+                                  title: Container(
+                                    decoration: BoxDecoration(
+                                      color: destacarPrimeiro ? Colors.red : Colors.transparent,
+                                    ),
+                                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    child: Text(
+                                      modo,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: destacarPrimeiro ? colorScheme.onPrimary : colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  value: indexStr,
+                                  groupValue: rotasSelecionadas.isNotEmpty
+                                      ? rotasSelecionadas.first
+                                      : null,
+                                  onChanged: (String? value) {
+                                    if (value == null) return;
+
+                                    setState(() {
                                       rotasSelecionadas.clear();
-                                      rotasSelecionadas.add(indexStr);
-                                    } else {
-                                      rotasSelecionadas.remove(indexStr);
-                                    }
-                                  });
-                                },
-                              ); */
-                            },
+                                      rotasSelecionadas.add(value);
+                                    });
+                                  },
+                                );
+                              },
+                          ),
+                        ),
+
+                        if(nadaMarcado)
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  textAlign: TextAlign.center,
+                                  'Nenhuma configuração de venda selecionada no engine!',
+                                  style: TextStyle(
+                                    color: colorScheme.error,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],

@@ -111,6 +111,7 @@ class FuncoesController extends GetxController {
     RxBool vendaComanda = false.obs;
     RxBool vendaMesa = false.obs;
     RxBool vendaBalcao = false.obs;
+    RxBool vendaComandaNaMesa = false.obs; 
 
     // pegarmeuMobileId
     RxString meuMobileId = ''.obs;
@@ -480,6 +481,7 @@ class FuncoesController extends GetxController {
         vendaComanda.value = false;
         vendaMesa.value = false;
         vendaBalcao.value = false;
+        vendaComandaNaMesa.value = false;
         garcomController.vendaComandaNaMesa.value = false;
 
         if (mesa == "1"){
@@ -493,6 +495,7 @@ class FuncoesController extends GetxController {
         }
 
         if (comandaNaMesa == "1"){
+          vendaComandaNaMesa.value = true;
           vendaComanda.value = true;
           garcomController.vendaComandaNaMesa.value = true;
           garcomController.vendaComanda.value = true;

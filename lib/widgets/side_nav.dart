@@ -65,7 +65,7 @@ class SideNavState extends State<SideNav> {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckinPage()));
       } else if(footerButtonsController.aparecerCheckOut.value){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckoutPage()));
-      } else if (footerButtonsController.aparecerMapa.value){
+      } else if ((garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value)){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => MapaPage()));
       } else if(footerButtonsController.aparecerRecepcao.value){
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => RecepcaoPage()));
@@ -727,13 +727,13 @@ class SideNavState extends State<SideNav> {
                 padding: EdgeInsets.zero,
                 children: [
 
-                  if (footerButtonsController.vendaComanda.value && footerButtonsController.rotaHome.value && funcoesController.vendaComanda.value)
+                  if (footerButtonsController.rotaHome.value && funcoesController.vendaComanda.value)
                   vendasComandaPage(currentRoute, colorScheme),
 
-                  if (footerButtonsController.vendaMesa.value && footerButtonsController.rotaHome.value && funcoesController.vendaMesa.value)
+                  if (footerButtonsController.rotaHome.value && funcoesController.vendaMesa.value)
                   vendasMesaPage(currentRoute, colorScheme),
 
-                  if(footerButtonsController.retirarBalcao.value && footerButtonsController.rotaHome.value && funcoesController.vendaBalcao.value)
+                  if(footerButtonsController.rotaHome.value && funcoesController.vendaBalcao.value)
                   retirarBalcao(currentRoute, colorScheme),
             
                   if (footerButtonsController.aparecerCheckIn.value && footerButtonsController.rotaHome.value)
@@ -754,7 +754,7 @@ class SideNavState extends State<SideNav> {
                   if (footerButtonsController.aparecerKDS.value && footerButtonsController.rotaHome.value)
                   kdsPage(currentRoute, colorScheme),
 
-                  if (footerButtonsController.aparecerMapa.value && footerButtonsController.rotaHome.value)
+                  if ((garcomController.vendaComanda.value || garcomController.vendaMesa.value || funcoesController.vendaBalcao.value) && footerButtonsController.rotaHome.value)
                   mapPage(currentRoute, colorScheme),
 
                   if (footerButtonsController.aparecerNote.value && footerButtonsController.rotaHome.value)
