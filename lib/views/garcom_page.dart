@@ -1692,6 +1692,11 @@ class GarcomPageState extends State<GarcomPage> with SingleTickerProviderStateMi
     }
 
     // Pedido já existente
+    if (_usarComanda && ((rota == 'comanda') || rota == "")) {
+      await validarComanda(comanda);
+    } else {
+      await validarMesa(mesa);
+    }
     await verificarSeTemConta(identificador);
     await buscarNumeroPedido(identificador);
   }

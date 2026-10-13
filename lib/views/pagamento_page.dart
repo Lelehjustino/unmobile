@@ -14,6 +14,7 @@ import 'package:un_recepcao/services/cielo/cielo_payment_service.dart';
 import 'package:un_recepcao/services/cielo/cielo_service.dart';
 import 'package:un_recepcao/services/maquininhas/paymentProvider.dart';
 import 'package:un_recepcao/services/pagBank/smartPos/pagbank_smartpos.dart';
+import 'package:un_recepcao/views/conta_page.dart';
 import 'package:un_recepcao/views/garcom_page.dart';
 import 'package:un_recepcao/views/mapa_page.dart';
 import 'package:un_recepcao/widgets/side_nav.dart';
@@ -1357,7 +1358,7 @@ class PagamentoPageState extends State<PagamentoPage>
   }
   
   // Funcao que insere os pagamentos
-  Future<bool> insertPagamentos() async {
+  Future<bool>  insertPagamentos() async {
     try {
       String descricaoFormasPagamento = montarDescricaoFormasPagamento();
       for(var pagamento in listaFormasDePagamentoSelecionadas) {
@@ -1760,15 +1761,11 @@ class PagamentoPageState extends State<PagamentoPage>
     }
 
     // Calcula valor real em centavos a partir do valorTotalLiquidoSelect
-    final double valorDouble = double.tryParse(
-          valorTotalLiquidoSelect.replaceAll(',', '.'),
-        ) ?? 0.0;
+    final double valorDouble = double.tryParse(valorTotalLiquidoSelect.replaceAll(',', '.'),) ?? 0.0;
     final int valorCentavos = (valorDouble * 100).round();
 
     // Gera referência única baseada no número do pedido
-    final String referencia = (numeropedido.isNotEmpty && numeropedido != '0')
-        ? 'CIELO_$numeropedido'
-        : 'CIELO_${DateTime.now().millisecondsSinceEpoch}';
+    final String referencia = (numeropedido.isNotEmpty && numeropedido != '0') ? 'CIELO_$numeropedido' : 'CIELO_${DateTime.now().millisecondsSinceEpoch}';
 
     print('==============================');
     print('PAGAMENTO CIELO');
@@ -1826,11 +1823,11 @@ class PagamentoPageState extends State<PagamentoPage>
         // que usa rotaAnterior (vinda dos arguments) — sem depender do nativo.
         bool pagamentoSucesso = await insertPagamentos();
         if (pagamentoSucesso) {
-           pedidoPagoComSucesso();
-          await volteiDoCielo(true);
+          // pedidoPagoComSucesso();
+          volteiDoCielo(true);
         } else {
-          erroAoPagarPedido();
-          await volteiDoCielo(false);
+          // erroAoPagarPedido();
+          volteiDoCielo(false);
         }
         break;
 
@@ -1843,6 +1840,8 @@ class PagamentoPageState extends State<PagamentoPage>
               duration: Duration(seconds: 4),
             ),
           );
+          // erroAoPagarPedido();
+          volteiDoCielo(false);
         }
         break;
 
@@ -1857,6 +1856,8 @@ class PagamentoPageState extends State<PagamentoPage>
               duration: Duration(seconds: 5),
             ),
           );
+          // erroAoPagarPedido();
+          volteiDoCielo(false);
         }
         break;
 
@@ -1871,6 +1872,8 @@ class PagamentoPageState extends State<PagamentoPage>
               duration: Duration(seconds: 6),
             ),
           );
+          // erroAoPagarPedido();
+          volteiDoCielo(false);
         }
         break;
     }
@@ -1924,11 +1927,53 @@ class PagamentoPageState extends State<PagamentoPage>
   Future<void> volteiDoCielo(bool sucesso) async {
     // Se teve sucesso no pagamento 
     if(sucesso) {
+      if (rotaAnterior == "mapa"){
+        // ir para o mapa 
+        // Get.toNamed('/mapa');
+        // Get.to('/mapa');
+        Get.to(
+          () => MapaPage()
+        );
+      } else if (rotaAnterior == "garcom"){
+        // ir para garcom 
+        // Get.toNamed('/garcom');
+        // Get.to('/garcom');
+        Get.to(
+          () => GarcomPage()
+        );
+      } else {
+        // rota padrao 
+        // Get.toNamed('/garcom');
+        // Get.to('/garcom');
+        Get.to(
+          () => GarcomPage()
+        );
+      }
 
+      pedidoPagoComSucesso();
     } 
     // Se pagamento deu errado
     else {
-
+      erroAoPagarPedido();
+      Future.delayed(Duration(milliseconds: 4000), () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      });
+      Get.to(
+        () => PagamentoPage(),
+          arguments: {
+            'numeropedido': numeropedido,
+            'comanda': comandaDoPedido,
+            'mesa': mesaDoPedido,
+            'numeroTurnoCaixa': funcoesController.numeroTurnoCaixa.value,
+            'statusCaixa': funcoesController.statusCaixa.value,
+            'numeroCaixa': funcoesController.numeroCaixa.value,
+            'nomeCaixa': funcoesController.nomeCaixa.value,
+            'pageAnterior': rotaAnterior,
+            'nome': nomeClienteDoPedido
+          },
+        );
     }
   }
 
@@ -2419,7 +2464,7 @@ class PagamentoPageState extends State<PagamentoPage>
           }
 
           // ----------------------------------------------------------- OFICIAL ---------------------------------------------------------------
-          final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
+          /* final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
 
           if (maquininhaDisponivel) {
             // SmartPOS disponível: executa pagamento PagBank primeiro
@@ -2432,13 +2477,13 @@ class PagamentoPageState extends State<PagamentoPage>
           } else {
             // Sem SmartPOS: finaliza o pedido diretamente
             await pagarPedido();
-          }
+          } */
 
           // -------------------------------------------------------------------------------------------------------------------------------
 
           // await realizarPagamentoMaquininhas(listaFormasDePagamentoSelecionadas);
 
-          // await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
+          await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
 
           dialogoConfirmacaoAberto = false;
         },
@@ -2834,12 +2879,17 @@ class PagamentoPageState extends State<PagamentoPage>
   }
 
   // Função para mostrar mensagem de pedido pago com sucesso
-  void pedidoPagoComSucesso() {
+  Future<void> pedidoPagoComSucesso() async {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        // Future.delayed(Duration(milliseconds: 1388), () {
+        Future.delayed(Duration(milliseconds: 1388), () {
+          if (Navigator.canPop(ctx)) {
+            Navigator.pop(ctx);
+          }
+        });
+        /* // Future.delayed(Duration(milliseconds: 1388), () {
         Future.delayed(Duration(milliseconds: 2000), () {
           if (Navigator.canPop(ctx)) {
             // Navigator.pop(ctx);
@@ -2851,7 +2901,7 @@ class PagamentoPageState extends State<PagamentoPage>
               Get.toNamed('/garcom');
             } 
           }
-        });
+        }); */
 
         return Center(
           child: TweenAnimationBuilder(
@@ -2899,12 +2949,12 @@ class PagamentoPageState extends State<PagamentoPage>
   }
 
   // Função para mostrar mensagem de erro ao pagar pedido
-  void erroAoPagarPedido() {
+  Future<void> erroAoPagarPedido() async {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        Future.delayed(Duration(milliseconds: 1388), () {
+        Future.delayed(Duration(milliseconds: 1400), () {
           if (Navigator.canPop(ctx)) {
             Navigator.pop(ctx);
           }

@@ -1651,6 +1651,7 @@ class MapaPageState extends State<MapaPage> {
                       'numeroBalcao': "0",
                     },
                   );
+
                 } else if (aberto) {
                   // Ir para o garçom para adicionar itens
                   Get.to(
@@ -1664,6 +1665,9 @@ class MapaPageState extends State<MapaPage> {
                       'numeroClienteBalcao': '',
                     },
                   );
+                  garcomController.retirarBalcaoRota.value = false;
+                  garcomController.vendaComanda.value = false;
+                  garcomController.vendaMesa.value = true;
                 } else if (!aberto) {
                   // Ir para o garçom para iniciar comanda
                   Get.to(
@@ -1677,6 +1681,9 @@ class MapaPageState extends State<MapaPage> {
                       'numeroClienteBalcao': '',
                     },
                   );
+                  garcomController.retirarBalcaoRota.value = false;
+                  garcomController.vendaComanda.value = false;
+                  garcomController.vendaMesa.value = true;
                 }
               }
             },
