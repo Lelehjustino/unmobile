@@ -106,8 +106,25 @@ class MainActivity : FlutterActivity() {
     // ── Tratamento singleTop: Activity já no topo ────────────────────────────
     // Cenário normal: launchMode=singleTop mantém a Activity viva; o retorno
     // da Cielo chega aqui.
+    //
+    // IMPORTANTE: para intents Cielo (unmobile://cielo), passamos Intent() vazio
+    // ao super.onNewIntent, pois o FlutterActivity interpreta qualquer URI de
+    // ACTION_VIEW como deep link e dispara pushRoute("/") internamente — o que
+    // faz o GetX navegar para a rota "/" = CheckinPage antes da nossa lógica
+    // rodar. Ao neutralizar o intent para o super, o roteamento automático do
+    // Flutter não ocorre e o CieloBridge entrega o resultado pelo MethodChannel.
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
+        val isCieloCallback = (intent.action == Intent.ACTION_VIEW
+                && intent.data?.scheme == "unmobile"
+                && intent.data?.host == "cielo")
+
+        if (isCieloCallback) {
+            // Passa intent vazio ao super para evitar pushRoute("/") automático
+            super.onNewIntent(Intent())
+        } else {
+            super.onNewIntent(intent)
+        }
+
         setIntent(intent)
         CieloBridge.processarRetorno(intent)
         // Consome o intent para não reprocessar em retomadas futuras

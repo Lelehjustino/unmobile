@@ -1835,7 +1835,10 @@ class PagamentoPageState extends State<PagamentoPage>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Pagamento cancelado na maquininha Cielo.'),
+              content: Text(
+                //'Pagamento cancelado na maquininha Cielo.'
+                'Pagamento não processado!',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
               duration: Duration(seconds: 4),
             ),
@@ -1850,7 +1853,8 @@ class PagamentoPageState extends State<PagamentoPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                resultado.mensagem ?? 'Erro no pagamento Cielo.',
+                // resultado.mensagem ?? 'Erro no pagamento Cielo.',
+                'Pagamento não processado!',
               ),
               backgroundColor: Theme.of(context).colorScheme.error,
               duration: Duration(seconds: 5),
@@ -1866,7 +1870,8 @@ class PagamentoPageState extends State<PagamentoPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Não foi possível confirmar o pagamento. Verifique na maquininha.',
+                // 'Não foi possível confirmar o pagamento. Verifique na maquininha.',
+                'Pagamento não processado!',
               ),
               backgroundColor: Theme.of(context).colorScheme.error,
               duration: Duration(seconds: 6),
@@ -1927,39 +1932,28 @@ class PagamentoPageState extends State<PagamentoPage>
   Future<void> volteiDoCielo(bool sucesso) async {
     // Se teve sucesso no pagamento 
     if(sucesso) {
-      if (rotaAnterior == "mapa"){
+      /* if (rotaAnterior == "mapa"){
         // ir para o mapa 
         // Get.toNamed('/mapa');
         // Get.to('/mapa');
-        Get.to(
-          () => MapaPage()
-        );
+        Get.to(() => MapaPage());
       } else if (rotaAnterior == "garcom"){
         // ir para garcom 
         // Get.toNamed('/garcom');
         // Get.to('/garcom');
-        Get.to(
-          () => GarcomPage()
-        );
+        Get.to(() => GarcomPage());
       } else {
         // rota padrao 
         // Get.toNamed('/garcom');
         // Get.to('/garcom');
-        Get.to(
-          () => GarcomPage()
-        );
-      }
+        Get.to(() => GarcomPage());
+      } */
 
       pedidoPagoComSucesso();
     } 
     // Se pagamento deu errado
     else {
       erroAoPagarPedido();
-      Future.delayed(Duration(milliseconds: 4000), () {
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-      });
       Get.to(
         () => PagamentoPage(),
           arguments: {
@@ -2884,12 +2878,12 @@ class PagamentoPageState extends State<PagamentoPage>
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        Future.delayed(Duration(milliseconds: 1388), () {
+        /* Future.delayed(Duration(milliseconds: 1388), () {
           if (Navigator.canPop(ctx)) {
             Navigator.pop(ctx);
           }
-        });
-        /* // Future.delayed(Duration(milliseconds: 1388), () {
+        }); */
+        // Future.delayed(Duration(milliseconds: 1388), () {
         Future.delayed(Duration(milliseconds: 2000), () {
           if (Navigator.canPop(ctx)) {
             // Navigator.pop(ctx);
@@ -2901,7 +2895,7 @@ class PagamentoPageState extends State<PagamentoPage>
               Get.toNamed('/garcom');
             } 
           }
-        }); */
+        });
 
         return Center(
           child: TweenAnimationBuilder(
