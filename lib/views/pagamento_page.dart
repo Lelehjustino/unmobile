@@ -2475,9 +2475,9 @@ class PagamentoPageState extends State<PagamentoPage>
 
           // -------------------------------------------------------------------------------------------------------------------------------
 
-          // await realizarPagamentoMaquininhas(listaFormasDePagamentoSelecionadas);
+          await realizarPagamentoMaquininhas(listaFormasDePagamentoSelecionadas);
 
-          await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
+          // await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
 
           dialogoConfirmacaoAberto = false;
         },
@@ -2872,6 +2872,29 @@ class PagamentoPageState extends State<PagamentoPage>
     return theme.colorScheme.outline;
   }
 
+  // Funcao para ir para a venda correta
+  Future<void> navegarVenda() async {
+    if(funcoesController.vendaComanda.value){
+      garcomController.retirarBalcaoRota.value = false;
+      garcomController.vendaComanda.value = true;
+      garcomController.vendaMesa.value = false;
+    } 
+    // venda mesa marcada 
+    else if (funcoesController.vendaMesa.value) {
+      garcomController.retirarBalcaoRota.value = false;
+      garcomController.vendaComanda.value = false;
+      garcomController.vendaMesa.value = true;
+    } 
+    // venda balcao marcada 
+    else if (funcoesController.vendaBalcao.value) {
+      garcomController.retirarBalcaoRota.value = true;
+      garcomController.vendaComanda.value = false;
+      garcomController.vendaMesa.value = false;
+    } 
+
+    Get.toNamed('/garcom');
+  }
+
   // Função para mostrar mensagem de pedido pago com sucesso
   Future<void> pedidoPagoComSucesso() async {
     showDialog(
@@ -2888,11 +2911,13 @@ class PagamentoPageState extends State<PagamentoPage>
           if (Navigator.canPop(ctx)) {
             // Navigator.pop(ctx);
             if (rotaAnterior == "garcom") {
-              Get.toNamed('/garcom');
+              // Get.toNamed('/garcom');
+              navegarVenda();
             } else if (rotaAnterior == "mapa") {
               Get.toNamed('/mapa');
             } else {
-              Get.toNamed('/garcom');
+              // Get.toNamed('/garcom');
+              navegarVenda();
             } 
           }
         });
