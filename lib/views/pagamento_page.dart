@@ -1743,144 +1743,153 @@ class PagamentoPageState extends State<PagamentoPage>
       return;
     }
 
-    // Objeto que veio da lista
-    final formaPagamento = listaFormasDePagamentoSelecionadasCielo.first;
-    // Pega o número
-    final numero = formaPagamento['numero'].toString();
+    for(int i = 0; i < listaFormasDePagamentoSelecionadasCielo.length; i++){
+        final formaPagamento = listaFormasDePagamentoSelecionadasCielo[i];
+        // Pega o número
+        final numero = formaPagamento['numero'].toString();
 
-    String paymentCode = await tipoPagamentoCielo(numero);
+        String paymentCode = await tipoPagamentoCielo(numero);
 
-    if (paymentCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Forma de pagamento não suportada pela Cielo!'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
+        if (paymentCode.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Forma de pagamento não suportada pela Cielo!'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+          return;
+        }
 
-    // Calcula valor real em centavos a partir do valorTotalLiquidoSelect
-    final double valorDouble = double.tryParse(valorTotalLiquidoSelect.replaceAll(',', '.'),) ?? 0.0;
-    final int valorCentavos = (valorDouble * 100).round();
+        // Calcula valor real em centavos a partir do valorTotalLiquidoSelect
+        final double valorDouble = _parseString(formaPagamento['valor'].toString());
+        final int valorCentavos = (valorDouble * 100).round();
 
-    // Gera referência única baseada no número do pedido
-    final String referencia = (numeropedido.isNotEmpty && numeropedido != '0') ? 'CIELO_$numeropedido' : 'CIELO_${DateTime.now().millisecondsSinceEpoch}';
+        // Gera referência única baseada no número do pedido
+        final String referencia = (numeropedido.isNotEmpty && numeropedido != '0') ? 'CIELO_$numeropedido' : 'CIELO_${DateTime.now().millisecondsSinceEpoch}';
 
-    print('==============================');
-    print('PAGAMENTO CIELO');
-    print('PaymentCode: $paymentCode');
-    print('Valor centavos: $valorCentavos');
-    print('Referência: $referencia');
-    print('==============================');
+        // Bloqueia UI
+        if (mounted) setState(() => _processandoCielo = true);
 
-    // Bloqueia UI
-    if (mounted) setState(() => _processandoCielo = true);
+        // Exibe snackbar de processamento
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                  SizedBox(width: 14),
+                  Expanded(child: Text('Aguardando pagamento na Cielo...')),
+                ],
+              ),
+              duration: Duration(minutes: 4),
+            ),
+          );
+        }
 
-    // Exibe snackbar de processamento
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.onPrimary,
+        // Aguarda o resultado (Completer resolve quando callback chegar ou timeout)
+        final resultado = await CieloPaymentService.pagar(
+          valorCentavos: valorCentavos,
+          referencia: referencia,
+          paymentCode: paymentCode,
+        );
+
+        // Fecha o snackbar de processamento
+        if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        // Desbloqueia UI
+        if (mounted) setState(() => _processandoCielo = false);
+
+        if (!mounted) return;
+
+        // Trata resultado
+        switch (resultado.status) {
+          case CieloPaymentStatus.aprovado:
+            String descricaoFormasPagamento = montarDescricaoFormasPagamento();
+            String numeroMoeda = formaPagamento['numero'].toString();
+            String nomeMoeda = formaPagamento['moeda'].toString();
+            double valorPagamentoDouble = _parseString(formaPagamento['valor'].toString());
+            String valorPagamento = valorPagamentoDouble.toStringAsFixed(2);
+            String numeroTurnoCaixa = numeroTurnoCaixaSelecionado;
+            String numeroPedido = numeropedido;
+            bool pagamentoSucesso = await inserirPagamento(numeroPedido, numeroTurnoCaixa, numeroMoeda, nomeMoeda, valorPagamento, descricaoFormasPagamento);
+            // Remove a forma de pagamento paga
+            listaFormasDePagamentoSelecionadas.remove(formaPagamento);
+            valorReceberDouble = valorReceberDouble - valorPagamentoDouble;
+
+            if(pagamentoSucesso && (listaFormasDePagamentoSelecionadas.isNotEmpty)) {
+              pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
+            }
+
+            if (pagamentoSucesso && (listaFormasDePagamentoSelecionadas.isEmpty)) {
+              // pedidoPagoComSucesso();
+              volteiDoCielo(true);
+            } else if (!pagamentoSucesso && (listaFormasDePagamentoSelecionadas.isNotEmpty)) {
+              pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
+            }
+            else if (!pagamentoSucesso && (listaFormasDePagamentoSelecionadas.isEmpty)) {
+              // erroAoPagarPedido();
+              volteiDoCielo(false);
+            }
+            break;
+
+          case CieloPaymentStatus.cancelado:
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    //'Pagamento cancelado na maquininha Cielo.'
+                    'Pagamento não processado!',
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  duration: Duration(seconds: 4),
                 ),
-              ),
-              SizedBox(width: 14),
-              Expanded(child: Text('Aguardando pagamento na Cielo...')),
-            ],
-          ),
-          duration: Duration(minutes: 4),
-        ),
-      );
-    }
+              );
+              // erroAoPagarPedido();
+              volteiDoCielo(false);
+            }
+            break;
 
-    // Aguarda o resultado (Completer resolve quando callback chegar ou timeout)
-    final resultado = await CieloPaymentService.pagar(
-      valorCentavos: valorCentavos,
-      referencia: referencia,
-      paymentCode: paymentCode,
-    );
+          case CieloPaymentStatus.erro:
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    // resultado.mensagem ?? 'Erro no pagamento Cielo.',
+                    'Pagamento não processado!',
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  duration: Duration(seconds: 5),
+                ),
+              );
+              // erroAoPagarPedido();
+              volteiDoCielo(false);
+            }
+            break;
 
-    // Fecha o snackbar de processamento
-    if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    // Desbloqueia UI
-    if (mounted) setState(() => _processandoCielo = false);
-
-    if (!mounted) return;
-
-    // Trata resultado
-    switch (resultado.status) {
-      case CieloPaymentStatus.aprovado:
-        // insertPagamentos já registra tudo no banco.
-        // A PagamentoPage decide a navegação via pedidoPagoComSucesso()
-        // que usa rotaAnterior (vinda dos arguments) — sem depender do nativo.
-        bool pagamentoSucesso = await insertPagamentos();
-        if (pagamentoSucesso) {
-          // pedidoPagoComSucesso();
-          volteiDoCielo(true);
-        } else {
-          // erroAoPagarPedido();
-          volteiDoCielo(false);
+          case CieloPaymentStatus.timeout:
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    // 'Não foi possível confirmar o pagamento. Verifique na maquininha.',
+                    'Pagamento não processado!',
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  duration: Duration(seconds: 6),
+                ),
+              );
+              // erroAoPagarPedido();
+              volteiDoCielo(false);
+            }
+            break;
         }
-        break;
-
-      case CieloPaymentStatus.cancelado:
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                //'Pagamento cancelado na maquininha Cielo.'
-                'Pagamento não processado!',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              duration: Duration(seconds: 4),
-            ),
-          );
-          // erroAoPagarPedido();
-          volteiDoCielo(false);
-        }
-        break;
-
-      case CieloPaymentStatus.erro:
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                // resultado.mensagem ?? 'Erro no pagamento Cielo.',
-                'Pagamento não processado!',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              duration: Duration(seconds: 5),
-            ),
-          );
-          // erroAoPagarPedido();
-          volteiDoCielo(false);
-        }
-        break;
-
-      case CieloPaymentStatus.timeout:
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                // 'Não foi possível confirmar o pagamento. Verifique na maquininha.',
-                'Pagamento não processado!',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              duration: Duration(seconds: 6),
-            ),
-          );
-          // erroAoPagarPedido();
-          volteiDoCielo(false);
-        }
-        break;
     }
   }
 
@@ -1932,23 +1941,6 @@ class PagamentoPageState extends State<PagamentoPage>
   Future<void> volteiDoCielo(bool sucesso) async {
     // Se teve sucesso no pagamento 
     if(sucesso) {
-      /* if (rotaAnterior == "mapa"){
-        // ir para o mapa 
-        // Get.toNamed('/mapa');
-        // Get.to('/mapa');
-        Get.to(() => MapaPage());
-      } else if (rotaAnterior == "garcom"){
-        // ir para garcom 
-        // Get.toNamed('/garcom');
-        // Get.to('/garcom');
-        Get.to(() => GarcomPage());
-      } else {
-        // rota padrao 
-        // Get.toNamed('/garcom');
-        // Get.to('/garcom');
-        Get.to(() => GarcomPage());
-      } */
-
       pedidoPagoComSucesso();
     } 
     // Se pagamento deu errado
@@ -1965,7 +1957,8 @@ class PagamentoPageState extends State<PagamentoPage>
             'numeroCaixa': funcoesController.numeroCaixa.value,
             'nomeCaixa': funcoesController.nomeCaixa.value,
             'pageAnterior': rotaAnterior,
-            'nome': nomeClienteDoPedido
+            'nome': nomeClienteDoPedido,
+            'numeroBalcao': numeroClienteDoPedidoBalcao,
           },
         );
     }

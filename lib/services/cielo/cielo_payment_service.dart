@@ -38,6 +38,8 @@ class CieloPaymentService {
   static String? _referenciaPendente;
   static int? _valorPendenteCentavos;
   static bool _callbackProcessado = false;
+  // Garante que o handler só é registrado uma vez por ciclo de vida do app
+  static bool _handlerRegistrado = false;
 
   // ---------------------------------------------------------------------------
   // Público: iniciar pagamento e aguardar resultado
@@ -62,15 +64,19 @@ class CieloPaymentService {
     _valorPendenteCentavos = valorCentavos;
     _callbackProcessado = false;
 
-    // Garante que o listener está registrado (idempotente)
-    CieloService.escutarRetorno(_onRetorno);
+    // Garante que o listener está registrado uma única vez
+    if (!_handlerRegistrado) {
+      _handlerRegistrado = true;
+      CieloService.escutarRetorno(_onRetorno);
+    }
 
     // Monta payload
+    // Nota: `value` e `unitPrice` são int (centavos). `installments` = 1 (à vista).
     final pagamento = {
       'accessToken': CieloCredentials().accessToken,
       'clientID': CieloCredentials().clientId,
       'reference': referencia,
-      'installments': 0,
+      'installments': 1,
       'items': [
         {
           'name': 'Venda unMobile',
@@ -81,7 +87,7 @@ class CieloPaymentService {
         }
       ],
       'paymentCode': paymentCode,
-      'value': valorCentavos.toString(),
+      'value': valorCentavos,
     };
 
     final json = jsonEncode(pagamento);
@@ -190,11 +196,29 @@ class CieloPaymentService {
 
     print('CIELO→ status=$status | ref=$referencia | responsecode=$responsecodeDyn | valor=$valorRetornado');
 
-    // --- Cancelamento ---
+    // --- Cancelamento explícito pelo usuário ---
     if (status == 'CANCELLED' || status == 'CANCELED' || status == 'CANCEL') {
       return CieloPaymentResult(
         status: CieloPaymentStatus.cancelado,
         mensagem: 'Pagamento cancelado.',
+        dadosBrutos: dados,
+      );
+    }
+
+    // --- Erro técnico reportado pela Cielo ---
+    if (status == 'ERROR') {
+      return CieloPaymentResult(
+        status: CieloPaymentStatus.erro,
+        mensagem: 'Erro técnico retornado pela Cielo.',
+        dadosBrutos: dados,
+      );
+    }
+
+    // --- Recusado pelo banco / bandeira ---
+    if (status == 'DECLINED' || status == 'REFUSED' || status == 'DENIED') {
+      return CieloPaymentResult(
+        status: CieloPaymentStatus.cancelado,
+        mensagem: 'Pagamento recusado pela operadora.',
         dadosBrutos: dados,
       );
     }
@@ -266,6 +290,7 @@ class CieloPaymentService {
     _referenciaPendente = null;
     _valorPendenteCentavos = null;
     _callbackProcessado = false;
+    // _handlerRegistrado permanece true — o handler não deve ser removido entre transações
   }
 
   // Consultar formas de pagamento habilitadas (sem alteração)

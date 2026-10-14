@@ -1174,7 +1174,8 @@ class ContaPageState extends State<ContaPage>
                                 'numeroCaixa': funcoesController.numeroCaixa.value,
                                 'nomeCaixa': funcoesController.nomeCaixa.value,
                                 'pageAnterior': rotaAnteriorPage,
-                                'nome': nomeClienteDoPedido
+                                'nome': nomeClienteDoPedido,
+                                'numeroBalcao': numeroClienteDoPedidoBalcao,
                               },
                             );
                           },

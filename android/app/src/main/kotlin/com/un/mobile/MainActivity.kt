@@ -121,13 +121,13 @@ class MainActivity : FlutterActivity() {
         if (isCieloCallback) {
             // Passa intent vazio ao super para evitar pushRoute("/") automático
             super.onNewIntent(Intent())
+            setIntent(intent)
+            CieloBridge.processarRetorno(intent)
+            // Consome o intent para não reprocessar em retomadas futuras
+            this.intent = Intent()
         } else {
             super.onNewIntent(intent)
+            setIntent(intent)
         }
-
-        setIntent(intent)
-        CieloBridge.processarRetorno(intent)
-        // Consome o intent para não reprocessar em retomadas futuras
-        this.intent = Intent()
     }
 }
