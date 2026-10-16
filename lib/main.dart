@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:un_recepcao/controllers/views/footer_buttons_controller.dart';
+import 'package:un_recepcao/controllers/views/pagamento_controller.dart';
 import 'package:un_recepcao/models/itemPizzaGrafico.dart';
 import 'package:un_recepcao/models/pagBank/order_class_pb.dart';
 import 'package:un_recepcao/services/cielo/cielo_service.dart';
@@ -66,6 +67,7 @@ void main() async {
   Get.put(ComandaCarrinhoController(), permanent: true);
   Get.put(ZerarAtendimentoController(), permanent: true);
   Get.put(GarcomController(), permanent: true);
+  Get.put(PagamentoController(), permanent: true);
   // Registrados como permanent: onInit() e carregarTudo() são chamados apenas uma vez.
   // Todas as views devem usar Get.find<FuncoesController>() — nunca Get.put().
   Get.put(FuncoesController(), permanent: true);

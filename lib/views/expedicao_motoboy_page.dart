@@ -7,6 +7,8 @@ import 'package:get/get_instance/src/extension_instance.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:intl/intl.dart';
+import 'package:keyboard_actions/keyboard_actions.dart';
+import 'package:keyboard_actions/keyboard_actions_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:un_recepcao/controllers/carrinho_controller.dart';
 import 'package:un_recepcao/controllers/comanda_carrinho.dart';
@@ -30,6 +32,9 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
   String versaoAplicacao = FuncoesController().versaoDoApp;
   final FuncoesController funcoesController = Get.find<FuncoesController>();
   final PainelController painelController = Get.find<PainelController>();
+
+  final TextEditingController barraDeBuscaController = TextEditingController();
+  final FocusNode barraDeBuscaFoco = FocusNode();
 
   List<dynamic> listaPedidos = [];
   List<dynamic> listaPedidosSelecionados = [];
@@ -845,1423 +850,9 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
     );
   }
 
-  Widget _buildPedidosExpedicaoRow() {
-    final colorScheme = Theme.of(context).colorScheme;
-    final double screenWidth = MediaQuery.of(context).size.width;
-    
-    // Proporções para manter a responsividade
-    final double fontPadrao = (screenWidth.clamp(600, 1920) * 0.012);
-    final double fontTitulo = (screenWidth.clamp(600, 1920) * 0.014);
-    final double paddingPadrao = screenWidth * 0.008;
-    final double spacingPadrao = screenWidth * 0.005;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: paddingPadrao, vertical: paddingPadrao),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // build de pedidos 
-          Expanded(
-            flex: 3,
-              child: Container(
-              // color: colorScheme.secondary.withOpacity(0.1),
-              child: Padding(
-                padding: EdgeInsets.all(paddingPadrao),
-                child: 
-                // PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS 
-                GridView.builder(
-                  padding: EdgeInsets.all(paddingPadrao),
-                  itemCount: listaPedidos.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: paddingPadrao,
-                    childAspectRatio: 3,
-                    // crossAxisSpacing: paddingPadrao,
-                  ),
-                  itemBuilder: (context, index) {
-                    final pedido = listaPedidos[index];
-                    final numeroDelivery = pedido['numerodelivery'].toString();
-                    final trocoPara = pedido['trocopara'].toString();
-                    final numeroPedido = pedido['numero'].toString();
-                    final valorLiquidoPedido = pedido['valorliquidopedido'].toString();
-                    final status = pedido['status'].toString();
-                    final entrega = pedido['entrega'].toString();
-                    final numerocliente_FK = pedido['numerocliente_FK'].toString();
-                    final numero = pedido['numero'].toString();
-                    final numeromotoboy_FK = pedido['numeromotoboy_FK'].toString();
-                    final nomeClienteSelecionado = pedido['nome'].toString();
-                    final telefoneClienteSelecionado = pedido['telefone'].toString();
-                    final enderecoClienteSelecionado = pedido['endereco'].toString();
-                    final numeroEnderecoClienteSelecionado = pedido['numeroendereco'].toString();
-                    final complementoClienteSelecionado = pedido['complemento'].toString();
-                    final bairroClienteSelecionado = pedido['bairro'].toString();
-
-                    final timediff = pedido['tempoAberto'].toString();
-                    final statusentrega = pedido['statusentrega'].toString();
-                    final atendimento = pedido['atendimento'].toString(); 
-
-                    // buscarInformacoesCliente(numeroPedido);
-
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        final novoPedido = {
-                          'indexOriginal': index,
-                          'numerodelivery': numeroDelivery,
-                          'valorliquidopedido': valorLiquidoPedido,
-                          'numeroPedido': numeroPedido,
-                          'status': status,
-                          'entrega': entrega,
-                          'numerocliente_FK': numerocliente_FK,
-                          'numero': numero,
-                          'numeromotoboy_FK': numeromotoboy_FK,
-                          'timediff': timediff,
-                          'statusentrega': statusentrega,
-                          'atendimento': atendimento,
-                          'trocopara': trocoPara,
-                          'nomeClienteSelecionado': nomeClienteSelecionado,
-                          'enderecoClienteSelecionado': enderecoClienteSelecionado,
-                          'numeroEnderecoClienteSelecionado': numeroEnderecoClienteSelecionado,
-                          'bairroClienteSelecionado': bairroClienteSelecionado,
-                          'integrador': pedido['integrador']?.toString() ?? "",
-                        };
-
-                        try {
-                          // Verificar se o pedido já está selecionado
-                          int indexExistente = listaPedidosSelecionados.indexWhere(
-                            (p) => p['numerodelivery'] == novoPedido['numerodelivery']
-                          );
-
-                          if (indexExistente != -1) {
-                            // Já está selecionado, remover (Toggle off)
-                            subtrairValores(valorLiquidoPedido, trocoPara);
-                            setState(() {
-                              listaPedidosSelecionados.removeAt(indexExistente);
-                              listaIndexPedidosSelecionados.remove(index);
-                            });
-                          } else {
-                            // Não está selecionado, adicionar (Toggle on)
-                            setState(() {
-                              listaPedidosSelecionados.add(novoPedido);
-                              listaIndexPedidosSelecionados.add(index);
-
-                              // Ordenar lista por número de delivery
-                              listaPedidosSelecionados.sort((a, b) {
-                                int numA = int.tryParse(a['numerodelivery'].toString()) ?? 0;
-                                int numB = int.tryParse(b['numerodelivery'].toString()) ?? 0;
-                                return numA.compareTo(numB);
-                              });
-
-                              calcularValores(valorLiquidoPedido, trocoPara);
-                            });
-                          }
-                        } catch (e) {
-                          print('erro ao alternar seleção do pedido: $e');
-                        }
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          // color: colorScheme.secondary.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(screenWidth * 0.008),
-                        ),
-                        padding: EdgeInsets.all(spacingPadrao / 2),
-                        child: 
-                        Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.all(paddingPadrao),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // CABEÇALHO: Número e Nome do Cliente
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(spacingPadrao / 2),
-                                      decoration: BoxDecoration(
-                                        color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim.withOpacity(0.1) : colorScheme.primary.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.motorcycle,
-                                        size: fontPadrao * 2,
-                                        color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Flexible(
-                                      child: Text(
-                                        '#$numeroDelivery',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: fontPadrao * 1.8,
-                                          fontWeight: FontWeight.bold,
-                                          color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 15),
-                                    Expanded(
-                                      child: Text(
-                                        nomeClienteSelecionado,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: fontPadrao * 1.2,
-                                          fontWeight: FontWeight.w600,
-                                          color: colorScheme.onSurface.withOpacity(0.8),
-                                        ),
-                                      ),
-                                    ),
-                                    // VALOR EM DESTAQUE
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim.withValues(alpha: 0.15) : colorScheme.primary.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        'R\$ $valorLiquidoPedido',
-                                        style: TextStyle(
-                                          fontSize: fontPadrao * 1.1,
-                                          fontWeight: FontWeight.bold,
-                                          color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                Divider(height: paddingPadrao * 2, thickness: 0.5),
-
-                                // CONTEÚDO: Endereço e Troco
-                                Flexible(
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(
-                                        Icons.location_on,
-                                        size: fontPadrao * 1.3,
-                                        color: listaIndexPedidosSelecionados.contains(index)
-                                            ? colorScheme.scrim
-                                            : colorScheme.primary,
-                                      ),
-
-                                      SizedBox(width: spacingPadrao),
-
-                                      Expanded(
-                                        child: RichText(
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          text: TextSpan(
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              color: colorScheme.onSurface,
-                                            ),
-                                            children: [
-                                              TextSpan(
-                                                text: '$enderecoClienteSelecionado, ',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: numeroEnderecoClienteSelecionado,
-                                              ),
-                                              TextSpan(
-                                                text: '\n$bairroClienteSelecionado',
-                                                style: TextStyle(
-                                                  fontSize: fontPadrao * 0.9,
-                                                  color: colorScheme.onSurface.withOpacity(0.6),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                /* Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: fontPadrao * 1.4,
-                                      color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '$enderecoClienteSelecionado, $numeroEnderecoClienteSelecionado',
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              fontWeight: FontWeight.w500,
-                                              color: colorScheme.onSurface.withOpacity(0.9),
-                                            ),
-                                          ),
-                                          Text(
-                                            bairroClienteSelecionado,
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao * 0.9,
-                                              color: colorScheme.onSurface.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // ),
-                                    /* if (trocoPara != '0' && trocoPara != '0.00' && trocoPara != 'null')
-                                      Padding(
-                                        padding: EdgeInsets.only(left: 8),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              'Troco para',
-                                              style: TextStyle(
-                                                fontSize: fontPadrao * 0.7,
-                                                color: colorScheme.onSurface.withOpacity(0.5),
-                                              ),
-                                            ),
-                                            Text(
-                                              'R\$ $trocoPara',
-                                              style: TextStyle(
-                                                fontSize: fontPadrao * 0.9,
-                                                fontWeight: FontWeight.bold,
-                                                color: colorScheme.onSurface.withOpacity(0.8),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ), */
-                                  ],
-                                ), */
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-          // FINAL PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS 
-          SizedBox(width: spacingPadrao),
-          // build de expedicao 
-          /* Expanded(
-            flex: 1,
-            child: Container(
-              color: colorScheme.secondary.withOpacity(0.1),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(paddingPadrao),
-                              child: Text(
-                                'Expedição',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: fontTitulo,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSecondary,
-                                ),
-                              ),
-                            ),
-
-                            // Lista com os pedidos - list view pedidos
-                            if (listaPedidosSelecionados.isNotEmpty)
-                              Column(
-                                children: listaPedidosSelecionados.asMap().entries.map<Widget>((entry) {
-                                  final indexNoPainel = entry.key;
-                                  final pedido = entry.value;
-                                  final numeroDelivery = pedido['numerodelivery'].toString();
-                                  final valorLiquidoPedido = pedido['valorliquidopedido'].toString();
-                                  final status = pedido['status'].toString();
-                                  final entrega = pedido['entrega'].toString();
-                                  final numerocliente_FK = pedido['numerocliente_FK'].toString();
-                                  final numero = pedido['numero'].toString();
-                                  final numeromotoboy_FK = pedido['numeromotoboy_FK'].toString();
-                                  final timediff = pedido['timediff(now(),p.abertura)'].toString(); // hora abertura
-                                  final statusentrega = pedido['statusentrega'].toString();
-                                  final atendimento = pedido['atendimento'].toString();
-                                  final numeroPedido = pedido['numeroPedido'].toString();
-                                  final nomeClienteSelecionado = pedido['nomeClienteSelecionado'].toString();
-                                  final enderecoClienteSelecionado = pedido['enderecoClienteSelecionado'].toString();
-                                  final numeroEnderecoClienteSelecionado = pedido['numeroEnderecoClienteSelecionado'].toString();
-                                  final bairroClienteSelecionado = pedido['bairroClienteSelecionado'].toString();
-                                  final trocoPara = pedido['trocopara'].toString();
-                                  return Card(
-                                    child: ListTile(
-                                      title: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          IconButton(
-                                            onPressed: (){
-                                              // olhar pedido - select 
-                                              Get.to(
-                                                () => InformacoesPedidoPage(),
-                                                arguments: {
-                                                  'numeropedido': numeroPedido,
-                                                  'numeroDelivery': numeroDelivery,
-                                                  'page': "expedicao_motoboy",
-                                                },
-                                              );
-                                            }, 
-                                            icon: Icon(
-                                              Icons.search,
-                                              size: fontPadrao * 2,
-                                            ),
-                                          ),
-
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text.rich(
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  TextSpan(
-                                                    children: [
-                                                      TextSpan(
-                                                        text: '#$numeroDelivery',
-                                                        style: TextStyle(
-                                                          fontSize: fontPadrao * 1.25,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: colorScheme.scrim,
-                                                        ),
-                                                      ),
-                                                      TextSpan(
-                                                        text: ' - R\$ $valorLiquidoPedido',
-                                                        style: TextStyle(
-                                                          fontSize: fontPadrao,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                Text(
-                                                  nomeClienteSelecionado,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontSize: fontPadrao,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              IconButton(
-                                                onPressed: (){
-                                                  if(listaPedidosSelecionados.isEmpty){
-                                                    if (!mounted) return;
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          'Não há pedidos selecionados.',
-                                                        ),
-                                                        backgroundColor: colorScheme.error,
-                                                      ),
-                                                    );
-                                                  } else {
-                                                    int index = listaPedidosSelecionados.length;
-                                                    subtrairValores(valorLiquidoPedido, trocoPara);
-                                                    setState(() {
-                                                      listaPedidosSelecionados.removeAt(indexNoPainel);
-                                                      listaIndexPedidosSelecionados.remove(pedido['indexOriginal']);
-                                                    });
-                                                    /* shownDialogaAlertTwoBottom(
-                                                      context: context,
-                                                      title: 'Deseja excluir este pedido da lista?',
-                                                      message2: () => '',
-                                                      icon: Icons.error,
-                                                      cancelText: 'Não',
-                                                      confirmText: 'Sim',
-                                                      onConfirm: () async {
-                                                        subtrairValores(valorLiquidoPedido, trocoPara);
-                                                        setState(() {
-                                                          listaPedidosSelecionados.removeAt(indexNoPainel);
-                                                          listaIndexPedidosSelecionados.remove(pedido['indexOriginal']);
-                                                        });
-                                                      },
-                                                      onCancel: () {},
-                                                    ); */
-                                                  }
-                                                }, 
-                                                icon: Icon(
-                                                  Icons.delete,
-                                                  size: fontPadrao * 2,
-                                                )
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            
-                            Expanded(child: SizedBox()),
-                           
-                            // Tres botoes - Total de pedidos e total troco
-                            Container(
-                              margin: EdgeInsets.symmetric(horizontal: spacingPadrao, vertical: spacingPadrao),
-                              padding: EdgeInsets.all(paddingPadrao),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(screenWidth * 0.007),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // Motoboy
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: nomeMotoboySelecionado == ""
-                                          ? Colors.transparent
-                                          : colorScheme.scrim.withOpacity(0.4),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: spacingPadrao, vertical: 0),
-                                      child: Text(
-                                        // Motoboy: 
-                                        '${numeroMotoboySelecionado} - ${nomeMotoboySelecionado}',
-                                        textAlign: TextAlign.center,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: fontTitulo * 1.1,
-                                          fontWeight: FontWeight.bold,
-                                          color: colorScheme.onSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: spacingPadrao),
-                                  Column(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              'Total de Pedidos: ',
-                                              textAlign: TextAlign.left,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: fontPadrao,
-                                                color: colorScheme.onSecondary,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            '${totalDePedidosString}',
-                                            textAlign: TextAlign.right,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              color: colorScheme.onSecondary,
-                                            ),
-                                          ),
-                                          /* Text(
-                                            '${listaPedidosSelecionados.length}',
-                                            textAlign: TextAlign.right,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              color: colorScheme.onSecondary,
-                                            ),
-                                          ), */
-                                        ],
-                                      ),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              'Total Troco: R\$ ',
-                                              textAlign: TextAlign.left,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: fontPadrao,
-                                                color: colorScheme.onSecondary,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            '${totalDeTrocoString}',
-                                            textAlign: TextAlign.right,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              color: colorScheme.onSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Botao de confirmar
-                            isLoadingConfirmar ? CircularProgressIndicator(
-                              color: Theme.of(context).colorScheme.scrim,
-                            ) : Padding(
-                              padding: EdgeInsets.all(paddingPadrao),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  minimumSize: Size(double.infinity, screenWidth * 0.04),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(screenWidth * 0.008),
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  setState(() {
-                                    isLoadingConfirmar = true;
-                                  });
-                                  if(listaPedidosSelecionados.isNotEmpty && painelController.numeroMotoboySelecionado.value != "" && painelController.nomeMotoboySelecionado.value != "" ){
-                                    try{
-                                      bool conectado = await Connection.conectarBanconoSalvar();
-                                      await _loadNumeroLicenca();
-                                      if(conectado){
-                                        // update
-                                        for(var pedido in listaPedidosSelecionados){
-                                          String intStr = pedido['integrador']?.toString() ?? "";
-                                          bool integradorBool = intStr.contains("PEDEAQUI") ||
-                                                                intStr.contains("IFOOD") ||
-                                                                intStr.contains("P10") || intStr.contains("P 10") ||
-                                                                intStr.contains("NEEMO") ||
-                                                                intStr.contains("99FOOD") ||
-                                                                intStr.contains("ANOTA AI");
-
-                                          await atualizarStatusEntrega(
-                                            numeroDelivery: pedido['numerodelivery'].toString(),
-                                            numeroMotoboy: painelController.numeroMotoboySelecionado.value,
-                                          );
-
-                                          await inserirLogEntrega(
-                                            numeroPedido: pedido['numero'],
-                                            numeroUsuario: painelController.numeroMotoboySelecionado.value,
-                                            numeroTradepoint: numeroTradepointSelecionada,
-                                            nomeMotoboy: painelController.nomeMotoboySelecionado.value,
-                                            despacharintegracaobool: integradorBool
-                                          );
-                                        }
-                                        await buscarPedidos();
-                                        limparPage();
-                                      } else {
-                                        isLoadingConfirmar = false;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Sem conexão com a internet'),
-                                            backgroundColor: colorScheme.error,
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Erro ao confirmar expedição'),
-                                          backgroundColor: Theme.of(context).colorScheme.error,
-                                        ),
-                                      );
-                                    } finally {
-                                      /* // confirmar 
-                                      listaPedidosSelecionados.clear();
-                                      totalDePedidos = 0;
-                                      totalDeTroco = 0;
-                                      painelController.nomeMotoboySelecionado.value = "";
-                                      painelController.numeroMotoboySelecionado.value = "";
-                                      painelController.setMotoboy("", "");
-                                      setState(() {
-                                        isLoadingConfirmar = false;
-                                        totalDePedidosString = "0,00";
-                                        totalDeTrocoString = "0,00";
-                                      }); */
-                                    }
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Selecione os pedidos e o motoboy'),
-                                        backgroundColor: colorScheme.error,
-                                      ),
-                                    );
-                                    setState(() {
-                                      isLoadingConfirmar = false;
-                                    });
-                                  }
-                                },
-                                child: Text(
-                                  'Confirmar',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontSize: fontPadrao,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              ),
-            ),
-          ), */
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPedidosExpedicaoColumn() {
-    final colorScheme = Theme.of(context).colorScheme;
-    final double screenWidth = MediaQuery.of(context).size.width;
-    
-    // Proporções para manter a responsividade
-    final double fontPadrao = (screenWidth.clamp(600, 1920) * 0.015);
-    final double fontTitulo = (screenWidth.clamp(600, 1920) * 0.022);
-    final double paddingPadrao = screenWidth * 0.008;
-    final double spacingPadrao = screenWidth * 0.005;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: paddingPadrao, vertical: paddingPadrao),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // build de pedidos 
-          Expanded(
-            flex: 1,
-              child: Container(
-              // color: colorScheme.secondary.withOpacity(0.1),
-              child: Padding(
-                padding: EdgeInsets.all(paddingPadrao),
-                child: 
-                // PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS 
-                GridView.builder(
-                  padding: EdgeInsets.all(paddingPadrao),
-                  itemCount: listaPedidos.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    // crossAxisCount: 2,
-                    crossAxisCount: 1,
-                    mainAxisSpacing: paddingPadrao,
-                    childAspectRatio: 4,
-                    // crossAxisSpacing: paddingPadrao,
-                  ),
-                  itemBuilder: (context, index) {
-                    final pedido = listaPedidos[index];
-                    final numeroDelivery = pedido['numerodelivery'].toString();
-                    final trocoPara = pedido['trocopara'].toString();
-                    final numeroPedido = pedido['numero'].toString();
-                    final valorLiquidoPedido = pedido['valorliquidopedido'].toString();
-                    final status = pedido['status'].toString();
-                    final entrega = pedido['entrega'].toString();
-                    final numerocliente_FK = pedido['numerocliente_FK'].toString();
-                    final numero = pedido['numero'].toString();
-                    final numeromotoboy_FK = pedido['numeromotoboy_FK'].toString();
-                    final nomeClienteSelecionado = pedido['nome'].toString();
-                    final telefoneClienteSelecionado = pedido['telefone'].toString();
-                    final enderecoClienteSelecionado = pedido['endereco'].toString();
-                    final numeroEnderecoClienteSelecionado = pedido['numeroendereco'].toString();
-                    final complementoClienteSelecionado = pedido['complemento'].toString();
-                    final bairroClienteSelecionado = pedido['bairro'].toString();
-
-                    final timediff = pedido['tempoAberto'].toString();
-                    final statusentrega = pedido['statusentrega'].toString();
-                    final atendimento = pedido['atendimento'].toString(); 
-
-                    // buscarInformacoesCliente(numeroPedido);
-
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        final novoPedido = {
-                          'indexOriginal': index,
-                          'numerodelivery': numeroDelivery,
-                          'valorliquidopedido': valorLiquidoPedido,
-                          'numeroPedido': numeroPedido,
-                          'status': status,
-                          'entrega': entrega,
-                          'numerocliente_FK': numerocliente_FK,
-                          'numero': numero,
-                          'numeromotoboy_FK': numeromotoboy_FK,
-                          'timediff': timediff,
-                          'statusentrega': statusentrega,
-                          'atendimento': atendimento,
-                          'trocopara': trocoPara,
-                          'nomeClienteSelecionado': nomeClienteSelecionado,
-                          'enderecoClienteSelecionado': enderecoClienteSelecionado,
-                          'numeroEnderecoClienteSelecionado': numeroEnderecoClienteSelecionado,
-                          'bairroClienteSelecionado': bairroClienteSelecionado,
-                          'integrador': pedido['integrador']?.toString() ?? "",
-                        };
-
-                        try {
-                          // Verificar se o pedido já está selecionado
-                          int indexExistente = listaPedidosSelecionados.indexWhere(
-                            (p) => p['numerodelivery'] == novoPedido['numerodelivery']
-                          );
-
-                          if (indexExistente != -1) {
-                            // Já está selecionado, remover (Toggle off)
-                            subtrairValores(valorLiquidoPedido, trocoPara);
-                            setState(() {
-                              listaPedidosSelecionados.removeAt(indexExistente);
-                              listaIndexPedidosSelecionados.remove(index);
-                            });
-                          } else {
-                            // Não está selecionado, adicionar (Toggle on)
-                            setState(() {
-                              listaPedidosSelecionados.add(novoPedido);
-                              listaIndexPedidosSelecionados.add(index);
-
-                              // Ordenar lista por número de delivery
-                              listaPedidosSelecionados.sort((a, b) {
-                                int numA = int.tryParse(a['numerodelivery'].toString()) ?? 0;
-                                int numB = int.tryParse(b['numerodelivery'].toString()) ?? 0;
-                                return numA.compareTo(numB);
-                              });
-
-                              calcularValores(valorLiquidoPedido, trocoPara);
-                            });
-                          }
-                        } catch (e) {
-                          print('erro ao alternar seleção do pedido: $e');
-                        }
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          // color: colorScheme.secondary.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(screenWidth * 0.008),
-                        ),
-                        padding: EdgeInsets.all(spacingPadrao / 2),
-                        child: 
-                        Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.all(paddingPadrao),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // CABEÇALHO: Número e Nome do Cliente
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(spacingPadrao / 2),
-                                      decoration: BoxDecoration(
-                                        color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim.withOpacity(0.1) : colorScheme.primary.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.motorcycle,
-                                        size: fontPadrao * 2,
-                                        color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Flexible(
-                                      child: Text(
-                                        '#$numeroDelivery',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: fontPadrao * 1.8,
-                                          fontWeight: FontWeight.bold,
-                                          color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 15),
-                                    Expanded(
-                                      child: Text(
-                                        nomeClienteSelecionado,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: fontPadrao * 1.2,
-                                          fontWeight: FontWeight.w600,
-                                          color: colorScheme.onSurface.withOpacity(0.8),
-                                        ),
-                                      ),
-                                    ),
-                                    // VALOR EM DESTAQUE
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim.withValues(alpha: 0.15) : colorScheme.primary.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        'R\$ $valorLiquidoPedido',
-                                        style: TextStyle(
-                                          fontSize: fontPadrao * 1.1,
-                                          fontWeight: FontWeight.bold,
-                                          color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                Divider(height: paddingPadrao * 2, thickness: 0.5),
-
-                                // CONTEÚDO: Endereço e Troco
-                                Flexible(
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(
-                                        Icons.location_on,
-                                        size: fontPadrao * 1.3,
-                                        color: listaIndexPedidosSelecionados.contains(index)
-                                            ? colorScheme.scrim
-                                            : colorScheme.primary,
-                                      ),
-
-                                      SizedBox(width: spacingPadrao),
-
-                                      Expanded(
-                                        child: RichText(
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          text: TextSpan(
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              color: colorScheme.onSurface,
-                                            ),
-                                            children: [
-                                              TextSpan(
-                                                text: '$enderecoClienteSelecionado, ',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: numeroEnderecoClienteSelecionado,
-                                              ),
-                                              TextSpan(
-                                                text: '\n$bairroClienteSelecionado',
-                                                style: TextStyle(
-                                                  fontSize: fontPadrao * 0.9,
-                                                  color: colorScheme.onSurface.withOpacity(0.6),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                /* Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: fontPadrao * 1.4,
-                                      color: listaIndexPedidosSelecionados.contains(index) ? colorScheme.scrim : colorScheme.primary,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '$enderecoClienteSelecionado, $numeroEnderecoClienteSelecionado',
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              fontWeight: FontWeight.w500,
-                                              color: colorScheme.onSurface.withOpacity(0.9),
-                                            ),
-                                          ),
-                                          Text(
-                                            bairroClienteSelecionado,
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao * 0.9,
-                                              color: colorScheme.onSurface.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // ),
-                                    /* if (trocoPara != '0' && trocoPara != '0.00' && trocoPara != 'null')
-                                      Padding(
-                                        padding: EdgeInsets.only(left: 8),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              'Troco para',
-                                              style: TextStyle(
-                                                fontSize: fontPadrao * 0.7,
-                                                color: colorScheme.onSurface.withOpacity(0.5),
-                                              ),
-                                            ),
-                                            Text(
-                                              'R\$ $trocoPara',
-                                              style: TextStyle(
-                                                fontSize: fontPadrao * 0.9,
-                                                fontWeight: FontWeight.bold,
-                                                color: colorScheme.onSurface.withOpacity(0.8),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ), */
-                                  ],
-                                ), */
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-          // FINAL PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS PEDIDOS 
-          SizedBox(width: spacingPadrao),
-          // build de expedicao 
-          /* Expanded(
-            flex: 1,
-            child: Container(
-              color: colorScheme.secondary.withOpacity(0.1),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(paddingPadrao),
-                              child: Text(
-                                'Expedição',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: fontTitulo,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSecondary,
-                                ),
-                              ),
-                            ),
-
-                            // Lista com os pedidos - list view pedidos
-                            if (listaPedidosSelecionados.isNotEmpty)
-                              Column(
-                                children: listaPedidosSelecionados.asMap().entries.map<Widget>((entry) {
-                                  final indexNoPainel = entry.key;
-                                  final pedido = entry.value;
-                                  final numeroDelivery = pedido['numerodelivery'].toString();
-                                  final valorLiquidoPedido = pedido['valorliquidopedido'].toString();
-                                  final status = pedido['status'].toString();
-                                  final entrega = pedido['entrega'].toString();
-                                  final numerocliente_FK = pedido['numerocliente_FK'].toString();
-                                  final numero = pedido['numero'].toString();
-                                  final numeromotoboy_FK = pedido['numeromotoboy_FK'].toString();
-                                  final timediff = pedido['timediff(now(),p.abertura)'].toString(); // hora abertura
-                                  final statusentrega = pedido['statusentrega'].toString();
-                                  final atendimento = pedido['atendimento'].toString();
-                                  final numeroPedido = pedido['numeroPedido'].toString();
-                                  final nomeClienteSelecionado = pedido['nomeClienteSelecionado'].toString();
-                                  final enderecoClienteSelecionado = pedido['enderecoClienteSelecionado'].toString();
-                                  final numeroEnderecoClienteSelecionado = pedido['numeroEnderecoClienteSelecionado'].toString();
-                                  final bairroClienteSelecionado = pedido['bairroClienteSelecionado'].toString();
-                                  final trocoPara = pedido['trocopara'].toString();
-                                  return Card(
-                                    margin: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    child: ListTile(
-                                      dense: true,
-                                      minVerticalPadding: 0,
-                                      title: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          IconButton(
-                                            onPressed: (){
-                                              // olhar pedido - select 
-                                              Get.to(
-                                                () => InformacoesPedidoPage(),
-                                                arguments: {
-                                                  'numeropedido': numeroPedido,
-                                                  'numeroDelivery': numeroDelivery,
-                                                  'page': "expedicao_motoboy",
-                                                },
-                                              );
-                                            }, 
-                                            icon: Icon(
-                                              Icons.search,
-                                              size: fontPadrao * 2,
-                                            ),
-                                          ),
-
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text.rich(
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  TextSpan(
-                                                    children: [
-                                                      TextSpan(
-                                                        text: '#$numeroDelivery',
-                                                        style: TextStyle(
-                                                          fontSize: fontPadrao * 1.25,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: colorScheme.scrim,
-                                                        ),
-                                                      ),
-                                                      TextSpan(
-                                                        text: ' - R\$ $valorLiquidoPedido - $nomeClienteSelecionado',
-                                                        style: TextStyle(
-                                                          fontSize: fontPadrao,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                /* Text(
-                                                  nomeClienteSelecionado,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontSize: fontPadrao,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ), */
-                                              ],
-                                            ),
-                                          ),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              IconButton(
-                                                onPressed: (){
-                                                  if(listaPedidosSelecionados.isEmpty){
-                                                    if (!mounted) return;
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          'Não há pedidos selecionados.',
-                                                        ),
-                                                        backgroundColor: colorScheme.error,
-                                                      ),
-                                                    );
-                                                  } else {
-                                                    int index = listaPedidosSelecionados.length;
-                                                    subtrairValores(valorLiquidoPedido, trocoPara);
-                                                    setState(() {
-                                                      listaPedidosSelecionados.removeAt(indexNoPainel);
-                                                      listaIndexPedidosSelecionados.remove(pedido['indexOriginal']);
-                                                    });
-                                                    /* shownDialogaAlertTwoBottom(
-                                                      context: context,
-                                                      title: 'Deseja excluir este pedido da lista?',
-                                                      message2: () => '',
-                                                      icon: Icons.error,
-                                                      cancelText: 'Não',
-                                                      confirmText: 'Sim',
-                                                      onConfirm: () async {
-                                                        subtrairValores(valorLiquidoPedido, trocoPara);
-                                                        setState(() {
-                                                          listaPedidosSelecionados.removeAt(indexNoPainel);
-                                                          listaIndexPedidosSelecionados.remove(pedido['indexOriginal']);
-                                                        });
-                                                      },
-                                                      onCancel: () {},
-                                                    ); */
-                                                  }
-                                                }, 
-                                                icon: Icon(
-                                                  Icons.delete,
-                                                  size: fontPadrao * 2,
-                                                )
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            
-                            Expanded(child: SizedBox()),
-                           
-                            // Tres botoes - Total de pedidos e total troco
-                            Container(
-                              margin: EdgeInsets.symmetric(horizontal: spacingPadrao, vertical: spacingPadrao),
-                              padding: EdgeInsets.all(paddingPadrao),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(screenWidth * 0.007),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // Motoboy
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: nomeMotoboySelecionado == ""
-                                          ? Colors.transparent
-                                          : colorScheme.scrim.withOpacity(0.4),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: spacingPadrao, vertical: 0),
-                                      child: Text(
-                                        // Motoboy: 
-                                        '${numeroMotoboySelecionado} - ${nomeMotoboySelecionado}',
-                                        textAlign: TextAlign.center,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: fontTitulo * 1.1,
-                                          fontWeight: FontWeight.bold,
-                                          color: colorScheme.onSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: spacingPadrao),
-                                  Column(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              'Total de Pedidos: ',
-                                              textAlign: TextAlign.left,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: fontPadrao * 1.2,
-                                                color: colorScheme.onSecondary,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            '${totalDePedidosString}',
-                                            textAlign: TextAlign.right,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao * 1.2,
-                                              color: colorScheme.onSecondary,
-                                            ),
-                                          ),
-                                          /* Text(
-                                            '${listaPedidosSelecionados.length}',
-                                            textAlign: TextAlign.right,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao,
-                                              color: colorScheme.onSecondary,
-                                            ),
-                                          ), */
-                                        ],
-                                      ),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              'Total Troco: R\$ ',
-                                              textAlign: TextAlign.left,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: fontPadrao * 1.2,
-                                                color: colorScheme.onSecondary,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            '${totalDeTrocoString}',
-                                            textAlign: TextAlign.right,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: fontPadrao * 1.2,
-                                              color: colorScheme.onSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Botao de confirmar
-                            isLoadingConfirmar ? CircularProgressIndicator(
-                              color: Theme.of(context).colorScheme.scrim,
-                            ) : Padding(
-                              padding: EdgeInsets.all(paddingPadrao),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  minimumSize: const Size(double.infinity, 40),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(screenWidth * 0.008),
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  setState(() {
-                                    isLoadingConfirmar = true;
-                                  });
-                                  if(listaPedidosSelecionados.isNotEmpty && painelController.numeroMotoboySelecionado.value != "" && painelController.nomeMotoboySelecionado.value != "" ){
-                                    try{
-                                      bool conectado = await Connection.conectarBanconoSalvar();
-                                      await _loadNumeroLicenca();
-                                      if(conectado){
-                                        // update
-                                        for(var pedido in listaPedidosSelecionados){
-                                          String intStr = pedido['integrador']?.toString() ?? "";
-                                          bool integradorBool = intStr.contains("PEDEAQUI") ||
-                                                                intStr.contains("IFOOD") ||
-                                                                intStr.contains("P10") || intStr.contains("P 10") ||
-                                                                intStr.contains("NEEMO") ||
-                                                                intStr.contains("99FOOD") ||
-                                                                intStr.contains("ANOTA AI");
-
-                                          await atualizarStatusEntrega(
-                                            numeroDelivery: pedido['numerodelivery'].toString(),
-                                            numeroMotoboy: painelController.numeroMotoboySelecionado.value,
-                                          );
-
-                                          await inserirLogEntrega(
-                                            numeroPedido: pedido['numero'],
-                                            numeroUsuario: painelController.numeroMotoboySelecionado.value,
-                                            numeroTradepoint: numeroTradepointSelecionada,
-                                            nomeMotoboy: painelController.nomeMotoboySelecionado.value,
-                                            despacharintegracaobool: integradorBool
-                                          );
-                                        }
-                                        await buscarPedidos();
-                                        limparPage();
-                                      } else {
-                                        isLoadingConfirmar = false;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Sem conexão com a internet'),
-                                            backgroundColor: colorScheme.error,
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Erro ao confirmar expedição'),
-                                          backgroundColor: Theme.of(context).colorScheme.error,
-                                        ),
-                                      );
-                                    } finally {
-                                      /* // confirmar 
-                                      listaPedidosSelecionados.clear();
-                                      totalDePedidos = 0;
-                                      totalDeTroco = 0;
-                                      painelController.nomeMotoboySelecionado.value = "";
-                                      painelController.numeroMotoboySelecionado.value = "";
-                                      painelController.setMotoboy("", "");
-                                      setState(() {
-                                        isLoadingConfirmar = false;
-                                        totalDePedidosString = "0,00";
-                                        totalDeTrocoString = "0,00";
-                                      }); */
-                                    }
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Selecione os pedidos e o motoboy'),
-                                        backgroundColor: colorScheme.error,
-                                      ),
-                                    );
-                                    setState(() {
-                                      isLoadingConfirmar = false;
-                                    });
-                                  }
-                                },
-                                child: Text(
-                                  'Confirmar',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontSize: fontPadrao * 1.3,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              ),
-            ),
-          ), */
-        ],
-      ),
-    );
-  }
-
   Widget _buildGridMotoboysColumn() {
     final colorScheme = Theme.of(context).colorScheme;
+    final pedidosFiltrados = _filtrarPedidosPorDelivery();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2275,7 +866,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
         const double cardMinWidth = 140.0;
         final int cols = (availableWidth / cardMinWidth).floor().clamp(2, 8);
 
-        if (listaPedidos.isEmpty) {
+        if (pedidosFiltrados.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -2296,7 +887,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
 
         return GridView.builder(
           padding: EdgeInsets.all(paddingPadrao),
-          itemCount: listaPedidos.length,
+          itemCount: pedidosFiltrados.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: cols,
             mainAxisSpacing: spacingPadrao * 2,
@@ -2304,7 +895,8 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
             childAspectRatio: 0.85,
           ),
           itemBuilder: (context, index) {
-            final pedido = listaPedidos[index];
+            final pedido = pedidosFiltrados[index];
+            final indexOriginal = listaPedidos.indexOf(pedido);
             final numeroDelivery = pedido['numerodelivery'].toString();
             final trocoPara = pedido['trocopara'].toString();
             final numeroPedido = pedido['numero'].toString();
@@ -2377,7 +969,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                 listaIndexPedidosSelecionados.clear();
 
                 final novoPedido = {
-                  'indexOriginal': index,
+                  'indexOriginal': indexOriginal,
                   'numerodelivery': numeroDelivery,
                   'valorliquidopedido': valorLiquidoPedido,
                   'numeroPedido': numeroPedido,
@@ -2412,7 +1004,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                   : false;
 
                 listaPedidosSelecionados.add(novoPedido);
-                listaIndexPedidosSelecionados.add(index);
+                listaIndexPedidosSelecionados.add(indexOriginal);
 
                 popupSelecionarMotoboy(
                   listaPedidosSelecionados,
@@ -2513,8 +1105,165 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
     );
   }
 
+  // Filtrar pedidos pelo número do delivery ou código do integrador
+  List<dynamic> _filtrarPedidosPorDelivery() {
+    final String busca = barraDeBuscaController.text.trim();
+
+    // Se a busca estiver vazia, exibe todos os pedidos.
+    if (busca.isEmpty) {
+      return listaPedidos;
+    }
+
+    return listaPedidos.where((pedido) {
+      final String numeroDelivery = (pedido['numerodelivery'] ?? '').toString();
+
+      final String integrador =  (pedido['integrador'] ?? '').toString();
+
+      // Extrai somente o conteúdo entre # e #
+      final match = RegExp(r'#([^#]*)#').firstMatch(integrador);
+      final String numeroIntegrador = match?.group(1)?.trim() ?? '';
+
+      // Busca pelo número do delivery ou pelo código do integrador.
+      return numeroDelivery.contains(busca) || numeroIntegrador.contains(busca);
+    }).toList();
+  }
+
+  // Widget de barra de busca
+  Widget _buildBarraDeBusca() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: Container()),
+        // Texto à esquerda
+        Padding(
+          padding: EdgeInsets.only(right: 10),
+          child: Text(
+            '#',
+            style: TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.primary,
+            ),
+          ),
+        ),
+
+        // Campo de busca
+        Expanded(
+          child: 
+          SizedBox(
+            height: 60, // Altura do campo
+            child: KeyboardActions(
+              disableScroll: true,
+              autoScroll: false,
+              config: KeyboardActionsConfig(
+                keyboardActionsPlatform:
+                    KeyboardActionsPlatform.IOS,
+                nextFocus: false,
+                actions: [
+                  KeyboardActionsItem(
+                    focusNode: barraDeBuscaFoco,
+                    toolbarButtons: [
+                      (node) {
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => node.unfocus(),
+                          child: Container(
+                            height: 44,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
+                            child: const Text(
+                              'OK',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ],
+                  ),
+                ],
+              ),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                ),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: barraDeBuscaFoco.hasFocus
+                      ? colorScheme.secondary.withOpacity(0.1)
+                      : colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: colorScheme.primary,
+                    width: 1.5,
+                  ),
+                ),
+                child: TextField(
+                  controller: barraDeBuscaController,
+                  focusNode: barraDeBuscaFoco,
+                  textAlign: TextAlign.center,
+
+                  style: TextStyle(
+                    fontSize: 22, // Tamanho da letra
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                    height: 1.2, // Altura da linha, não é o tamanho da fonte
+                  ),
+
+                  autofocus: false,
+                  showCursor: true,
+                  cursorColor: colorScheme.primary,
+                  keyboardType: TextInputType.number,
+
+                  onTap: () {
+                    if (!barraDeBuscaFoco.hasFocus) {
+                      barraDeBuscaFoco.requestFocus();
+                    }
+                  },
+
+                  onChanged: (valor) {
+                    setState(() {
+                      // Atualize aqui o filtro dos pedidos.
+                    });
+                  },
+
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isCollapsed: true,
+                  ),
+),
+              ),
+            ),
+          ),
+          
+        ),
+
+        // Texto à direita
+        Padding(
+          padding: EdgeInsets.only(left: 10),
+          child: Text(
+            '#',
+            style: TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.primary,
+            ),
+          ),
+        ),
+
+        Expanded(child: Container()),
+      ],
+    );
+  }
+
   Widget _buildGridMotoboysRow() {
     final colorScheme = Theme.of(context).colorScheme;
+    final pedidosFiltrados = _filtrarPedidosPorDelivery();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2540,7 +1289,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
         final double desiredCardHeight = (availableHeight * 0.35).clamp(150.0, 220.0);
         final double calculatedAspectRatio = cardWidth / desiredCardHeight;
 
-        if (listaPedidos.isEmpty) {
+        if (pedidosFiltrados.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -2561,7 +1310,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
 
         return GridView.builder(
           padding: EdgeInsets.all(paddingPadrao),
-          itemCount: listaPedidos.length,
+          itemCount: pedidosFiltrados.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: cols,
             mainAxisSpacing: spacingPadrao,
@@ -2569,7 +1318,8 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
             childAspectRatio: calculatedAspectRatio,
           ),
           itemBuilder: (context, index) {
-            final pedido = listaPedidos[index];
+            final pedido = pedidosFiltrados[index];
+            final indexOriginal = listaPedidos.indexOf(pedido);
             final numeroDelivery = pedido['numerodelivery'].toString();
             final trocoPara = pedido['trocopara'].toString();
             final numeroPedido = pedido['numero'].toString();
@@ -2639,7 +1389,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                 listaIndexPedidosSelecionados.clear();
 
                 final novoPedido = {
-                  'indexOriginal': index,
+                  'indexOriginal': indexOriginal,
                   'numerodelivery': numeroDelivery,
                   'valorliquidopedido': valorLiquidoPedido,
                   'numeroPedido': numeroPedido,
@@ -2660,7 +1410,7 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                 };
 
                 listaPedidosSelecionados.add(novoPedido);
-                listaIndexPedidosSelecionados.add(index);
+                listaIndexPedidosSelecionados.add(indexOriginal);
 
                 popupSelecionarMotoboy(
                   listaPedidosSelecionados,
@@ -3329,10 +2079,29 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
       body: Stack(
         children: [
           Padding(
-            padding: EdgeInsets.all(24),
+            padding: EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Barra de busca
+                Column(
+                  children: [
+                    Text(
+                      "Busque seu pedido:",
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold
+                      ),
+                    ),
+                    SizedBox(height: 4,),
+                    _buildBarraDeBusca(),
+                  ],
+                ),
+
+                SizedBox(
+                  height: 4,
+                ),
+
                 // horizontal 
                 if (orientation == Orientation.landscape) 
                 Expanded(
@@ -3346,44 +2115,6 @@ class ExpedicaoMotoboyPageState extends State<ExpedicaoMotoboyPage> {
                   flex: 1,
                   child: _buildGridMotoboysColumn(),
                 ),
-                // horizontal
-                /* if (orientation == Orientation.landscape) 
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Coluna para motoboys 
-                      Expanded(
-                        flex: 3,
-                        child: _buildMotoboysRowMaior(),
-                      ),
-                      // Pedidos e expedicao
-                      Expanded(
-                        flex: 10,
-                        child: _buildPedidosExpedicaoRow(),
-                      ),
-                    ],
-                  ),
-                ),
-                // vertical 
-                if (orientation == Orientation.portrait) 
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Coluna para motoboys 
-                      Expanded(
-                        flex: 1,
-                        child: _buildMotoboysRowMenor(),
-                      ),
-                      // Pedidos e expedicao
-                      Expanded(
-                        flex: 8,
-                        child: _buildPedidosExpedicaoColumn(),
-                      ),
-                    ],
-                  ),
-                ), */
               ],
             ),
           ),

@@ -8,6 +8,7 @@ import 'package:un_recepcao/controllers/maquininhas/paymentServiceOficial.dart';
 import 'package:un_recepcao/controllers/payment_service.dart';
 import 'package:un_recepcao/controllers/views/funcoes_controller.dart';
 import 'package:un_recepcao/controllers/views/garcom_controller.dart';
+import 'package:un_recepcao/controllers/views/pagamento_controller.dart';
 import 'package:un_recepcao/controllers/views/painel_controller.dart';
 import 'package:un_recepcao/data/data_class.dart';
 import 'package:un_recepcao/services/cielo/cielo_payment_service.dart';
@@ -35,6 +36,7 @@ class PagamentoPageState extends State<PagamentoPage>
 
   final FuncoesController funcoesController = Get.find<FuncoesController>();
   final GarcomController garcomController = Get.find<GarcomController>();
+  final PagamentoController pagamentoController = Get.find<PagamentoController>();
   final painelController = Get.put(PainelController());
 
   // Variáveis para receber e ajeitar args
@@ -203,6 +205,13 @@ class PagamentoPageState extends State<PagamentoPage>
   // List<dynamic> listaCaixas = [];
 
   String detalhesPedido = "";
+  bool pagamentoCielo = false;
+
+  bool cliqueiContinuarPagamento = false;
+
+  double valorInicialCielo = 0.0;
+  double valorCompletoCielo = 0.0;
+  double valorCompletoLista = 0.0;
 
   @override
   void initState() {
@@ -267,10 +276,6 @@ class PagamentoPageState extends State<PagamentoPage>
     calcularValorReceberInicial();
     arrumarDadosCaixa();
     detalhesPedidoFunc();
-
-    // buscarTipoPedido();
-    // buscarPagamento();
-    // buscarCaixas();
   }
 
   void detalhesPedidoFunc(){
@@ -1382,7 +1387,10 @@ class PagamentoPageState extends State<PagamentoPage>
     String numeroMoeda, 
     String nomeMoeda, 
     String valorPagamento,
-    String descricaoFormasPagamento
+    String descricaoFormasPagamento,
+    {
+      bool finalizarPedido = true,
+    }
     ) async {
 
     String trocoInsert = valorTrocoDouble > 0.0 ? valorTroco : "0";
@@ -1406,23 +1414,25 @@ class PagamentoPageState extends State<PagamentoPage>
       """);
 
       // 2. Update no pedido
-      queries.add("""
-        UPDATE pedidos 
-        SET 
-          status = '3',
-          fechamento = CURRENT_TIMESTAMP,
-          valordesconto = '$valorDescontoSelect',
-          valortotalliquido = '$valorTotalLiquidoSelect',
-          troco = '$trocoInsert',
-          numerocaixa_FK = '$numeroCaixaSelecionado',
-          numerousuariofechamento_FK = '$numeroUsuario',
-          numerotradepointfechamento_FK = '$numeroTradepointSelecionada',
-          numeromovimentacaocaixa_FK = '$numeroTurnoCaixa',
-          descricaoformaspagamento = '$descricaoFormasPagamento',
-          lastsync = '0000-00-00 00:00:00'
-        WHERE numero = '$numeroPedido'
-        LIMIT 1;
-      """);
+      if (finalizarPedido) {
+        queries.add("""
+          UPDATE pedidos 
+          SET 
+            status = '3',
+            fechamento = CURRENT_TIMESTAMP,
+            valordesconto = '$valorDescontoSelect',
+            valortotalliquido = '$valorTotalLiquidoSelect',
+            troco = '$trocoInsert',
+            numerocaixa_FK = '$numeroCaixaSelecionado',
+            numerousuariofechamento_FK = '$numeroUsuario',
+            numerotradepointfechamento_FK = '$numeroTradepointSelecionada',
+            numeromovimentacaocaixa_FK = '$numeroTurnoCaixa',
+            descricaoformaspagamento = '$descricaoFormasPagamento',
+            lastsync = '0000-00-00 00:00:00'
+          WHERE numero = '$numeroPedido'
+          LIMIT 1;
+        """);
+      
 
       // 3. Update vendas 
       queries.add("""
@@ -1658,7 +1668,7 @@ class PagamentoPageState extends State<PagamentoPage>
           LIMIT 1;
         """);
       } */
-
+      }
       String res = await Connection().safeQuery(queries);
       
       return res == 'sucesso';
@@ -1723,8 +1733,8 @@ class PagamentoPageState extends State<PagamentoPage>
           return tipoPagamentoPagBank = "";
       }
   }
-  
-  // Funcao para pagar usando cielo
+
+  // Funcao que paga pedido cielo 
   Future<void> pagarPedidoCielo(
     List<dynamic> listaFormasDePagamentoSelecionadasCielo) async {
     // Proteção: bloqueia segunda transação simultânea
@@ -1742,6 +1752,680 @@ class PagamentoPageState extends State<PagamentoPage>
       print('Nenhuma forma de pagamento selecionada.');
       return;
     }
+
+    // Objeto que veio da lista
+    final formaPagamento = listaFormasDePagamentoSelecionadasCielo.first;
+    // Pega o número
+    final numero = formaPagamento['numero'].toString();
+
+    String paymentCode = await tipoPagamentoCielo(numero);
+
+    if (paymentCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Forma de pagamento não suportada pela Cielo!'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // Calcula valor real em centavos a partir do valorTotalLiquidoSelect
+    final double valorDouble = double.tryParse(
+          valorTotalLiquidoSelect.replaceAll(',', '.'),
+        ) ?? 0.0;
+    final int valorCentavos = (valorDouble * 100).round();
+
+    // Gera referência única baseada no número do pedido
+    final String referencia = (numeropedido.isNotEmpty && numeropedido != '0')
+        ? 'CIELO_$numeropedido'
+        : 'CIELO_${DateTime.now().millisecondsSinceEpoch}';
+
+    print('==============================');
+    print('PAGAMENTO CIELO');
+    print('PaymentCode: $paymentCode');
+    print('Valor centavos: $valorCentavos');
+    print('Referência: $referencia');
+    print('==============================');
+
+    // Bloqueia UI
+    if (mounted) setState(() => _processandoCielo = true);
+
+    // Exibe snackbar de processamento
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+              SizedBox(width: 14),
+              Expanded(child: Text('Aguardando pagamento na Cielo...')),
+            ],
+          ),
+          duration: Duration(minutes: 4),
+        ),
+      );
+    }
+
+    // Aguarda o resultado (Completer resolve quando callback chegar ou timeout)
+    final resultado = await CieloPaymentService.pagar(
+      valorCentavos: valorCentavos,
+      referencia: referencia,
+      paymentCode: paymentCode,
+    );
+
+    // Fecha o snackbar de processamento
+    if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    // Desbloqueia UI
+    if (mounted) setState(() => _processandoCielo = false);
+
+    if (!mounted) return;
+
+    // Trata resultado
+    switch (resultado.status) {
+      case CieloPaymentStatus.aprovado:
+        // insertPagamentos já registra tudo no banco.
+        // A PagamentoPage decide a navegação via pedidoPagoComSucesso()
+        // que usa rotaAnterior (vinda dos arguments) — sem depender do nativo.
+        bool pagamentoSucesso = await insertPagamentos();
+        if (pagamentoSucesso) {
+           pedidoPagoComSucesso();
+          await volteiDoCielo(true);
+        } else {
+          erroAoPagarPedido();
+          await volteiDoCielo(false);
+        }
+        break;
+
+      case CieloPaymentStatus.cancelado:
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Pagamento cancelado na maquininha Cielo.'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        break;
+
+      case CieloPaymentStatus.erro:
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                resultado.mensagem ?? 'Erro no pagamento Cielo.',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        break;
+
+      case CieloPaymentStatus.timeout:
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Não foi possível confirmar o pagamento. Verifique na maquininha.',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+        break;
+    }
+  }
+
+  /* Future<void> pagarPedidoCielo(
+    List<dynamic> listaFormasDePagamentoSelecionadasCielo,
+    String valorCentavos,
+    String referencia,
+    String paymentCode,
+  ) async {
+    // 1. Impede pagamentos simultâneos.
+    if (_processandoCielo) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pagamento Cielo já está em andamento.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // 2. Valida a lista.
+    if (listaFormasDePagamentoSelecionadasCielo.isEmpty) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nenhuma forma de pagamento selecionada.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // 3. Valida o valor em centavos.
+    final int? centavos = int.tryParse(valorCentavos);
+
+    if (centavos == null || centavos <= 0) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Valor do pagamento inválido.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // 4. Valida os parâmetros da Cielo.
+    if (referencia.trim().isEmpty || paymentCode.trim().isEmpty) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Referência ou forma de pagamento inválida.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // 5. Bloqueia uma nova transação.
+    if (mounted) {
+      setState(() {
+        _processandoCielo = true;
+      });
+    }
+
+    try {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+              SizedBox(width: 14),
+              Expanded(
+                child: Text('Aguardando pagamento na Cielo...'),
+              ),
+            ],
+          ),
+          duration: Duration(minutes: 4),
+        ),
+      );
+
+      // 6. Envia UMA única transação à Cielo.
+      final resultado = await CieloPaymentService.pagar(
+        valorCentavos: centavos,
+        referencia: referencia,
+        paymentCode: paymentCode,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      // 7. Trata o resultado da transação.
+      switch (resultado.status) {
+        case CieloPaymentStatus.aprovado:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Pagamento aprovado!'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+          listaFormasDePagamentoSelecionadas.remove(resultado);
+          // volteiDoCielo(true);
+          break;
+
+        case CieloPaymentStatus.cancelado:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Pagamento não processado!'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+
+          // volteiDoCielo(false);
+          break;
+
+        case CieloPaymentStatus.erro:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Pagamento não processado!'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+
+          // volteiDoCielo(false);
+          break;
+
+        case CieloPaymentStatus.timeout:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Não foi possível confirmar o pagamento. '
+                'Verifique a situação na maquininha antes de tentar novamente.',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              duration: Duration(seconds: 6),
+            ),
+          );
+
+          // Não tente cobrar novamente automaticamente:
+          // a transação pode ter sido aprovada sem o retorno chegar.
+          // volteiDoCielo(false);
+          break;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Erro no pagamento Cielo: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao processar o pagamento Cielo.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+
+        // volteiDoCielo(false);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processandoCielo = false;
+        });
+      }
+    }
+  } */
+  
+  /* /* // Funcao para pagar usando cielo
+  Future<void> pagarPedidoCielo(List<dynamic> listaFormasDePagamentoSelecionadasCielo) async {
+    if (_processandoCielo) return;
+
+    if (listaFormasDePagamentoSelecionadasCielo.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nenhuma forma de pagamento selecionada.'),
+        ),
+      );
+      return;
+    }
+
+    /* // VALIDAÇÃO DO TOTAL ANTES DE INICIAR A COBRANÇA CIELO
+    int totalListaCentavos = 0;
+
+    for (final forma in listaFormasDePagamentoSelecionadasCielo) {
+      if (forma is! Map) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Existe uma forma de pagamento inválida.'),
+          ),
+        );
+        return;
+      }
+
+      final int valorCentavos = pagamentoController.valorParaCentavos(forma['valor']);
+
+      if (valorCentavos <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'O valor de ${forma['moeda']} precisa ser maior que zero.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      totalListaCentavos += valorCentavos;
+    }
+
+    // Esta variável precisa representar o total devido nesta operação.
+    double valorTotal = 0.0;
+
+    for (int i = 0; i < listaFormasDePagamentoSelecionadas.length; i++) {
+      final dynamic valor = listaFormasDePagamentoSelecionadas[i]['valor'];
+
+      final double valorDouble = valor is num
+          ? valor.toDouble()
+          : double.parse(
+              valor.toString().trim().replaceAll(',', '.'),
+            );
+
+      valorTotal += valorDouble;
+    }
+
+    debugPrint('Total calculado: $valorTotal');
+    
+    final int totalEsperadoCentavos = pagamentoController.valorParaCentavos(valorTotal);
+
+    debugPrint('========== VALIDACAO CIELO ==========');
+    debugPrint('Total esperado: $totalEsperadoCentavos centavos');
+    debugPrint('Total da lista: $totalListaCentavos centavos');
+    debugPrint('=====================================');
+            
+    final double valorEsperado = totalEsperadoCentavos / 100.0;
+
+    if (totalEsperadoCentavos <= 0) {
+      pagamentoController.showErrorDialog(
+        context: context,
+        title: 'Total do pedido zerado',
+        message:
+            'O total esperado do pedido é R\$ '
+            '${valorEsperado.toStringAsFixed(2)}.\n\n'
+            'Confira o valor antes de iniciar o pagamento.',
+        icon: Icons.error,
+        onConfirm: () {},
+      );
+
+      return;
+    }
+
+    if (totalListaCentavos != totalEsperadoCentavos) {
+      pagamentoController.showErrorDialog(
+        context: context,
+        title: 'Valor não completo!',
+        message:
+            'O total esperado do pedido é R\$ '
+            '${valorEsperado.toStringAsFixed(2)}.\n\n'
+            'Confira o valor antes de iniciar o pagamento.',
+        icon: Icons.error,
+        onConfirm: () {},
+      );
+      return;
+    } */
+
+    // Não repetir cobranças cujo resultado precisa ser conferido.
+    final existePagamentoPendenteDeConferencia = listaFormasDePagamentoSelecionadasCielo.any((forma) {
+      if (forma is! Map) return false;
+
+      return forma['cieloResultadoIncerto'] == true || forma['cieloAprovadoSemRegistro'] == true;
+    });
+
+    if (existePagamentoPendenteDeConferencia) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Existe um pagamento que precisa ser conferido na Cielo '
+            'e no sistema antes de tentar novamente.',
+          ),
+          duration: Duration(seconds: 6),
+        ),
+      );
+      return;
+    }
+
+    // Cópia estável: não iterar sobre a lista que será modificada.
+    final List<dynamic> formas = List<dynamic>.from(
+      listaFormasDePagamentoSelecionadasCielo,
+    );
+
+    // Mantém a descrição original de todas as formas selecionadas.
+    final String descricaoFormasPagamento = montarDescricaoFormasPagamento();
+
+    Map? formaAtual;
+
+    setState(() {
+      _processandoCielo = true;
+    });
+
+    try {
+      for (int i = 0; i < formas.length; i++) {
+        final item = formas[i];
+
+        if (item is! Map) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Forma de pagamento inválida.'),
+            ),
+          );
+          return;
+        }
+
+        formaAtual = item;
+
+        final String numeroMoeda = item['numero'].toString();
+        final String nomeMoeda = item['moeda'].toString();
+        final int valorCentavos = pagamentoController.valorParaCentavos(item['valor']);
+
+        if (valorCentavos <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'O valor de $nomeMoeda precisa ser maior que zero.',
+              ),
+            ),
+          );
+          return;
+        }
+
+        final String paymentCode = await tipoPagamentoCielo(numeroMoeda);
+
+        if (paymentCode.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'A forma $nomeMoeda não é suportada pela Cielo.',
+              ),
+            ),
+          );
+          return;
+        }
+
+        // Preserva a referência caso seja necessário conferir o retorno.
+        // Cada forma de pagamento tem uma referência própria.
+        final String referencia = (item['referenciaCielo'] ??= 'CIELO_${numeropedido}_' '${DateTime.now().microsecondsSinceEpoch}_$i').toString();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                  SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      'Aguardando pagamento de $nomeMoeda na Cielo...',
+                    ),
+                  ),
+                ],
+              ),
+              duration: Duration(minutes: 4),
+            ),
+          );
+        }
+
+        final resultado = await CieloPaymentService.pagar(
+          valorCentavos: valorCentavos,
+          referencia: referencia,
+          paymentCode: paymentCode,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        }
+
+        if (!mounted) return;
+
+        setState(() {
+          pagamentoCielo = true;
+        });
+
+        switch (resultado.status) {
+          // APROVADO
+          case CieloPaymentStatus.aprovado:
+            // O pedido só deve ser encerrado no último pagamento.
+            final bool ultimoPagamento = i == formas.length - 1;
+
+            final bool gravado = await inserirPagamento(
+              numeropedido,
+              numeroTurnoCaixaSelecionado,
+              numeroMoeda,
+              nomeMoeda,
+              pagamentoController.centavosParaValorSql(valorCentavos),
+              descricaoFormasPagamento,
+              finalizarPedido: ultimoPagamento,
+            );
+
+            if (!gravado) {
+              // A Cielo aprovou. Não cobrar novamente automaticamente.
+              item['cieloAprovadoSemRegistro'] = true;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'A Cielo aprovou $nomeMoeda, mas o sistema não '
+                    'conseguiu registrar o pagamento. Confira a '
+                    'transação e o banco antes de tentar novamente.',
+                  ),
+                  duration: Duration(seconds: 8),
+                ),
+              );
+              return;
+            }
+
+            // Só remove depois da aprovação e gravação confirmadas.
+            listaFormasDePagamentoSelecionadas.remove(item);
+
+            if (ultimoPagamento) {
+              await volteiDoCielo(true);
+              return;
+            }
+          break;
+
+          // CANCELADO
+          case CieloPaymentStatus.cancelado:
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Pagamento cancelado na Cielo. ',
+                ),
+                duration: Duration(seconds: 5),
+              ),
+            );
+          return;
+
+          // ERRO
+          case CieloPaymentStatus.erro:
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Erro ao realizar pagamento',
+                ),
+                duration: Duration(seconds: 7),
+              ),
+            );
+          return;
+
+          // RECUSADA
+          case CieloPaymentStatus.timeout:
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Pagamento recusado!',
+                ),
+                duration: Duration(seconds: 8),
+              ),
+            );
+          return;
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Erro no fluxo de pagamento Cielo: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      // Se já iniciamos a tentativa, não presumir que houve recusa.
+      if (formaAtual != null) {
+        formaAtual!['cieloResultadoIncerto'] = true;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Não foi possível confirmar o resultado da Cielo. '
+              'Confira a transação antes de tentar novamente.',
+            ),
+            duration: Duration(seconds: 8),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        setState(() {
+          _processandoCielo = false;
+        });
+      }
+    }
+  } */
+  Future<void> pagarPedidoCielo(
+    List<dynamic> listaFormasDePagamentoSelecionadasCielo, 
+    String valorCentavos,
+    String referencia,
+    String paymentCode,
+
+    ) async {
+
+    // Proteção: bloqueia segunda transação simultânea
+    if (_processandoCielo) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pagamento Cielo já está em andamento.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    if (listaFormasDePagamentoSelecionadasCielo.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nenhuma forma de pagamento selecionada.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    valorInicialCielo = valorRecebidoDouble;
 
     for(int i = 0; i < listaFormasDePagamentoSelecionadasCielo.length; i++){
         final formaPagamento = listaFormasDePagamentoSelecionadasCielo[i];
@@ -1763,7 +2447,7 @@ class PagamentoPageState extends State<PagamentoPage>
         // Calcula valor real em centavos a partir do valorTotalLiquidoSelect
         final double valorDouble = _parseString(formaPagamento['valor'].toString());
         final int valorCentavos = (valorDouble * 100).round();
-
+        
         // Gera referência única baseada no número do pedido
         final String referencia = (numeropedido.isNotEmpty && numeropedido != '0') ? 'CIELO_$numeropedido' : 'CIELO_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -1822,6 +2506,13 @@ class PagamentoPageState extends State<PagamentoPage>
             // Remove a forma de pagamento paga
             listaFormasDePagamentoSelecionadas.remove(formaPagamento);
             valorReceberDouble = valorReceberDouble - valorPagamentoDouble;
+
+            valorCompletoCielo = valorInicialCielo - valorPagamentoDouble;
+
+            for (int i = 0; i < listaFormasDePagamentoSelecionadasCielo.length; i++){
+              final interno = listaFormasDePagamentoSelecionadasCielo[i];
+              valorCompletoLista = valorCompletoLista + _parseString(interno['valor'].toString());
+            }
 
             if(pagamentoSucesso && (listaFormasDePagamentoSelecionadas.isNotEmpty)) {
               pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
@@ -1892,7 +2583,7 @@ class PagamentoPageState extends State<PagamentoPage>
         }
     }
   }
-
+ */
   // Tipos de pagamento para cielo 
   Future<String> tipoPagamentoCielo(String tipoNumero) async {
     switch (tipoNumero) {
@@ -1939,6 +2630,16 @@ class PagamentoPageState extends State<PagamentoPage>
 
   // Funcao chamada quando volta da aplicao da cielo 
   Future<void> volteiDoCielo(bool sucesso) async {
+    if (!mounted) return;
+
+    if (sucesso) {
+      await pedidoPagoComSucesso();
+    } else {
+      await erroAoPagarPedido();
+    }
+  }
+
+  /* Future<void> volteiDoCielo(bool sucesso) async {
     // Se teve sucesso no pagamento 
     if(sucesso) {
       pedidoPagoComSucesso();
@@ -1962,7 +2663,7 @@ class PagamentoPageState extends State<PagamentoPage>
           },
         );
     }
-  }
+  } */
 
   // Funcao chamada quando clicar em pagar e eu estiver dentro de uma maquininha da pagbank
   // Segue o fluxo oficial SmartCoffee: doPayment bloqueante + PlugPagEventListener
@@ -2345,7 +3046,10 @@ class PagamentoPageState extends State<PagamentoPage>
         break;
 
       case PaymentProvider.cielo:
-        await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
+        setState(() {
+          pagamentoCielo = true;
+        });
+        // await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
         break;
 
       case PaymentProvider.desconhecido:
@@ -2451,7 +3155,7 @@ class PagamentoPageState extends State<PagamentoPage>
           }
 
           // ----------------------------------------------------------- OFICIAL ---------------------------------------------------------------
-          /* final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
+          final bool maquininhaDisponivel = await PagBankSmartPOS.estaDisponivel();
 
           if (maquininhaDisponivel) {
             // SmartPOS disponível: executa pagamento PagBank primeiro
@@ -2464,11 +3168,12 @@ class PagamentoPageState extends State<PagamentoPage>
           } else {
             // Sem SmartPOS: finaliza o pedido diretamente
             await pagarPedido();
-          } */
+          }
 
           // -------------------------------------------------------------------------------------------------------------------------------
-
-          await realizarPagamentoMaquininhas(listaFormasDePagamentoSelecionadas);
+          
+          
+          // await realizarPagamentoMaquininhas(listaFormasDePagamentoSelecionadas);
 
           // await pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
 
@@ -3523,168 +4228,6 @@ class PagamentoPageState extends State<PagamentoPage>
                     ),
                   ),
 
-                  // Cabeçalho da tabela
-                  // Seção de entrada de pagamento (Código da Forma e Valor)
-                  /* Padding(
-            padding: EdgeInsets.only(left: 16, right: 16, bottom: 4, top: 4),
-            child: Row(
-              children: [
-                // Campo: Código da Forma de Pagamento
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    alignment: Alignment.center,
-                    height: 55,
-                    child: TextField(
-                      controller: nomeMoedaController,
-                      focusNode: nomeMoedaFocus,
-                      readOnly: true,
-                      showCursor: true,
-                      cursorColor: colorScheme.primary,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        labelText: 'NOME:',
-                        labelStyle: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.primary.withOpacity(0.05),
-                        contentPadding: EdgeInsets.zero,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.transparent,
-                            width: 1,
-                          ),
-                        ),
-
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.transparent, // cor normal
-                            width: 1,
-                          ),
-                        ),
-
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color:
-                                colorScheme.primary, // cor quando selecionado
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                // Campo: Valor a Pagar
-                Expanded(
-                  flex: 5,
-                  child: Container(
-                    alignment: Alignment.center,
-                    height: 55,
-                    child: TextField(
-                      controller: valorPagarController,
-                      focusNode: valorPagarFocus,
-                      onTap: () {
-                        setState(() {
-                          showKeyboardNumero = true;
-                          Future.delayed(Duration(milliseconds: 150), () {
-                            if (valorPagarFocus.canRequestFocus) {
-                              valorPagarFocus.requestFocus();
-                            }
-                          });
-                        });
-                      },
-                      readOnly: true,
-                      showCursor: true,
-                      cursorColor: colorScheme.primary,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'VALOR A PAGAR',
-                        labelStyle: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
-                        prefixText: 'R\$ ',
-                        prefixStyle: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.primary.withOpacity(0.05),
-                        contentPadding: EdgeInsets.zero,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.transparent,
-                            width: 1,
-                          ),
-                        ),
-
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.transparent, // cor normal
-                            width: 1,
-                          ),
-                        ),
-
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color:
-                                colorScheme.primary, // cor quando selecionado
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                // Botão Confirmar Pagamento
-                Material(
-                  color: colorScheme.primary,
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: 2,
-                  child: InkWell(
-                    onTap: () {
-                      adicionarPagamentoLista(
-                        nomeMoedaController.text,
-                        numeroMoedaController.text,
-                        valorPagarController.text,
-                      );
-                      setState(() {
-                        showKeyboardNumero = false;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      child: Icon(
-                        Icons.check_rounded,
-                        color: colorScheme.onPrimary,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ), */
-
                   // Lista de metodos pagamento
                   if (funcoesController.listaFormasDePagamento.isEmpty)
                     Expanded(
@@ -3827,221 +4370,6 @@ class PagamentoPageState extends State<PagamentoPage>
                   Expanded(
                     child: Row(
                       children: [
-                        /* // Lado Esquerdo - Lista de pagamentos registrados
-                        Expanded(
-                          flex: 1,
-                          child: listaFormasDePagamentoSelecionadas.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.account_balance_wallet_outlined,
-                                        size: 30,
-                                        color: Colors.grey.withOpacity(0.3),
-                                      ),
-                                      SizedBox(height: 10),
-                                      Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: Text(
-                                          'Nenhum pagamento registrado',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.grey.withOpacity(0.6),
-                                            fontSize: MediaQuery.textScalerOf(
-                                              context,
-                                            ).scale(14),
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : Container(
-                                  margin: EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface.withOpacity(0.5),
-                                    borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(5),
-                                    ),
-                                  ),
-                                  child: ListView.builder(
-                                    padding: EdgeInsets.symmetric(vertical: 0),
-                                    itemCount:
-                                        listaFormasDePagamentoSelecionadas
-                                            .length,
-                                    itemBuilder: (context, index) {
-                                      final forma =
-                                          listaFormasDePagamentoSelecionadas[index];
-
-                                      final nomeMoeda =
-                                          forma['moeda']?.toString() ?? '';
-
-                                      final valorMoeda = double.tryParse(
-                                        forma['valor'].toString().replaceAll(
-                                          ',',
-                                          '.',
-                                        ),
-                                      );
-
-                                      return Card(
-                                        margin: EdgeInsets.symmetric(
-                                          vertical: 4,
-                                          horizontal: 8,
-                                        ),
-                                        elevation: 1,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Row(
-                                            children: [
-                                              // Informações do Pagamento
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      nomeMoeda,
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 13,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                    SizedBox(height: 2),
-                                                    Text(
-                                                      'R\$ ${valorMoeda?.toStringAsFixed(2).replaceAll('.', ',')}',
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        fontSize: 12,
-                                                        color:
-                                                            colorScheme.primary,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              // Botão de Excluir
-                                              IconButton(
-                                                onPressed: () async {
-                                                  setState(() {
-                                                    listaFormasDePagamentoSelecionadas
-                                                        .removeAt(index);
-                                                  });
-                                                  await calcularRecebimentos(mostrarDialogo: false);
-                                                },
-                                                padding: EdgeInsets.zero,
-                                                constraints: BoxConstraints(),
-                                                icon: Icon(
-                                                  Icons.delete_outline,
-                                                  size: 20,
-                                                  color: colorScheme.error,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                      /* Container(
-                                  margin: EdgeInsets.only(
-                                    left: 0,
-                                    right: 0,
-                                    top: 4,
-                                    bottom: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: colorScheme.onSurface
-                                            .withOpacity(0.04),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ListTile(
-                                    dense: true,
-                                    leading: Container(
-                                      padding: EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: colorScheme.primary.withOpacity(
-                                          0.1,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: IconButton(
-                                        onPressed: () async {
-                                          setState(() {
-                                            listaFormasDePagamentoSelecionadas
-                                                .removeAt(index);
-                                          });
-                                          await calcularRecebimentos(mostrarDialogo: false);
-                                        },
-                                        icon: Icon(
-                                          Icons.delete_outline,
-                                          // size: 10,
-                                          color: colorScheme.error,
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(
-                                      nomeMoeda,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        // fontSize: 10,
-                                      ),
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'R\$ ${valorMoeda?.toStringAsFixed(2).replaceAll('.', ',')}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 10,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ),
-                                        SizedBox(width: 4),
-                                        /* IconButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              listaFormasDePagamentoSelecionadas
-                                                  .removeAt(index);
-                                            });
-                                            await calcularRecebimentos(mostrarDialogo: false);
-                                          },
-                                          icon: Icon(
-                                            Icons.delete_outline,
-                                            size: 10,
-                                            color: colorScheme.error,
-                                          ),
-                                        ), */
-                                      ],
-                                    ),
-                                  ),
-                                ); */
-                                    },
-                                  ),
-                                ),
-                        ), */
 
                         // Lado Direito - Nova Coluna
                         if (nomeMoedaController.text.isEmpty)
@@ -4352,12 +4680,12 @@ class PagamentoPageState extends State<PagamentoPage>
                                                         tipoMoedaSelecionado = "";
                                                       });
                                                     } else {
-                                                      // Adiciona o pagamento
-                                                      adicionarPagamentoLista(
+                                                        adicionarPagamentoLista(
                                                         nomeMoedaController.text,
                                                         numeroMoedaController.text,
                                                         valorPagarController.text,
                                                       );
+
                                                       setState(() {
                                                         aparecerConfirmar = false;
                                                         showKeyboardNumero = false;
@@ -4469,7 +4797,153 @@ class PagamentoPageState extends State<PagamentoPage>
                                     ],
                                   ),
                                 )
-                              : Container(
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Lista de formas de pagamento
+                                    Expanded(
+                                      child: Container(
+                                        margin: EdgeInsets.symmetric(
+                                          horizontal: 0,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.surface.withOpacity(0.5),
+                                          borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(5),
+                                          ),
+                                        ),
+                                        child: ListView.builder(
+                                          padding: EdgeInsets.symmetric(vertical: 0),
+                                          itemCount: listaFormasDePagamentoSelecionadas.length,
+                                          itemBuilder: (context, index) {
+                                            final forma = listaFormasDePagamentoSelecionadas[index];
+
+                                            final nomeMoeda = forma['moeda']?.toString() ?? '';
+
+                                            final valorMoeda = double.tryParse(
+                                              forma['valor'].toString().replaceAll(',', '.'),
+                                            );
+
+                                            return Card(
+                                              margin: EdgeInsets.only(
+                                                top: 4,
+                                                bottom: 4,
+                                                left: 8,
+                                                right: 16,
+                                              ),
+                                              child: ListTile(
+                                                title: Text(
+                                                  nomeMoeda,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                                subtitle: Text(
+                                                  'R\$ ${valorMoeda?.toStringAsFixed(2).replaceAll('.', ',')}',
+                                                  style: TextStyle(
+                                                    color: colorScheme.primary,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                trailing: IconButton(
+                                                  onPressed: () {
+                                                    shownDialogaAlertTwoBottom(
+                                                      context: context,
+                                                      title: "Deseja remover pagamento?",
+                                                      message:
+                                                          "Remover $valorMoeda de $nomeMoeda?",
+                                                      icon: Icons.delete_outline,
+                                                      onConfirm: () async {
+                                                        setState(() {
+                                                          listaFormasDePagamentoSelecionadas
+                                                              .removeAt(index);
+                                                        });
+                                                        await calcularRecebimentos(mostrarDialogo: false);
+                                                      },
+                                                      onCancel: () async {
+                                                        setState(() {});
+                                                      },
+                                                    );
+                                                  },
+                                                  icon: Icon(
+                                                    Icons.delete_outline,
+                                                    color: colorScheme.error,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Botão logo abaixo da lista
+                                    /* if(temValorInteiro && multicomanda && pagamentoCielo) */
+                                    /* if (pagamentoCielo && listaFormasDePagamentoSelecionadas.isNotEmpty)
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        top: 4,
+                                        bottom: 4,
+                                        right: 22,
+                                        left: 16,
+                                      ),
+                                      child: SizedBox(
+                                        width: double.infinity,
+                                        height: MediaQuery.of(context).size.height * 0.07,
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: colorScheme.outline,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                          ),
+                                         
+                                        onPressed: () async {
+                                          if (cliqueiContinuarPagamento || _processandoCielo) {
+                                            return;
+                                          }
+
+                                          cliqueiContinuarPagamento = true;
+
+                                          try {
+                                            await pagarPedidoCielo(
+                                              listaFormasDePagamentoSelecionadas,
+
+                                            );
+                                          } catch (e, stackTrace) {
+                                            debugPrint('Erro ao continuar pagamento: $e');
+                                            debugPrintStack(stackTrace: stackTrace);
+
+                                            if (!context.mounted) return;
+
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: const Text('Erro ao continuar pagamento!'),
+                                                backgroundColor: Theme.of(context).colorScheme.error,
+                                              ),
+                                            );
+                                          } finally {
+                                            cliqueiContinuarPagamento = false;
+                                          }
+                                        },
+                                          child: Text(
+                                            'CONTINUAR PAGAMENTO',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.textScalerOf(context).scale(14),
+                                              fontWeight: FontWeight.bold,
+                                              color: colorScheme.onPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ), */
+                                  ],
+                                ),
+                             /*  Container(
                                   margin: EdgeInsets.symmetric(
                                     horizontal: 0,
                                     vertical: 5,
@@ -4606,93 +5080,80 @@ class PagamentoPageState extends State<PagamentoPage>
                                           ),
                                         ),
                                       );
-                                      /* Container(
-                                  margin: EdgeInsets.only(
-                                    left: 0,
-                                    right: 0,
-                                    top: 4,
-                                    bottom: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: colorScheme.onSurface
-                                            .withOpacity(0.04),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ListTile(
-                                    dense: true,
-                                    leading: Container(
-                                      padding: EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: colorScheme.primary.withOpacity(
-                                          0.1,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: IconButton(
-                                        onPressed: () async {
-                                          setState(() {
-                                            listaFormasDePagamentoSelecionadas
-                                                .removeAt(index);
-                                          });
-                                          await calcularRecebimentos(mostrarDialogo: false);
-                                        },
-                                        icon: Icon(
-                                          Icons.delete_outline,
-                                          // size: 10,
-                                          color: colorScheme.error,
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(
-                                      nomeMoeda,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        // fontSize: 10,
-                                      ),
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'R\$ ${valorMoeda?.toStringAsFixed(2).replaceAll('.', ',')}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 10,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ),
-                                        SizedBox(width: 4),
-                                        /* IconButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              listaFormasDePagamentoSelecionadas
-                                                  .removeAt(index);
-                                            });
-                                            await calcularRecebimentos(mostrarDialogo: false);
-                                          },
-                                          icon: Icon(
-                                            Icons.delete_outline,
-                                            size: 10,
-                                            color: colorScheme.error,
-                                          ),
-                                        ), */
-                                      ],
-                                    ),
-                                  ),
-                                ); */
                                     },
                                   ),
-                                ),
+                                ), */
                         ),
+                        /* // Continuar pagamento multimoeda
+                        // se for multimoeda e tem o valor completo 
+                        /* if(temValorInteiro && multicomanda
+                         // && pagamentoCielo
+                         ) */
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              left: 8,
+                              right: 8,
+                              top: 4,
+                              bottom: 4,
+                            ),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.07,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: valorReceberDouble <= 0.0
+                                      ? Theme.of(context).colorScheme.outline
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceTint,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  if (cliqueiContinuarPagamento) {
+                                    return; 
+                                  }
+
+                                  try{
+                                    cliqueiContinuarPagamento = true;
+                                    pagarPedidoCielo(listaFormasDePagamentoSelecionadas);
+                                  } catch (e){
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Erro ao continuar pagamento!',
+                                        ),
+                                        backgroundColor: Theme.of(context).colorScheme.error,
+                                      ),
+                                    );
+                                  } finally {
+                                    cliqueiContinuarPagamento = false;
+                                  }
+                                },
+                                child: Text(
+                                  'CONTINUAR PAGAMENTO',
+                                  style: TextStyle(
+                                    fontSize: MediaQuery.textScalerOf(
+                                      context,
+                                    ).scale(14),
+                                    fontWeight: FontWeight.bold,
+                                    color: valorReceberDouble >= 0.0
+                                        ? Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary
+                                        : Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ), */
                       ],
                     ),
+                    
                   ),
 
                   // if (!showKeyboardNumero)
@@ -5075,7 +5536,7 @@ class PagamentoPageState extends State<PagamentoPage>
                               height: MediaQuery.of(context).size.height * 0.07,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: valorReceberDouble <= 0.0
+                                  backgroundColor: valorReceberDouble <= 0.0 
                                       ? Theme.of(context).colorScheme.outline
                                       : Theme.of(
                                           context,
